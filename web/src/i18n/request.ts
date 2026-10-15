@@ -10,12 +10,13 @@ const loaders: Record<Locale, () => Promise<{ default: Record<string, unknown> }
   zh: () => import("../../messages/zh.json"),
   es: () => import("../../messages/es.json"),
   ja: () => import("../../messages/ja.json"),
+  pt: () => import("../../messages/pt.json"),
 };
 
 // next-intl 요청 설정. i18n 경로 라우팅(세그먼트·미들웨어)을 쓰지 않는 구성이라
 // locale 을 여기서 직접 정한다. requestLocale 은 참조하지 않으므로 동적 렌더링을
 // 유발하지 않는다. 이 설정은 서버 컴포넌트·프리렌더의 기본 언어만 정하고, 실행 중
-// 사용자 전환은 클라이언트의 IntlRuntimeProvider 가 담당한다(messages/en·ko·zh·es·ja).
+// 사용자 전환은 클라이언트의 IntlRuntimeProvider 가 담당한다(messages/en·ko·zh·es·ja·pt).
 export default getRequestConfig(async () => {
   const locale = resolveLocale();
   const messages = (await loaders[locale]()).default;

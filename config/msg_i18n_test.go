@@ -8,8 +8,8 @@ import (
 )
 
 // TestStartupMessageSwitchesLanguage pins that the DB-config startup error and
-// source labels follow ARTEX_LANG: English by default, Korean/Chinese/Spanish/Japanese
-// when configured. Identifiers an operator must act on stay verbatim.
+// source labels follow ARTEX_LANG: English by default, Korean/Chinese/Spanish/Japanese/
+// Portuguese when configured. Identifiers an operator must act on stay verbatim.
 func TestStartupMessageSwitchesLanguage(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ARTEX_PG_DSN", "")
@@ -43,8 +43,8 @@ func TestStartupMessageSwitchesLanguage(t *testing.T) {
 		}
 	}
 
-	// Chinese / Spanish / Japanese → non-empty and different from the Korean source.
-	for _, lang := range []string{"zh", "es", "ja"} {
+	// Chinese / Spanish / Japanese / Portuguese → non-empty and different from the Korean source.
+	for _, lang := range []string{"zh", "es", "ja", "pt"} {
 		t.Setenv("ARTEX_LANG", lang)
 		if got := mustDSNErr(t); got == "" {
 			t.Errorf("%s startup error should be non-empty", lang)

@@ -1,7 +1,7 @@
 /**
  * Script: check-i18n-keys.ts
  *
- * 로케일 메시지 파일(web/messages/{ko,en,zh,es,ja}.json)의 키 정합성 가드.
+ * 로케일 메시지 파일(web/messages/{ko,en,zh,es,ja,pt}.json)의 키 정합성 가드.
  * ko.json 을 기준으로 나머지 로케일의 키 집합이 완전히 일치하는지(누락·추가 모두) 검사하고,
  * 불일치가 있으면 비-0 으로 종료한다. 실행: npm run check:i18n
  */
@@ -12,7 +12,7 @@ import path from "node:path";
 
 const MESSAGES_DIR = path.resolve(__dirname, "../../messages");
 const BASELINE = "ko";
-const LOCALES = ["en", "zh", "es", "ja"] as const;
+const LOCALES = ["en", "zh", "es", "ja", "pt"] as const;
 
 function readLocale(locale: string): Set<string> {
   const file = path.join(MESSAGES_DIR, `${locale}.json`);

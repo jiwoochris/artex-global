@@ -9,7 +9,7 @@ import (
 
 // TestTrMsgSwitchesLanguage pins the backend output-language switching: a
 // user-facing Korean message is returned verbatim under ko (and when unwired),
-// and translated to a non-Korean string under en/zh/es. This is the backend
+// and translated to a non-Korean string under en/zh/es/pt. This is the backend
 // analogue of the web i18n catalog — it proves writeErr responses follow the
 // configured language, not Korean only.
 func TestTrMsgSwitchesLanguage(t *testing.T) {
@@ -42,14 +42,14 @@ func TestTrMsgSwitchesLanguage(t *testing.T) {
 		t.Fatalf("ko: trMsg must return the Korean source, got %q", got)
 	}
 
-	// en/zh/es → a translated, non-empty string. en and es must carry no Hangul.
-	for _, lang := range []string{"en", "zh", "es"} {
+	// en/zh/es/pt → a translated, non-empty string. en, es and pt must carry no Hangul.
+	for _, lang := range []string{"en", "zh", "es", "pt"} {
 		config.CurrentLanguage = func() string { return lang }
 		got := trMsg(koMsg)
 		if got == "" || got == koMsg {
 			t.Fatalf("%s: trMsg must translate away from the Korean source, got %q", lang, got)
 		}
-		if (lang == "en" || lang == "es") && hasHangul(got) {
+		if (lang == "en" || lang == "es" || lang == "pt") && hasHangul(got) {
 			t.Fatalf("%s: translation must not contain Hangul, got %q", lang, got)
 		}
 	}

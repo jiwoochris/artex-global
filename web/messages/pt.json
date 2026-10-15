@@ -1,0 +1,3764 @@
+{
+  "auth": {
+    "login": {
+      "agree": "Li e aceito o <terms>Aviso de uso</terms>",
+      "checking": "Verificando o status de login…",
+      "errorAgree": "Primeiro leia e aceite o Aviso de uso",
+      "errorBackend": "Não é possível conectar com o serviço de backend",
+      "errorCredential": "Usuário ou senha incorretos",
+      "password": "Senha",
+      "passwordPlaceholder": "Insira sua senha",
+      "submit": "Entrar",
+      "submitting": "Entrando…",
+      "title": "Entrar",
+      "username": "Usuário",
+      "welcome": "Bem-vindo de volta. Insira sua senha para continuar usando o ARTEX."
+    },
+    "setup": {
+      "confirmPassword": "Confirmar senha",
+      "confirmPlaceholder": "Insira a senha novamente",
+      "desc": "É a primeira vez que você usa o ARTEX. Defina uma senha de login para sua conta (pelo menos 8 caracteres).",
+      "errorBackend": "Não é possível conectar com o serviço de backend",
+      "errorInit": "A inicialização falhou",
+      "errorMismatch": "As duas senhas não coincidem",
+      "errorTooShort": "A senha deve ter pelo menos 8 caracteres",
+      "newPassword": "Nova senha",
+      "newPasswordPlaceholder": "Pelo menos 8 caracteres",
+      "submit": "Definir senha e entrar",
+      "submitting": "Salvando…",
+      "title": "Configurar senha",
+      "setupToken": "Token de configuração",
+      "setupTokenPlaceholder": "O token de 32 caracteres impresso na linha [auth] do registro de console do servidor",
+      "setupTokenHelp": "Para impedir que outra pessoa se aproprie primeiro da conta de administrador, insira o token de configuração que só é impresso no terminal onde o servidor é executado (no Docker: docker compose logs artex).",
+      "errorTokenEmpty": "Insira o token de configuração",
+      "unavailableTitle": "Não é possível confirmar o status da configuração",
+      "unavailableDesc": "O backend ou o banco de dados estão temporariamente indisponíveis. Para não sobrescrever uma senha que já possa existir, a configuração está fechada por enquanto. Restaure o serviço e tente novamente.",
+      "retry": "Tentar novamente"
+    },
+    "terms": {
+      "a1Body": "Este software (ARTEX) é um programa de código aberto distribuído sob a GNU Affero General Public License v3.0 (AGPL-3.0). Sob esta licença, você é livre para usar, copiar, modificar e distribuir o software. No entanto, todas as obras derivadas (incluindo os serviços online oferecidos a terceiros através de uma rede) também devem ser publicadas sob a mesma AGPL-3.0, e você deve disponibilizar aos usuários o código-fonte completo correspondente. O texto completo da AGPL-3.0 é regido pelo arquivo LICENSE distribuído junto com o software.",
+      "a1Title": "Artigo 1 · Definições e licença de código aberto",
+      "a2Body": "Este software é fornecido unicamente para aprendizado pessoal, estudo de código, exploração dos princípios das técnicas de segurança e verificação técnica em um ambiente isolado local construído por você mesmo; é adequado para fins não ofensivos e não destrutivos como o aprendizado, a pesquisa acadêmica e a revisão de código. Salvo quando expressamente permitido neste artigo, você não deve usar o software para nenhum outro fim.",
+      "a2Title": "Artigo 2 · Âmbito de uso permitido",
+      "a3Item1": "É estritamente proibido realizar varredura, sondagem, exploração ou ataques contra qualquer site, serviço online ou sistema conectado à rede de propriedade de outros ou de terceiros (independentemente da autorização ou de se o ativo é de sua propriedade).",
+      "a3Item2": "É estritamente proibido usar este software em testes de penetração reais, exercícios de ataque-defesa, exercícios de equipes vermelha/azul ou ambientes de produção.",
+      "a3Item3": "É estritamente proibido usar este software para intrusão ilícita, roubo de dados, extorsão, negação de serviço (DoS/DDoS) ou outras atividades destrutivas ou criminosas.",
+      "a3Item4": "É estritamente proibido remover, alterar ou burlar as informações de direitos autorais, licença ou aviso de segurança contidas neste software e em seus resultados.",
+      "a3Item5": "É estritamente proibida toda conduta que infrinja as leis, regulamentos e normas do seu país ou região.",
+      "a3Title": "Artigo 3 · Condutas proibidas",
+      "a4Body": "Os direitos autorais e os direitos de propriedade intelectual relacionados a este software pertencem aos autores e colaboradores do projeto, que lhe concedem esses direitos dentro do âmbito estabelecido pela licença AGPL-3.0. Salvo os direitos que essa licença concede expressamente, este aviso não lhe concede nenhum outro direito, seja expresso ou implícito.",
+      "a4Title": "Artigo 4 · Propriedade intelectual",
+      "a5Body": "Este software é um programa de código aberto que você pode implantar por conta própria; os autores não operam nenhum serviço centralizado e não coletam nem enviam seus dados de uso. Todos os dados que você criar, processar ou consultar durante o uso são gerenciados por você mesmo, e você é responsável por sua legalidade e segurança. Você assume todas as consequências decorrentes de um tratamento inadequado dos dados.",
+      "a5Title": "Artigo 5 · Dados e privacidade",
+      "a6Body": "Você deve cumprir por conta própria todas as leis e regulamentos do seu país ou região em matéria de segurança de redes, segurança de dados e proteção da privacidade, crimes informáticos e similares (no caso da República da Coreia, incluindo, entre outras, a Lei de Promoção da Utilização de Redes de Informação e Comunicação e de Proteção da Informação e a Lei de Proteção de Dados Pessoais).",
+      "a6Emphasis": "Toda a responsabilidade legal e as consequências decorrentes de você infringir as leis e regulamentos anteriores ou os termos deste aviso são assumidas exclusivamente por você mesmo, sem relação alguma com os autores nem os colaboradores deste software.",
+      "a6Title": "Artigo 6 · Conformidade e responsabilidade legal",
+      "a7Body": "Este software é fornecido «NO ESTADO EM QUE SE ENCONTRA» (AS IS) e «CONFORME DISPONIBILIDADE» (AS AVAILABLE), sem garantia de nenhum tipo, seja expressa ou implícita, incluindo as garantias de comercialização, adequação a um fim determinado, exatidão e não violação. Na máxima medida permitida pela lei aplicável, os autores e colaboradores deste software não serão responsáveis por nenhum dano direto, indireto, incidental, especial ou consequente decorrente do uso ou da impossibilidade de uso deste software (independentemente da adequação do modo de uso), incluindo, entre outros, a perda de dados, os danos ao sistema, a interrupção do negócio, a perda de lucros e os litígios.",
+      "a7Title": "Artigo 7 · Isenção de responsabilidade e limitação de responsabilidade",
+      "a8Body": "Os autores podem atualizar este aviso de tempos em tempos em função das leis e regulamentos ou das necessidades de desenvolvimento do projeto; a versão atualizada é distribuída junto com o projeto e entra em vigor a partir de sua data de publicação. Seu uso continuado deste software é considerado aceitação dos termos revisados. Na medida em que a lei permitir, a faculdade de interpretação final deste aviso corresponde aos autores do projeto. Se alguma cláusula deste aviso for declarada nula, isso não afeta a validade das cláusulas restantes.",
+      "a8Title": "Artigo 8 · Modificação dos termos e interpretação final",
+      "agreeButton": "Li e aceito todos os termos",
+      "footerNotRead": "Role até o final dos termos antes de confirmar",
+      "footerRead": "Você revisou todos os termos",
+      "intro": "Este «Aviso de uso e isenção de responsabilidade» (doravante, o «Aviso») é um acordo entre você e os autores e colaboradores do projeto ARTEX sobre o uso deste software. Leia com atenção e compreenda plenamente cada artigo antes de usá-lo, prestando especial atenção às cláusulas de isenção, limitação de responsabilidade e proibição marcadas em negrito ou em blocos de cor.",
+      "introEmphasis": "No momento em que você baixar, instalar, acessar ou usar de qualquer modo este software, considera-se que você leu e compreendeu todo este Aviso e que o aceita e fica obrigado por sua totalidade.",
+      "meta": "Versão v1.0 · Vigente desde 2026-09-18 · Leia todos os termos abaixo até o final antes de entrar",
+      "title": "Aviso de uso e isenção de responsabilidade do ARTEX"
+    }
+  },
+  "dashboard": {
+    "activeModel": "Modelo ativo",
+    "activeTasks": "Tarefas ativas",
+    "activityStream": "Fluxo de atividade",
+    "ago": "há {value}",
+    "all": "Tudo",
+    "assetDistribution": "Distribuição de ativos",
+    "assetNodes": "Nós de ativos",
+    "assetType": {
+      "app": "App",
+      "endpoint": "Endpoint",
+      "ip": "IP",
+      "root_domain": "Domínio raiz",
+      "service": "Serviço",
+      "subdomain": "Subdomínio"
+    },
+    "byType": "Por tipo",
+    "cacheHit": "Acerto de cache",
+    "cacheHitRate": "Taxa de acertos de cache",
+    "captureOff": "Captura desativada",
+    "chartCacheRead": "Leitura de cache",
+    "chartInput": "Entrada",
+    "chartOutput": "Saída",
+    "colEngine": "Motor",
+    "colGoalProgress": "Progresso do objetivo",
+    "colInFlight": "Em andamento",
+    "colLastActivity": "Última atividade",
+    "colStatus": "Estado",
+    "colTask": "Tarefa",
+    "confirmedFindings": "Achados confirmados",
+    "configured": "Configurado",
+    "crossTaskShared": "Compartilhado entre tarefas",
+    "default": "Padrão",
+    "eventCount": "{count} eventos",
+    "findings": "Achados",
+    "inputUncached": "Entrada (sem cache)",
+    "llmConfig": "Configuração de LLM",
+    "morePending": "+{count} mais…",
+    "noActivity": "Sem atividade",
+    "noAssetData": "Sem dados de ativos",
+    "noData": "Sem dados",
+    "noFindings": "Sem achados",
+    "noPendingIntercepts": "Sem interceptações pendentes de aprovação",
+    "noTasks": "Sem tarefas",
+    "noTrafficData": "Sem dados de tráfego",
+    "notConfigured": "Não configurado",
+    "off": "Desativado",
+    "on": "Ativado",
+    "output": "Saída",
+    "pendingApprovals": "Aprovações pendentes ({count})",
+    "range7": "7 dias",
+    "range30": "30 dias",
+    "range90": "3 meses",
+    "range180": "6 meses",
+    "range365": "1 ano",
+    "recentRequests": "Solicitações recentes",
+    "recording": "Gravando",
+    "requestCount": "{count} solicitações",
+    "srcNew": "Livro de medição",
+    "srcOld": "Estatísticas de atividade",
+    "statDone": "Concluído",
+    "statExplore": "Explorando",
+    "statPaused": "Em pausa",
+    "statTokenDetail": "Entrada {input} ({cache} em cache) · saída {output}",
+    "subtitle": "Estado global do sistema · atualização em tempo real",
+    "systemStatus": "Estado do sistema",
+    "taskCount": "{count} tarefas",
+    "tasks": "Tarefas",
+    "title": "Visão geral",
+    "tokenConsumption": "Consumo de tokens de LLM",
+    "tokenUsage": "Uso de tokens",
+    "tooltipNew": "Versão nova: obtém-se do livro de medição llm_usage, precisa em cada chamada e inclui o consumo interrompido. Conta apenas os dados posteriores à ativação da função.",
+    "tooltipOld": "Versão antiga: obtém-se das estatísticas de activity e inclui também as tarefas passadas, mas omite o consumo interrompido e não é precisa no nível de modelo.",
+    "totalInOut": "Total (entrada + saída)",
+    "totalNodes": "{count} nós no total",
+    "trafficCapture": "Captura de tráfego",
+    "trafficExchanges": "Trocas de tráfego",
+    "trafficStatusCodes": "Códigos de estado do tráfego",
+    "verNew": "Nova",
+    "verOld": "Antiga",
+    "viewTasks": "Ver tarefas"
+  },
+  "header": {
+    "updateBadge": "Nova versão {latest}",
+    "updateBadgeShort": "Nova versão",
+    "updateTitle": "A nova versão {latest} foi encontrada. Clique para ir à atualização.",
+    "version": "Versão · {version}"
+  },
+  "nav": {
+    "group": {
+      "function": "Funções",
+      "system": "Sistema"
+    },
+    "item": {
+      "agents": "Agentes",
+      "approvals": "Aprovações",
+      "asset-intercept": "Bloqueio de ativos",
+      "assets": "Ativos",
+      "chat": "Chat",
+      "commands": "Execução de ferramentas",
+      "dashboard": "Painel",
+      "findings": "Achados",
+      "intercept": "Regras de interceptação",
+      "llm": "LLM",
+      "llm-records": "Registros LLM",
+      "logs": "Logs",
+      "mcp": "MCP",
+      "notify": "Notificações",
+      "settings": "Configurações do sistema",
+      "skills": "Skills",
+      "sync": "Sincronização de ativos",
+      "tasks": "Tarefas",
+      "tools": "Ferramentas",
+      "traffic": "Tráfego",
+      "workspace": "Espaço de trabalho"
+    }
+  },
+  "notFound": {
+    "back": "Voltar ao início",
+    "description": "A página que você procura não existe.",
+    "title": "Página não encontrada."
+  },
+  "search": {
+    "button": "Buscar",
+    "empty": "Não há resultados de busca.",
+    "placeholder": "Buscar painéis, usuários e mais…"
+  },
+  "status": {
+    "audit": {
+      "allow": "Permitir",
+      "block": "Bloquear"
+    },
+    "delivery": {
+      "failed": "Falhado",
+      "pending": "Pendente de envio",
+      "sending": "Enviando",
+      "sent": "Entregue",
+      "skipped": "Omitido"
+    },
+    "engine": {
+      "exploring": "Explorando",
+      "idle": "Inativo",
+      "paused": "Em pausa",
+      "stalled": "Estagnado"
+    },
+    "finding": {
+      "confirmed": "Confirmada",
+      "duplicate": "Duplicada",
+      "false_positive": "Falso positivo",
+      "fixed": "Corrigida",
+      "ignored": "Ignorada",
+      "in_progress": "Em andamento",
+      "pending": "Pendente",
+      "resolved": "Resolvida",
+      "risk_accepted": "Risco aceito"
+    },
+    "goal": {
+      "abandoned": "Abandonado",
+      "met": "Cumprido",
+      "open": "Em andamento"
+    },
+    "intent": {
+      "blocked": "Erro de execução",
+      "deleted": "Excluído",
+      "done": "Concluído",
+      "exhausted": "Orçamento esgotado",
+      "open": "Pendente",
+      "paused": "Em pausa",
+      "running": "Em execução",
+      "stopped": "Parado"
+    },
+    "node": {
+      "confirmed": "Confirmado",
+      "observed": "Observado",
+      "tombstoned": "Descartado"
+    },
+    "severity": {
+      "critical": "Crítica",
+      "high": "Alta",
+      "low": "Baixa",
+      "medium": "Média"
+    },
+    "task": {
+      "created": "Criada",
+      "done": "Concluída",
+      "failed": "Falhada",
+      "paused": "Em pausa",
+      "queued": "Em fila",
+      "running": "Em execução",
+      "timeout": "Tempo esgotado"
+    }
+  },
+  "userMenu": {
+    "changePassword": "Alterar senha",
+    "logout": "Sair"
+  },
+  "taskDetail": {
+    "report": {
+      "title": "Relatório de teste de penetração (Markdown)",
+      "copy": "Copiar",
+      "loading": "Carregando…",
+      "loadError": "Não foi possível carregar o relatório. Tente novamente.",
+      "retry": "Tentar novamente",
+      "empty": "Não há relatório",
+      "copySuccess": "Markdown copiado",
+      "copyError": "Erro ao copiar. Selecione o texto manualmente e copie"
+    },
+    "findings": {
+      "columnFinding": "Achado",
+      "sortTime": "Hora de detecção",
+      "orderAsc": "Crescente",
+      "orderDesc": "Decrescente",
+      "sortAria": "Hora de detecção atualmente {order}; clique para alterar a ordem",
+      "unclassified": "Sem classificação",
+      "sourceReadonly": "Origem #{id} · somente leitura",
+      "trafficEvidence": "{count} evidências de tráfego",
+      "viewDetail": "Ver detalhes do achado",
+      "detail": "Detalhes",
+      "evidencePoc": "Evidência / PoC",
+      "markedAs": "Marcado como «{label}»",
+      "updateFailed": "Erro ao atualizar: {message}",
+      "empty": "Não há achados confirmados nesta tarefa nem em tarefas diretamente relacionadas."
+    },
+    "retests": {
+      "loadError": "Não foi possível carregar os achados da tarefa: {error}",
+      "retry": "Tentar novamente",
+      "selectTitle": "Selecionar achado",
+      "selectDesc": "Veja o histórico de reteste dos achados desta tarefa ou inicie um novo reteste.",
+      "selectAria": "Selecionar achado: {name}",
+      "emptyTitle": "Não há achados para retestar",
+      "emptyDesc": "Quando forem detectados achados nesta tarefa, você poderá iniciar um reteste aqui.",
+      "prevPage": "Página anterior de achados",
+      "nextPage": "Próxima página de achados",
+      "pageIndicator": "Página {page} / {total}",
+      "findingDetail": "Detalhes do achado"
+    },
+    "tabs": {
+      "sessions": "Sessões",
+      "overview": "Resumo",
+      "graph": "Caminho de exploração",
+      "broadcast": "Difusão",
+      "findings": "Achados",
+      "retests": "Retestes",
+      "assets": "Ativos de teste",
+      "coverage": "Gráfico de cobertura de ativos",
+      "intercept": "Aprovação de interceptação",
+      "report": "Relatório"
+    },
+    "header": {
+      "notFound": "A tarefa {id} não foi encontrada. É possível que tenha sido excluída, arquivada ou que não exista.",
+      "loading": "Carregando…",
+      "backToList": "Voltar à lista de tarefas"
+    },
+    "control": {
+      "pause": "Pausar",
+      "resume": "Retomar",
+      "completed": "Concluída",
+      "ended": "Finalizada",
+      "paused": "Exploração pausada",
+      "resumed": "Exploração retomada",
+      "failed": "Erro de controle: {message}"
+    },
+    "archive": {
+      "queued": "Tarefa adicionada à fila de arquivamento",
+      "failed": "Erro ao arquivar: {message}",
+      "disabledQueued": "As tarefas na fila devem ser pausadas primeiro",
+      "disabledRunning": "As tarefas em execução devem ser pausadas primeiro",
+      "disabledInherited": "A tarefa não arquivada #{id} herda diretamente esta tarefa; arquive primeiro a tarefa dependente",
+      "triggerAria": "Arquivar tarefa",
+      "dialogTitle": "Arquivar a tarefa #{id}?",
+      "dialogDesc": "O grafo da tarefa, os registros relacionados, os ativos e o tráfego dedicados, os arquivos da tarefa e os registros do LLM serão compactados em armazenamento frio. Quando o arquivamento terminar, você poderá restaurá-la na página «Arquivadas» da lista de tarefas.",
+      "cancel": "Cancelar",
+      "confirm": "Arquivar"
+    },
+    "llm": {
+      "controlAria": "Ver ou alterar a configuração de LLM da tarefa",
+      "exhausted": "Todas as configurações da cadeia se esgotaram",
+      "profileRef": "Configuração #{id}",
+      "followDefault": "Seguir a configuração padrão",
+      "backupCount": "{count} de reserva",
+      "editorDescription": "As alterações na ordem ou na configuração atual são aplicadas a partir da próxima chamada ao LLM.",
+      "editorDescriptionTerminal": "A tarefa já foi finalizada, portanto as alterações afetam apenas as conversas posteriores do agente principal.",
+      "save": "Salvar",
+      "saveReset": "Salvar e redefinir",
+      "saving": "Salvando",
+      "chainTitle": "Cadeia de configuração de LLM da tarefa",
+      "exhaustedTitle": "A cota de toda a cadeia de configuração se esgotou",
+      "exhaustedDesc": "Foi determinado que todas as configurações selecionadas estão sem cota. Salvar a cadeia de configuração redefine o estado de falha.",
+      "close": "Fechar",
+      "updated": "Configuração de LLM atualizada",
+      "updatedWithReopened": "Configuração de LLM atualizada; {count} intenções bloqueadas por excesso de cota foram recuperadas",
+      "updateFailed": "Erro ao atualizar: {message}"
+    },
+    "coverageGraph": {
+      "kind": {
+        "company": "Empresa",
+        "root_domain": "Domínio raiz",
+        "subdomain": "Subdomínio",
+        "ip": "IP",
+        "service": "Serviço",
+        "app": "App",
+        "endpoint": "Endpoint"
+      },
+      "graph": {
+        "moreCount": "mais {count} {kind}",
+        "scopeIn": "No escopo",
+        "tested": "Testado",
+        "loading": "Carregando…",
+        "empty": "Não há ativos no escopo (defina primeiro o escopo da tarefa)",
+        "refresh": "Atualizar",
+        "legendTested": "Testado (destacado)",
+        "legendUntested": "Não testado",
+        "legendOutOfScope": "Fora do escopo",
+        "hint": "Layout dirigido por forças. Arraste os nós e use a roda para aplicar zoom. O «⋯» cinza indica nós recolhidos; clique para expandi-los."
+      },
+      "sheet": {
+        "attributes": "Atributos",
+        "attrType": "Tipo",
+        "attrTestState": "Estado de teste",
+        "tested": "Testado",
+        "untested": "Não testado",
+        "outOfScope": "Fora do escopo (nó vinculado)",
+        "attrDomain": "Domínio",
+        "attrRootDomain": "Domínio raiz",
+        "attrPort": "Porta",
+        "attrTitle": "Título",
+        "attrStatusCode": "Código de status",
+        "attrApp": "App",
+        "attrAssetId": "ID do ativo",
+        "refIntents": "Intenções relacionadas",
+        "refFacts": "Fatos relacionados",
+        "refFindings": "Achados relacionados",
+        "rawData": "Dados brutos",
+        "refSource": "Origem #{id} · somente leitura",
+        "foldTitle": "{kind} ocultos ({count})",
+        "foldHint": "Os itens testados são exibidos primeiro. Clique em «Ver mais» para carregar o próximo lote no gráfico.",
+        "showMore": "Ver mais (+{step})"
+      }
+    },
+    "assetsTab": {
+      "title": "Ativos de teste",
+      "totalAll": "{count} ativos vinculados à tarefa atual",
+      "add": "Adicionar ativo de teste",
+      "empty": "Não há ativos de teste nesta categoria",
+      "loadError": "Não foi possível carregar os ativos da tarefa: {message}",
+      "kind": {
+        "root_domain": "Domínio raiz",
+        "ip": "IP",
+        "subdomain": "Subdomínio",
+        "app": "App",
+        "service": "Serviço",
+        "endpoint": "Endpoint"
+      },
+      "col": {
+        "domain": "Domínio",
+        "icp": "Registro ICP",
+        "source": "Origem",
+        "action": "Ação",
+        "cSegment": "Segmento C",
+        "boundDomains": "Domínios vinculados",
+        "openPorts": "Portas abertas",
+        "rootDomain": "Domínio raiz",
+        "recordType": "Tipo de registro",
+        "recordValue": "Valor do registro",
+        "app": "App",
+        "address": "Endereço",
+        "category": "Categoria",
+        "title": "Título",
+        "fingerprint": "Fingerprint",
+        "addressService": "Endereço / serviço",
+        "statusCode": "Código de status",
+        "responseLength": "Tamanho da resposta",
+        "auth": "Autenticação",
+        "method": "Método",
+        "fullAddress": "Endereço completo",
+        "params": "Parâmetros"
+      },
+      "source": {
+        "label": {
+          "agent": "Detecção do agente",
+          "anchor": "Âncora de quadro",
+          "api": "API de ativos",
+          "company": "Associação de empresa",
+          "legacy": "Associação legada",
+          "manual": "Adição manual",
+          "system": "Associação do sistema",
+          "task": "Inicialização da tarefa"
+        },
+        "node": "Nó de origem #{id}",
+        "legacySummary": "Migrado de um vínculo de ativos de tarefa legado, portanto não há uma descrição detalhada da origem"
+      },
+      "remove": {
+        "aria": "Remover o ativo {label} da tarefa",
+        "title": "Remover da tarefa",
+        "confirmTitle": "Remover da tarefa atual?",
+        "confirmBody": "Remove «{label}» dos ativos de teste da tarefa atual.",
+        "keep": "Os ativos globais, o tráfego vinculado e as âncoras de quadro anteriores são mantidos.",
+        "cancel": "Cancelar",
+        "removing": "Removendo",
+        "confirm": "Confirmar remoção",
+        "success": "{label} foi removido da tarefa atual",
+        "error": "Erro ao remover: {message}"
+      },
+      "addSheet": {
+        "title": "Adicionar ativo de teste",
+        "description": "Insira o escopo de teste diretamente. Os domínios e os IPs criam ou reutilizam ativos globais; CIDR, ICP e palavras-chave são usados como contexto de escopo do agente.",
+        "editorLabel": "Ativos de teste e escopo",
+        "editorDescription": "Insira um por linha; os domínios, IPs, CIDR, registros ICP e palavras-chave são reconhecidos automaticamente.",
+        "cancel": "Cancelar",
+        "submitN": "Registrar {count}",
+        "submit": "Registrar",
+        "success": "{requested} entradas de escopo registradas, {assetSummary} ativos de domínio/IP vinculados",
+        "error": "Erro ao adicionar: {message}"
+      }
+    },
+    "broadcastTab": {
+      "kind": {
+        "begin": "Ponto de início",
+        "task": "Tarefa raiz",
+        "goal": "Objetivo",
+        "intent": "Intenção",
+        "fact": "Fato",
+        "finding": "Achado",
+        "hint": "Dica",
+        "digest": "Resumo"
+      },
+      "rel": {
+        "spawns": "Gera",
+        "derived_from": "Cadeia de intenções",
+        "yields": "Produz",
+        "proves": "Prova",
+        "covers": "Resume"
+      },
+      "state": {
+        "fact": {
+          "origin": "Origem",
+          "confirmed": "Confirmado",
+          "dismissed": "Refutado"
+        },
+        "finding": {
+          "confirmed": "Confirmado",
+          "dismissed": "Descartado"
+        },
+        "hint": {
+          "active": "Pendente de adoção",
+          "consumed": "Adotada"
+        },
+        "digest": {
+          "active": "Ativo",
+          "superseded": "Substituído"
+        }
+      },
+      "assetType": {
+        "app": "App",
+        "endpoint": "Endpoint",
+        "ip": "IP",
+        "root_domain": "Domínio raiz",
+        "service": "Serviço",
+        "subdomain": "Subdomínio"
+      },
+      "relTime": {
+        "now": "Agora mesmo",
+        "minutes": "há {count} min",
+        "hours": "há {count} h",
+        "days": "há {count} dias"
+      },
+      "node": "Nó",
+      "nodeRef": "Nó #{id}",
+      "fieldType": "Tipo {label}",
+      "fieldSource": "Origem {origin}",
+      "noSummary": "(sem resumo)",
+      "noPayload": "(sem payload)",
+      "assets": "Ativos relacionados · {count}",
+      "deleteReason": "Motivo da exclusão",
+      "upstream": "Ascendentes · origem deste nó",
+      "downstream": "Descendentes · derivados deste nó",
+      "fresh": "Novo",
+      "unknownDay": "Data desconhecida",
+      "emptyFiltered": "Não há difusões que correspondam ao filtro.",
+      "emptyNoNodes": "Esta tarefa ainda não gerou nós de exploração.",
+      "pending": "{count} difusões novas · ir para o mais recente",
+      "toolbar": {
+        "searchPlaceholder": "Buscar conteúdo / origem / id do nó",
+        "searchAria": "Buscar difusões",
+        "clear": "Limpar",
+        "orderDescAria": "Atualmente do mais recente ao mais antigo; clique para inverter",
+        "orderAscAria": "Atualmente do mais antigo ao mais recente; clique para inverter",
+        "newest": "Mais recente",
+        "oldest": "Mais antigo",
+        "pauseAria": "Pausar atualização automática",
+        "resumeAria": "Retomar atualização automática",
+        "live": "Atualização automática",
+        "paused": "Em pausa"
+      }
+    },
+    "overviewTab": {
+      "add": "Adicionar",
+      "addFailed": "Erro ao adicionar",
+      "saveFailed": "Erro ao salvar",
+      "desc": {
+        "title": "Descrição e objetivos da tarefa",
+        "descLabel": "Descrição",
+        "goalLabel": "Objetivo"
+      },
+      "goals": {
+        "title": "Gerenciamento de objetivos",
+        "hint": "(Objetivos verificáveis finais, {count} no total · adicionar ou editar notifica o planner e retoma a tarefa)",
+        "addPlaceholder": "Adicionar um objetivo, por exemplo «Obter acesso com elevação de privilégios a uma conta de administrador»",
+        "vulnPlaceholder": "Tipo de achado (opcional)",
+        "empty": "Não há objetivos. Ao adicioná-los, o planner os usa para atribuir intenções de exploração e determinar se foram cumpridos."
+      },
+      "constraints": {
+        "title": "Restrições de ação",
+        "hint": "(Define os limites de exploração do planner/worker. {count} no total · as alterações se aplicam a partir do próximo ciclo de planejamento)",
+        "deny": "Negar",
+        "allow": "Permitir",
+        "addPlaceholder": "Uma restrição de ação, por exemplo «Testar apenas a porta atual e não escanear outras portas»",
+        "empty": "Não há restrições de ação. Elas são extraídas automaticamente da descrição e dos objetivos ao criar a tarefa, e você também pode adicioná-las, editá-las ou excluí-las aqui para definir quais ações permitir ou negar."
+      },
+      "coverage": {
+        "title": "Cobertura de testes de ativos",
+        "rough": "(Estimativa aproximada, apenas como referência)",
+        "testedOf": "Testados {tested} / no escopo {total}"
+      },
+      "tokens": {
+        "title": "Uso de tokens do LLM",
+        "hint": "(Por modelo{calls, plural, =0 {} other { · # chamadas no total}})",
+        "input": "Entrada",
+        "output": "Saída",
+        "cacheRead": "Leitura de cache",
+        "cacheHitRate": "Taxa de acertos de cache",
+        "colModel": "Modelo",
+        "colCalls": "Chamadas",
+        "colHitRate": "Taxa de acertos",
+        "empty": "Não há uso do LLM (a tarefa ainda não realizou chamadas ou os registros estão sendo gravados)."
+      },
+      "scope": {
+        "title": "Escopo de teste",
+        "hint": "(Denominador de cobertura + limite autorizado, {count} no total)",
+        "kind": {
+          "company": "Empresa",
+          "root_domain": "Domínio raiz",
+          "subdomain": "Subdomínio",
+          "ip": "IP",
+          "cidr": "Faixa",
+          "icp": "ICP",
+          "keyword": "Palavra-chave"
+        },
+        "source": {
+          "auto": "Automático",
+          "agent": "Agente",
+          "manual": "Manual"
+        },
+        "placeholder": {
+          "company": "Nome da empresa ou id",
+          "ipCidr": "por exemplo 10.0.0.1 ou 10.0.0.0/24",
+          "icp": "por exemplo número de registro ICP",
+          "keyword": "por exemplo palavra-chave do nome da empresa",
+          "domain": "por exemplo example.com"
+        },
+        "companyFallback": "Empresa #{id}",
+        "inherited": "Herdado",
+        "empty": "Não há escopo de teste. Ao adicioná-lo, ele pode ser usado como denominador da cobertura de ativos."
+      },
+      "heartbeat": {
+        "title": "Heartbeat",
+        "engineState": "Estado do motor",
+        "runningWorker": "Worker em execução",
+        "lastActivity": "Última atividade",
+        "goals": "Objetivos {met}/{total}",
+        "completedAt": "Hora de conclusão"
+      },
+      "running": {
+        "title": "Intenções em andamento",
+        "empty": "Não há intenções em andamento"
+      },
+      "attention": {
+        "title": "Requer atenção",
+        "confirmedVuln": "Achados confirmados",
+        "executing": "Em execução",
+        "frontierPending": "Frontier pendente",
+        "blockedIntent": "Intenções bloqueadas"
+      },
+      "recent": {
+        "title": "Achados recentes",
+        "empty": "Não há achados"
+      },
+      "blocked": {
+        "title": "Intenções bloqueadas ou com erro",
+        "hint": "({count} no total · podem ser reexecutadas)",
+        "rerunAll": "Reexecutar tudo",
+        "rerun": "Reexecutar",
+        "truncated": "Mostrando apenas as primeiras 20. Clique em «Reexecutar tudo» para processar as {rest} restantes."
+      },
+      "stat": {
+        "pending": "Intenções pendentes",
+        "pendingSub": "Frontier aberto",
+        "confirmed": "Achados confirmados",
+        "confirmedSub": "Tarefa atual",
+        "total": "Total de intenções",
+        "totalSub": "Todas as intenções da tarefa atual"
+      },
+      "rule": {
+        "title": "Interceptação / permissão de ativos por tarefa",
+        "hint": "(Aplica-se apenas à tarefa atual, não de forma global. Primeiro a interceptação e depois a permissão · {count} no total)",
+        "block": "Interceptar",
+        "allow": "Permitir",
+        "notePlaceholder": "Nota (opcional)",
+        "empty": "Não há regras por tarefa. Uma correspondência com «Interceptar» proíbe o teste; «Permitir» é uma lista branca. Se configurada, a tarefa atual só testa os ativos que correspondem a uma regra de permissão (se não for configurada, nenhuma lista branca é aplicada).",
+        "kind": {
+          "exact_domain": "Domínio (correspondência exata)",
+          "exact_ip": "IP (correspondência exata)",
+          "exact_url": "URL (correspondência exata)",
+          "fuzzy_domain": "Domínio (correspondência parcial)",
+          "fuzzy_ip": "IP (correspondência parcial)",
+          "fuzzy_url": "URL (correspondência parcial)",
+          "cidr": "Faixa CIDR"
+        }
+      }
+    }
+  },
+  "retest": {
+    "panel": {
+      "title": "Reteste de achados",
+      "desc": "Verifica o estado atual em uma sessão independente; cada reteste conserva sua conclusão e sua evidência.",
+      "viewRunning": "Ver sessão de reteste em andamento",
+      "start": "Iniciar reteste",
+      "loadError": "Não foi possível carregar o histórico de retestes: {error}",
+      "retry": "Tentar novamente",
+      "emptyTitle": "Não há histórico de retestes",
+      "emptyDesc": "Após implantar uma correção, inicie um reteste para comparar a evidência antes e depois.",
+      "viewSession": "Ver sessão",
+      "sessionDeleted": "Sessão excluída",
+      "notes": "Notas adicionais: {notes}",
+      "evidence": "Evidência de reteste",
+      "status": {
+        "pending": "Pendente de início",
+        "running": "Retestando",
+        "completed": "Concluída",
+        "failed": "Reteste com falha",
+        "stopped": "Parada"
+      },
+      "verdict": {
+        "reproduced": "Reproduzido",
+        "fixed": "Corrigido",
+        "inconclusive": "Não conclusivo"
+      }
+    },
+    "dialog": {
+      "startedNew": "Reteste iniciado. Clique em «Retestando» para ver a sessão",
+      "alreadyRunning": "Este achado já está sendo retestado. Consulte a sessão existente",
+      "startFailed": "Não foi possível iniciar o reteste: {message}",
+      "title": "Reteste do achado #{id}",
+      "desc": "O agente de reteste lê a evidência original e as restrições de teste, e realiza uma verificação dirigida em uma sessão independente. Se o reteste finalizar corretamente e a correção for confirmada, o estado do achado muda automaticamente para «Corrigido»; qualquer outra conclusão conserva o estado existente.",
+      "notesLabel": "Notas adicionais (opcional)",
+      "notesPlaceholder": "por exemplo Verifique o endpoint original com a conta de teste original. A versão corrigida é a v2.",
+      "notesDesc": "Você pode adicionar a versão da correção, as condições de teste ou as restrições desta execução.",
+      "cancel": "Cancelar",
+      "submit": "Iniciar reteste",
+      "submitting": "Criando…"
+    }
+  },
+  "llmChain": {
+    "current": "Atual",
+    "skippedTitle": "Os perfis anteriores ao cursor atual não são escolhidos como destinos de failover automático",
+    "skipped": "Omitido",
+    "backup": "Reserva {n}",
+    "profileRef": "Perfil #{id}",
+    "searchPlaceholder": "Busque um perfil de LLM para adicionar",
+    "noProfiles": "Não há perfis de LLM disponíveis",
+    "noMatch": "Não há perfis de LLM correspondentes",
+    "activeSuffix": "(ativo)",
+    "emptyHint": "Se nenhum perfil for especificado, a tarefa segue o perfil ativo do agente ou o global.",
+    "unavailable": "Perfil não disponível",
+    "moveUp": "Mover o perfil para cima",
+    "moveDown": "Mover o perfil para baixo",
+    "remove": "Remover perfil",
+    "currentProfile": "Perfil atual"
+  },
+  "sideQuestion": {
+    "button": "Pergunta à parte",
+    "buttonTitle": "/btw Pergunta à parte",
+    "title": "Pergunta à parte",
+    "panelLabel": "Painel de perguntas à parte",
+    "clearHistory": "Limpar o histórico de perguntas à parte",
+    "closePanel": "Fechar o painel de perguntas à parte",
+    "contextUpdatedAt": "Contexto atualizado: {time}",
+    "firstRunHint": "Você pode perguntar assim que o agente principal tiver sido executado pela primeira vez",
+    "loadEarlier": "Carregar perguntas à parte anteriores",
+    "emptyTitle": "Pergunte quando quiser",
+    "emptyDesc": "As respostas se baseiam no contexto do agente atual, enquanto a tarefa principal continua em execução.",
+    "recentExchanges": "As {count} perguntas e respostas mais recentes, na íntegra",
+    "historySummarized": "Inclui um resumo das perguntas e respostas anteriores",
+    "snapshotSummarized": "Usando um resumo do contexto principal",
+    "contextTime": "Contexto {time}",
+    "questionAria": "Entrada de pergunta à parte",
+    "askPlaceholder": "Pergunte sobre o contexto atual…",
+    "independentNote": "Perguntas e respostas independentes · sem execução de ferramentas",
+    "stopAnswer": "Parar a resposta à pergunta à parte",
+    "sendQuestion": "Enviar pergunta à parte",
+    "clearConfirmTitle": "Limpar o histórico de perguntas à parte?",
+    "clearConfirmDesc": "Isto exclui as perguntas e respostas à parte do agente atual e interrompe qualquer resposta em geração. A conversa principal e o instantâneo de contexto são preservados.",
+    "cancel": "Cancelar",
+    "clearConfirm": "Limpar histórico",
+    "drawerDesc": "Perguntas e respostas independentes de {label}",
+    "parseError": "Não foi possível interpretar os dados da pergunta à parte. Reabra o painel.",
+    "status": {
+      "running": "Respondendo",
+      "completed": "Concluída",
+      "failed": "Falhada",
+      "cancelled": "Interrompida",
+      "interrupted": "Interrompida"
+    },
+    "phase": {
+      "preparing": "Preparando o contexto…",
+      "summarizing_history": "Resumindo as perguntas e respostas à parte anteriores…",
+      "compressing_snapshot": "Comprimindo a cópia do contexto da pergunta à parte…",
+      "retrying": "O limite de contexto do modelo foi ultrapassado; tentando novamente após recortá-lo…",
+      "answering": "Respondendo…"
+    }
+  },
+  "approval": {
+    "title": {
+      "task": "Aprovação de interceptação",
+      "history": "Histórico de aprovações"
+    },
+    "refresh": "Atualizar",
+    "intro": "Expanda um registro para ver a solicitação da ferramenta, o veredito de aprovação e o contexto e o resultado de execução daquele momento.",
+    "pendingBadge": "{count} pendentes de aprovação",
+    "loadError": "Não foi possível carregar",
+    "recordLoadError": "Não foi possível carregar os registros: {error}. Clique em Atualizar para tentar novamente.",
+    "pendingLoadError": "Não foi possível carregar a lista de aprovações pendentes: {error}. Clique em Atualizar para tentar novamente.",
+    "filter": {
+      "label": "Filtro do histórico de aprovações",
+      "status": "Status de aprovação",
+      "source": "Origem do veredito",
+      "clear": "Limpar filtros",
+      "statusAll": "Todos os status",
+      "sourceAll": "Todas as origens"
+    },
+    "status": {
+      "pending": "Pendente",
+      "allowed": "Permitido",
+      "denied": "Negado",
+      "timeout": "Tempo esgotado"
+    },
+    "sourceOption": {
+      "model": "Veredito do modelo",
+      "rule": "Veredito de regra",
+      "unknown": "Origem desconhecida"
+    },
+    "pendingSection": "Pendentes de ação ({count})",
+    "pendingHint": "Expanda e então permita ou negue",
+    "pendingTableLabel": "Aprovações pendentes de ação",
+    "filteredResults": "Resultados filtrados",
+    "allRecords": "Todos os registros",
+    "emptyFiltered": "Nenhum registro de aprovação corresponde aos filtros",
+    "emptyTitle": "Ainda não há registros de aprovação",
+    "emptyFilteredDesc": "Altere o status de aprovação ou a origem do veredito, ou limpe os filtros para ver todos os registros.",
+    "emptyDesc": "Quando uma regra ou o modelo toma uma decisão de aprovação, o registro aparece aqui.",
+    "historyTableLabel": "Lista do histórico de aprovações",
+    "table": {
+      "expandDetail": "Expandir detalhes",
+      "tool": "Ferramenta",
+      "source": "Origem",
+      "matchRule": "Regra correspondente",
+      "params": "Parâmetros",
+      "status": "Status"
+    },
+    "row": {
+      "toggleAria": "Aprovação #{id} {action}"
+    },
+    "collapse": "Recolher",
+    "expand": "Expandir",
+    "detailAria": "Detalhes da aprovação #{id}",
+    "conversationRef": "Conversa #{id}",
+    "taskRef": "Tarefa {id}",
+    "ruleRef": "Regra #{id}",
+    "locateSourceAria": "Ir para a origem da aprovação #{id}: {label}",
+    "locateFailed": "Não é possível ir para essa execução",
+    "modelDecision": "Veredito do modelo",
+    "ruleMissing": "A regra não foi registrada ou foi excluída",
+    "noReason": "Nenhum motivo foi registrado",
+    "copied": "Copiado",
+    "copyFailed": "Não foi possível copiar. Selecione o conteúdo manualmente para copiá-lo",
+    "copyAria": "Copiar {label}",
+    "notRecorded": "Não registrado",
+    "truncatedNote": "O conteúdo foi truncado. O acima é a parte salva.",
+    "allow": "Permitir",
+    "deny": "Negar",
+    "allowedExecution": "Execução permitida",
+    "deniedExecution": "Execução negada",
+    "detailLoadFailed": "Não foi possível carregar os detalhes",
+    "detailLoadFailedWith": "Não foi possível carregar os detalhes: {error}",
+    "retryDetail": "Tentar detalhes novamente",
+    "noDetailSnapshot": "Este registro não salvou um instantâneo detalhado da aprovação, portanto não é possível restaurar o contexto, o veredito inicial do modelo nem a saída de execução daquele momento.",
+    "collapseContext": "Recolher contexto",
+    "viewContextAndResult": "Ver contexto e resultado de execução",
+    "digestOnlyNote": "Este registro armazena apenas a impressão digital da entrada de revisão, não a entrada original, portanto não é possível restaurar o contexto enviado ao modelo naquele momento. Isso não significa que não houvesse contexto durante a revisão; os vereditos do modelo gerados a partir de agora conservam um instantâneo da entrada.",
+    "noModelInputNote": "Este registro não salvou nenhuma entrada de revisão do modelo. Pode ser que uma regra tenha decidido diretamente, que tenha ocorrido um erro antes de chamar o modelo ou que o registro tenha sido criado com uma versão anterior.",
+    "viewAuditFragmentNotSent": "Ver fragmento de auditoria da conversa (não enviado ao modelo)",
+    "viewAuditFragment": "Ver fragmento de auditoria da conversa",
+    "auditCurrentTurn": "Entrada do turno atual da conversa (fragmento de auditoria)",
+    "visibleContext": "Contexto de conversa visível",
+    "savedContextNote": "Uma parte do registro de conversa salvo às {time}. Para ver o que o modelo realmente usou, consulte a entrada de revisão do modelo.",
+    "contextTruncated": "Apenas o contexto recente é conservado e parte do conteúdo foi truncada.",
+    "errorTag": "Erro",
+    "noRelatedContext": "Nenhum contexto vinculável foi registrado",
+    "executionOutput": "Saída de execução",
+    "toolNotExecuted": "A ferramenta não foi executada.",
+    "noOutputYet": "Ainda não há saída de execução",
+    "ambiguousCorrelation": "Há chamadas simultâneas com os mesmos parâmetros, portanto a chamada à ferramenta não pode ser correlacionada de forma única. Este registro não mostra um resultado de execução estimado.",
+    "noUniqueToolId": "Nenhum ID de chamada de ferramenta que permita uma correlação única foi registrado.",
+    "toolCallId": "ID de chamada de ferramenta",
+    "inputDigest": "SHA-256 do resumo de parâmetros",
+    "configDigest": "SHA-256 da impressão digital de configuração de revisão",
+    "modelInputDigest": "SHA-256 da entrada de revisão do modelo",
+    "resultRecordedAt": "Resultado registrado às",
+    "toolRequest": "{agent} · Solicitação de ferramenta",
+    "agentFallback": "Agente",
+    "viewCommand": "Ver conteúdo do comando",
+    "commandContent": "Conteúdo do comando",
+    "executionResult": "Resultado de execução",
+    "loading": "Carregando…",
+    "reviewStatus": "Status de revisão",
+    "approvalVerdict": "Veredito de aprovação",
+    "noApprovalReason": "Nenhum motivo de aprovação foi registrado",
+    "finalAction": "Ação final",
+    "sourceLabel": "Origem",
+    "requestedAt": "Solicitado às",
+    "decidedAt": "Decidido às",
+    "ruleSnapshot": "Instantâneo da regra",
+    "approvalModelProfile": "Perfil do modelo de aprovação",
+    "modelInitial": "Veredito inicial do modelo",
+    "ruleInitial": "Veredito inicial da regra",
+    "modelFallback": "Fallback por erro do modelo",
+    "action": {
+      "allow": "Permitir",
+      "ask": "Perguntar",
+      "deny": "Negar"
+    },
+    "execution": {
+      "not_started": "Ainda não iniciado",
+      "not_executed": "Não executado",
+      "awaiting_result": "Permitido, aguardando o resultado de execução",
+      "succeeded": "Execução bem-sucedida",
+      "failed": "Execução com falha",
+      "unknown": "Resultado de execução desconhecido",
+      "notCorrelated": "Não foi possível correlacionar o resultado de execução"
+    },
+    "context": {
+      "user": "Mensagem do usuário",
+      "assistant": "Mensagem do agente",
+      "text": "Mensagem do agente",
+      "tool_use": "Solicitação de ferramenta",
+      "tool_result": "Saída de ferramenta"
+    },
+    "review": {
+      "context": "Contexto de revisão do modelo",
+      "snapshotNote": "A seguir, é mostrado um instantâneo da entrada realmente enviada ao modelo de revisão desta vez. O contexto serve apenas para entender a ação atual; a base do veredito é a política de revisão.",
+      "legacyInput": "Este registro usa uma entrada de versão anterior e conserva exatamente o que foi enviado naquele momento.",
+      "currentCall": "Chamada atual pendente de revisão",
+      "bgUser": "Contexto · Mensagem do usuário",
+      "bgWorkerLegacy": "Contexto · Resumo de intenção do Worker (versão anterior)",
+      "bgUserNote": "Obtido da mensagem atual do usuário.",
+      "bgWorkerNote": "O resumo de intenção do Worker que as versões anteriores enviavam. A revisão do Worker da nova versão não envia mais este conteúdo.",
+      "noBg": "Não há mensagens de contexto para esta revisão.",
+      "turnInputLegacy": "Entrada do turno atual (versão anterior)",
+      "taskDescLegacy": "Descrição da tarefa (versão anterior)",
+      "taskGoalLegacy": "Objetivo da tarefa (versão anterior)",
+      "taskConstraintsLegacy": "Restrições da tarefa (versão anterior)",
+      "workerIntentLegacy": "Intenção do Worker (versão anterior)",
+      "workingDir": "Diretório de trabalho",
+      "noHistory": "Para esta revisão não foram enviadas chamadas anteriores nem resultados de execução.",
+      "historyTitleLegacy": "Chamadas anteriores fornecidas ao modelo naquele momento (versão anterior)",
+      "histSucceeded": "Bem-sucedido",
+      "histFailed": "Falhou (pode haver alguns efeitos colaterais)",
+      "histArgs": "Parâmetros da chamada anterior",
+      "histResult": "Resultado da execução anterior",
+      "noPairable": "Desta vez não há registros de execução de ferramentas anteriores que possam ser emparelhados.",
+      "histTruncated": "Dos registros anteriores apenas um intervalo limitado é conservado e parte do conteúdo foi truncada.",
+      "viewFullJson": "Ver o JSON completo da entrada de revisão do modelo",
+      "modelInput": "Entrada de revisão do modelo"
+    }
+  },
+  "agentEditor": {
+    "tab": {
+      "prompt": "Configuração e prompt",
+      "wrapup": "Prompt de encerramento",
+      "triggers": "Disparadores"
+    },
+    "notFound": "Agente não encontrado: {key}",
+    "llm": {
+      "label": "Modelo padrão (configuração de LLM)",
+      "follow": "Seguir a configuração ativa de tarefa / global",
+      "defaultSuffix": " · padrão",
+      "hint": "Vincula uma configuração de LLM fixa a este agente (aplica-se apenas após clicar em \"Salvar configuração\"). Prioridade: vinculação de agente > ajuste de tarefa/sessão > ativo global."
+    },
+    "config": {
+      "maxTurns": "Máximo de turnos (0 = sem limite)",
+      "runSeconds": "Tempo de execução (segundos, 0 = sem limite)",
+      "save": "Salvar configuração"
+    },
+    "webSearch": {
+      "label": "Busca na web",
+      "onHint": "Quando ativado para este agente (aplica-se após clicar em Salvar acima), pode usar web_search para buscar na Internet",
+      "offHint": "Primeiro você deve ativar a busca na web e configurar o backend em \"Configuração do sistema\" para poder ativá-la aqui"
+    },
+    "shell": {
+      "label": "Shell interativo",
+      "hint": "Quando ativado para este agente (aplica-se após clicar em Salvar acima), pode operar programas interativos como msfconsole/ssh/REPL por meio de ferramentas de sessão PTY persistente (shell_open/send/read/close/list)"
+    },
+    "prompt": {
+      "varsLabel": "Variáveis (clique para inserir um marcador, que é substituído por dados de tempo de execução na renderização)",
+      "example": "Exemplo: {example}",
+      "noVars": "(sem variáveis)",
+      "placeholder": "Deixe em branco para usar o prompt padrão integrado",
+      "previewBtn": "Pré-visualizar a renderização",
+      "saveVersion": "Salvar como nova versão",
+      "resetDefault": "Restaurar padrão"
+    },
+    "preview": {
+      "title": "Pré-visualização da renderização",
+      "descPrefix": "Todas as",
+      "descSuffix": "foram substituídas pelo backend por valores de exemplo.",
+      "renderError": "Erro de renderização: {error}",
+      "failed": "A pré-visualização falhou: {error}"
+    },
+    "version": {
+      "historyLabel": "Histórico de versões",
+      "current": "Atual",
+      "none": "(ainda não há versões salvas; é usado o valor padrão integrado)",
+      "noNote": "(sem nota)",
+      "empty": "(vazio)",
+      "compareCurrent": "Comparar com a versão atual",
+      "loadToEditor": "Carregar no editor"
+    },
+    "diff": {
+      "title": "Comparação de versões: v{from} → v{to} (atual)",
+      "removed": "- Removido",
+      "added": "+ Adicionado"
+    },
+    "wrapup": {
+      "desc": "Quando este agente é finalizado por <b>tempo limite esgotado</b> ou <b>esgotamento de passos</b>, o sistema injeta este \"prompt de encerramento\" e executa uma rodada final. Primeiro registra novamente o que identificou mas não chegou a salvar e depois gera um resumo de uma frase (para evitar deixar coisas sem terminar). Deixe em branco para usar o valor padrão integrado.",
+      "bodyLabel": "Corpo do prompt de encerramento",
+      "custom": "Personalizado",
+      "useDefault": "Usar padrão integrado",
+      "placeholder": "Deixe em branco para usar o prompt de encerramento padrão integrado",
+      "turnsLabel": "Rodadas de encerramento (quantas rodadas a fase de encerramento executa por conta própria no máximo; 0 = padrão integrado de {default} rodadas)",
+      "save": "Salvar",
+      "resetDefault": "Restaurar padrão",
+      "defaultLabel": "Padrão integrado (somente leitura, para referência)"
+    },
+    "taskTimeout": {
+      "desc": "<b>Encerramento por tempo limite da tarefa</b> (um <b>conjunto independente</b> do encerramento por execução anterior): é injetado quando a <b>tarefa completa</b> atinge seu limite de tempo e está prestes a terminar. Sua intenção costuma ser oposta à do por execução. Por exemplo, no por execução um planner diz \"não pare, continue planejando\", mas ao esgotar o tempo da tarefa diz \"pare a tempo e emita um veredito final\". Deixe em branco para usar o valor padrão integrado.",
+      "bodyLabel": "Corpo do prompt de encerramento por tempo limite da tarefa",
+      "placeholder": "Deixe em branco para usar o prompt de encerramento por tempo limite da tarefa padrão integrado",
+      "turnsLabel": "Rodadas de encerramento (0 = padrão integrado de {default} rodadas)"
+    },
+    "toast": {
+      "savedVersion": "Salvo como versão v{version}",
+      "saveFailed": "Erro ao salvar: {error}",
+      "resetToDefaultVersion": "Restaurado ao valor padrão integrado (v{version})",
+      "resetToDefault": "Restaurado ao valor padrão integrado",
+      "resetFailed": "Erro ao restaurar: {error}",
+      "wrapupSaved": "Configuração de encerramento salva (aplica-se a partir da próxima execução)",
+      "wrapupCleared": "Esvaziado; é usado o valor padrão integrado",
+      "taskTimeoutWrapupSaved": "Configuração de encerramento por tempo limite da tarefa salva (aplica-se a partir da próxima execução)",
+      "configSaved": "Configuração de execução salva (aplicada imediatamente)",
+      "mcpVisOn": "Visualização de MCP \"{name}\" ativada",
+      "mcpVisOff": "Visualização de MCP \"{name}\" desativada",
+      "skillVisOn": "Visualização de Skill \"{name}\" ativada",
+      "skillVisOff": "Visualização de Skill \"{name}\" desativada",
+      "toolBound": "Ferramenta \"{key}\" vinculada",
+      "toolUnbound": "Ferramenta \"{key}\" desvinculada",
+      "toolBindFailed": "Erro ao salvar a vinculação da ferramenta: {error}",
+      "loadedToEditor": "v{version} carregada no editor. Revise-a e depois clique em \"Salvar como nova versão\""
+    },
+    "mcp": {
+      "desc": "Selecione os servidores MCP que serão exibidos para este agente.",
+      "none": "(sem MCP)"
+    },
+    "skill": {
+      "desc": "Selecione os Skills que serão exibidos para este agente.",
+      "none": "(sem Skills)"
+    },
+    "tools": {
+      "desc": "Selecione as ferramentas integradas que serão vinculadas a este agente.",
+      "trafficBadge": "Tráfego",
+      "disabledBadge": "Desativada",
+      "needCapture": "A captura de tráfego deve ser ativada",
+      "none": "(sem ferramentas)"
+    },
+    "triggers": {
+      "desc": "Os disparadores executam este agente personalizado automaticamente. Cada vez que um é acionado, <b>cria e executa uma nova sessão</b> (visível na página \"Conversas\"). Você pode selecionar várias condições de acionamento, e o sistema adiciona automaticamente \"o motivo deste acionamento + a tarefa/vulnerabilidade/objetivo relacionados\" depois da mensagem base que você escreveu.",
+      "policyLabel": "Política de gestão após o acionamento (determina como os disparadores são enfileirados, mesclados e executados)",
+      "runMode": "Modo de execução",
+      "serial": "Em série (enfileirado, um de cada vez)",
+      "parallel": "Em paralelo (sessões concorrentes independentes)",
+      "mergeMode": "Modo de mesclagem",
+      "mergeByTask": "Mesclar por tarefa",
+      "mergeAll": "Mesclar tudo em um",
+      "mergeNone": "Sem mesclagem",
+      "maxParallel": "Máximo de execuções concorrentes (0 = sem limite)",
+      "policyParallel": "Em paralelo: cada acionamento abre imediatamente sua própria sessão e é executado de forma concorrente, sem mesclagem. Os acionamentos que superarem o máximo de execuções concorrentes aguardam na fila até haver um espaço livre.",
+      "policyByTask": "Em série, mesclagem por tarefa: o mesmo agente é executado um de cada vez, e os disparadores de eventos da mesma tarefa são mesclados em uma única sessão na fila.",
+      "policyAll": "Em série, mesclar tudo: o mesmo agente é executado um de cada vez, e ao retirar da fila, todos os disparadores em espera são mesclados em uma única sessão.",
+      "policyNone": "Em série, sem mesclagem: o mesmo agente é executado um de cada vez, e cada disparador abre sua própria sessão.",
+      "editTitle": "Editar disparador #{id} (após editar, clique em \"Salvar alterações\")",
+      "addTitle": "Adicionar disparador (você pode escrever uma mensagem de usuário diferente para cada condição)",
+      "onInterval": "Disparador periódico",
+      "every": "A cada",
+      "seconds": "segundos",
+      "intervalPlaceholder": "Mensagem que será enviada ao agente em um acionamento periódico, p. ex.: revisar todas as tarefas",
+      "onFinding": "Disparar ao detectar uma vulnerabilidade",
+      "findingPlaceholder": "Mensagem que será enviada ao agente quando uma vulnerabilidade for detectada (o sistema anexa a tarefa e os detalhes da vulnerabilidade)",
+      "onGoalMet": "Disparar ao atingir o objetivo",
+      "goalPlaceholder": "Mensagem que será enviada ao agente quando um objetivo for atingido (o sistema anexa a tarefa e o objetivo atingido)",
+      "onTaskTimeout": "Disparar ao esgotar o tempo da tarefa",
+      "taskTimeoutPlaceholder": "Mensagem que será enviada ao agente quando o tempo da tarefa se esgotar (o sistema anexa o número da tarefa e o objetivo)",
+      "onToolCall": "Disparar em uma chamada de ferramenta",
+      "toolSelectHint": "Selecione as ferramentas que deseja monitorar (ao menos uma). Durante a execução da tarefa, dispara cada vez que essas ferramentas <b>terminam uma chamada</b>. {count} selecionadas.",
+      "toolListEmpty": "(a lista de ferramentas está vazia)",
+      "toolCallPlaceholder": "Mensagem que será enviada ao agente quando uma ferramenta for chamada (o sistema anexa as informações da tarefa, os argumentos de entrada da ferramenta e o valor retornado)",
+      "onTaskCreate": "Disparar ao criar uma tarefa",
+      "taskCreatePlaceholder": "Mensagem que será enviada ao agente quando uma tarefa for criada (o sistema anexa o número da tarefa e o objetivo)",
+      "saveEdit": "Salvar alterações",
+      "add": "Adicionar disparador",
+      "cancelEdit": "Cancelar edição",
+      "existing": "Disparadores existentes",
+      "existingNone": "(nenhum)",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "errNoCondition": "Selecione ao menos uma condição de acionamento",
+      "errNoTool": "Para um disparador de chamada de ferramenta, selecione ao menos uma ferramenta",
+      "savedEdit": "Alterações salvas",
+      "added": "Disparador adicionado",
+      "saveEditFailed": "Erro ao salvar: {error}",
+      "addFailed": "Erro ao adicionar: {error}",
+      "savePolicyFailed": "Erro ao salvar a política: {error}",
+      "deleteFailed": "Erro ao excluir: {error}",
+      "cond": {
+        "everyN": "A cada {sec} s",
+        "finding": "Vulnerabilidade detectada",
+        "goalMet": "Objetivo atingido",
+        "taskTimeout": "Tempo da tarefa esgotado",
+        "toolCall": "Chamada de ferramenta ({count})",
+        "taskCreate": "Tarefa criada",
+        "none": "(sem condição)"
+      },
+      "detail": {
+        "interval": "Periódico: {msg}",
+        "finding": "Vulnerabilidade: {msg}",
+        "goal": "Objetivo: {msg}",
+        "timeout": "Tempo esgotado: {msg}",
+        "taskCreate": "Tarefa criada: {msg}",
+        "tools": "Ferramentas: {tools}",
+        "toolsNone": "(nenhuma selecionada)",
+        "message": "Mensagem: {msg}"
+      }
+    }
+  },
+  "assetSearch": {
+    "placeholder": "Busca DSL: domain=example AND status_code>=400",
+    "loading": "Buscando…",
+    "found": "{count} resultados",
+    "field": {
+      "domain": "Domínio (raiz / subdomínio / domínio de serviço)",
+      "ip": "Endereço IPv4/IPv6",
+      "url": "URL completa (serviço / endpoint)",
+      "root_domain": "Domínio raiz",
+      "page_title": "Título da página (serviço HTTP)",
+      "icp": "Número de registro ICP",
+      "service_name": "Nome do serviço (serviços não HTTP)",
+      "app_name": "Nome do app",
+      "bundle_id": "Bundle ID do app",
+      "category": "Categoria do app",
+      "app_icp": "Registro ICP do app",
+      "method": "Método HTTP GET/POST/PUT/…",
+      "service_type": "Tipo de serviço: http | other",
+      "record_type": "Tipo de registro DNS A/CNAME/MX/…",
+      "technology": "Impressão digital de tecnologia (campo de array)",
+      "port": "Número da porta (inteiro)",
+      "status_code": "Código de status HTTP (inteiro)",
+      "company_id": "ID da empresa proprietária (inteiro)",
+      "task_id": "ID da tarefa de origem (inteiro)"
+    },
+    "op": {
+      "fuzzy": "Correspondência parcial",
+      "exact": "Correspondência exata",
+      "exclude": "Excluir",
+      "eq": "Igual a",
+      "ne": "Diferente de",
+      "gt": "Maior que",
+      "gte": "Maior ou igual a",
+      "lt": "Menor que",
+      "lte": "Menor ou igual a"
+    },
+    "logic": {
+      "and": "E (ambas as condições são satisfeitas)",
+      "or": "OU (uma das duas é satisfeita)"
+    }
+  },
+  "taskTemplate": {
+    "picker": {
+      "label": "Modelo de tarefa",
+      "manage": "Gerenciar modelos",
+      "saveAs": "Salvar como modelo",
+      "loading": "Carregando modelos",
+      "empty": "Não há modelos de tarefa",
+      "search": "Buscar e selecionar um modelo de tarefa",
+      "noMatch": "Não há modelos correspondentes",
+      "hint": "Ao selecionar um, copiam-se a descrição, o objetivo, a categoria e as regras de nível de tarefa do modelo; não se mantém um vínculo com o modelo.",
+      "loadError": "Não foi possível carregar o modelo: {error}"
+    },
+    "apply": {
+      "title": "Usar o modelo \"{name}\"?",
+      "description": "A descrição e o objetivo que você inseriu serão sobrescritos com o conteúdo do modelo.",
+      "cancel": "Cancelar",
+      "confirm": "Sobrescrever e usar"
+    },
+    "manager": {
+      "title": "Gerenciar modelos de tarefa",
+      "description": "Os modelos salvam a descrição, o objetivo, a categoria e as regras de bloqueio/permissão de nível de tarefa. Editar um modelo não afeta as tarefas já criadas.",
+      "new": "Novo modelo",
+      "noTemplates": "Não há modelos",
+      "nameLabel": "Nome do modelo",
+      "namePlaceholder": "p. ex.: Pentest web externo",
+      "descriptionLabel": "Descrição",
+      "descriptionPlaceholder": "Objetivo do teste e contexto",
+      "goalLabel": "Objetivo",
+      "goalPlaceholder": "O objetivo que a tarefa deve alcançar",
+      "categoryLabel": "Categoria da tarefa",
+      "categoryUnclassified": "Sem classificação",
+      "categoryHint": "Preenche previamente esta categoria ao aplicar o modelo (você pode alterá-la novamente).",
+      "rulesLabel": "Regras de bloqueio / permissão de nível de tarefa",
+      "rulesHint": "Preenche previamente estas regras de nível de tarefa ao aplicar o modelo (bloqueio/permissão; aplica-se apenas a tarefas novas e não se reflete de forma global).",
+      "delete": "Excluir modelo",
+      "close": "Fechar",
+      "create": "Criar modelo",
+      "saveChanges": "Salvar alterações",
+      "saving": "Salvando",
+      "validation": "Insira o nome, a descrição e o objetivo do modelo",
+      "created": "Modelo criado",
+      "updated": "Modelo atualizado",
+      "deleted": "Modelo excluído",
+      "saveError": "Não foi possível salvar: {error}",
+      "deleteError": "Não foi possível excluir: {error}"
+    },
+    "deleteDialog": {
+      "title": "Excluir o modelo \"{name}\"?",
+      "untitled": "Modelo sem nome",
+      "description": "As tarefas criadas a partir deste modelo não são afetadas.",
+      "cancel": "Cancelar",
+      "deleting": "Excluindo",
+      "delete": "Excluir"
+    }
+  },
+  "explorationGraph": {
+    "kind": {
+      "task": "Tarefa raiz",
+      "begin": "Ponto de início",
+      "goal": "Objetivo",
+      "hint": "Dica",
+      "intent": "Intenção",
+      "fact": "Fato",
+      "finding": "Vulnerabilidade",
+      "digest": "Resumo"
+    },
+    "rel": {
+      "spawns": "Gera",
+      "derived_from": "Cadeia de intenção",
+      "yields": "Produz",
+      "proves": "Comprova"
+    },
+    "detail": {
+      "attributes": "Atributos",
+      "type": "Tipo",
+      "state": "Estado",
+      "priority": "Prioridade",
+      "origin": "Origem",
+      "sourceTask": "Tarefa de origem",
+      "time": "Hora",
+      "digestConclusion": "Conclusão do resumo",
+      "members": "Nós do resumo ({count})",
+      "membersNotLoaded": "{count} nós membros não estão carregados no grafo atual",
+      "raw": "Dados brutos",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "sourceBadge": "Origem #{id}",
+      "sourceTaskBadge": "Tarefa de origem #{id} · somente leitura",
+      "inheritedTooltip": "Herdado da tarefa #{id}, somente leitura",
+      "inheritedReadOnly": "#{id} (herdado, somente leitura)"
+    },
+    "emptyHint": "Ainda não há dados de exploração",
+    "lineage": {
+      "empty": "Não há nenhum caminho para mostrar (não há nós de exploração vinculados a esta vulnerabilidade, ou a tarefa foi excluída).",
+      "emptyHint": "Sem caminho",
+      "loading": "Carregando…"
+    }
+  },
+  "pagination": {
+    "perPage": "por página",
+    "range": "{from}–{to} de {total}",
+    "empty": "0 no total",
+    "prev": "Página anterior",
+    "next": "Próxima página"
+  },
+  "findings": {
+    "title": "Vulnerabilidades",
+    "subtitle": "Vulnerabilidades agregadas de todas as tarefas",
+    "view": {
+      "flat": "Todas as vulnerabilidades",
+      "grouped": "Por tarefa",
+      "asset": "Por ativo"
+    },
+    "stat": {
+      "total": "Total de vulnerabilidades",
+      "pending": "Pendentes"
+    },
+    "search": {
+      "placeholder": "Buscar conteúdo de vulnerabilidades"
+    },
+    "severity": {
+      "all": "Todas",
+      "critical": "Crítica",
+      "high": "Alta",
+      "medium": "Média",
+      "low": "Baixa",
+      "ariaFilter": "Filtrar por severidade {label}"
+    },
+    "status": {
+      "placeholder": "Estado",
+      "all": "Todos os estados"
+    },
+    "vulnclass": {
+      "placeholder": "Tipo de vulnerabilidade",
+      "all": "Todos os tipos"
+    },
+    "task": {
+      "placeholder": "Tarefa",
+      "all": "Todas as tarefas",
+      "unassigned": "Tarefa não vinculada / excluída",
+      "deletedShort": "Tarefa #{id} (excluída)"
+    },
+    "sort": {
+      "severity": "Por severidade",
+      "time": "Por data"
+    },
+    "selectedCount": "{count} selecionadas",
+    "export": "Exportar",
+    "selectAllPage": "Selecionar toda a página atual",
+    "selectAllGroup": "Selecionar todo este grupo na página atual",
+    "asset": {
+      "all": "Todos os ativos",
+      "totalCount": "{count} no total"
+    },
+    "group": {
+      "withName": "{name} (Tarefa #{id})",
+      "taskOnly": "Tarefa #{id}",
+      "sourceUnavailable": "Tarefa de origem não disponível",
+      "viewTask": "Ver Tarefa #{id}"
+    },
+    "empty": "Não há vulnerabilidades correspondentes.",
+    "deepen": {
+      "title": "Análise aprofundada da vulnerabilidade",
+      "description": "Cria um intent de Worker com prioridade 10 na Tarefa #{id} original para executar uma verificação secundária baseada na vulnerabilidade atual: {name}",
+      "label": "Descrição do ataque",
+      "placeholder": "Descreva a rota de ataque, as condições-limite, o objetivo ou a evidência esperada que deseja verificar",
+      "hint": "O novo intent herda a ancoragem de ativo desta vulnerabilidade.",
+      "submit": "Criar intent de análise aprofundada"
+    },
+    "exportDialog": {
+      "title": "Exportar vulnerabilidades",
+      "description": "Escolha o escopo e o formato de exportação. Uma vez gerado, o navegador fará o download automaticamente.",
+      "scopeLabel": "Escopo da exportação",
+      "scopeFiltered": "Exportar os resultados do filtro atual ({count} no total)",
+      "scopeAll": "Exportar tudo",
+      "scopeSelected": "Exportar {count} selecionadas",
+      "formatLabel": "Formato de exportação",
+      "formatMdSingle": "Relatório combinado em Markdown (1 arquivo .md)",
+      "formatMdZip": "Arquivos Markdown separados (1 .md por vulnerabilidade, .zip)",
+      "formatCsv": "Tabela CSV (.csv)",
+      "formatJson": "JSON (.json)",
+      "exporting": "Exportando…",
+      "submit": "Exportar"
+    },
+    "common": {
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "saving": "Salvando…",
+      "delete": "Excluir",
+      "loading": "Carregando…"
+    },
+    "toast": {
+      "retestStatusFailed": "Erro ao carregar o estado de reteste: {error}",
+      "exportStarted": "Iniciou o download do arquivo de exportação",
+      "exportFailed": "Erro ao exportar: {error}",
+      "assetTreeFailed": "Erro ao carregar a árvore de ativos: {error}",
+      "marked": "Marcado como «{label}»",
+      "updateFailed": "Erro ao atualizar: {error}",
+      "saved": "Salvo",
+      "saveFailed": "Erro ao salvar: {error}",
+      "deleted": "Vulnerabilidade excluída",
+      "deleteFailed": "Erro ao excluir: {error}",
+      "deepenQueued": "O intent de análise aprofundada #{id} foi adicionado à fila de tarefas",
+      "deepenCreated": "Foi criado o intent de Worker de alta prioridade #{id}",
+      "deepenFailed": "Erro ao enviar: {error}"
+    },
+    "table": {
+      "colSeverity": "Severidade",
+      "colName": "Nome da vulnerabilidade",
+      "colAsset": "Ativo",
+      "colStatus": "Estado",
+      "colTask": "Tarefa",
+      "colTime": "Data",
+      "colActions": "Ações",
+      "selectOne": "Selecionar esta vulnerabilidade",
+      "viewDetail": "Ver detalhes da vulnerabilidade",
+      "unclassified": "Sem classificação",
+      "trafficEvidence": "{count} evidências de tráfego",
+      "retestingTitle": "Ver a sessão de reteste em andamento",
+      "retesting": "Retestando",
+      "retestTitle": "Retestar esta vulnerabilidade em uma sessão separada",
+      "retest": "Retestar",
+      "deepen": "Aprofundar",
+      "deleteAria": "Excluir vulnerabilidade",
+      "deleteConfirmTitle": "Excluir esta vulnerabilidade?",
+      "deleteConfirmBody": "Isso exclui o elemento de forma permanente. Também é removido da lista de vulnerabilidades, da aba de vulnerabilidades da tarefa e do grafo de exploração. Esta ação não pode ser desfeita.",
+      "editName": "Nome da vulnerabilidade",
+      "editNamePlaceholder": "Um título legível. Se deixado em branco, usa-se o tipo",
+      "editCategory": "Tipo",
+      "editCategoryPlaceholder": "p. ex. SQL Injection",
+      "editSeverity": "Severidade",
+      "evidence": "Evidência",
+      "typeInline": "· Tipo: ",
+      "assetInline": "· Ativo: ",
+      "detailReport": "Relatório detalhado",
+      "reportCopied": "Relatório detalhado copiado",
+      "reportLoadFailed": "Erro ao carregar o relatório.",
+      "reportEmpty": "Não há relatório detalhado disponível."
+    },
+    "assetTree": {
+      "kind": {
+        "company": "Empresa",
+        "root_domain": "Domínio raiz",
+        "subdomain": "Subdomínio",
+        "ip": "IP",
+        "app": "App",
+        "service": "Serviço",
+        "endpoint": "Endpoint",
+        "none": "Sem vínculo"
+      },
+      "emptyNoAsset": "Não há vulnerabilidades vinculadas a ativos no filtro atual.",
+      "emptyNoMatch": "Não há ativos correspondentes.",
+      "filterPlaceholder": "Filtrar ativos",
+      "refresh": "Atualizar árvore de ativos",
+      "truncated": "Há ativos demais, por isso os níveis {kinds} ficam ocultos (suas quantidades somam-se aos níveis superiores). Restrinja o escopo com o filtro ou o campo de busca para ver todos os níveis.",
+      "collapse": "Recolher",
+      "expand": "Expandir",
+      "criticalCount": "Críticas {count}",
+      "highCount": "Altas {count}",
+      "totalCount": "{count} vulnerabilidades no total"
+    },
+    "detail": {
+      "notFound": "Vulnerabilidade {id} não encontrada",
+      "back": "Voltar à lista de vulnerabilidades",
+      "sourceTask": "Tarefa de origem #{id} · somente leitura",
+      "tab": {
+        "overview": "Resumo",
+        "lineage": "Rastreabilidade"
+      },
+      "summary": "Resumo",
+      "summaryEmpty": "(Sem resumo)",
+      "evidence": "Evidência / PoC",
+      "evidenceEmpty": "(Sem evidência)",
+      "reportStale": "A evidência de tráfego mudou, por isso é necessário regenerar o relatório detalhado.",
+      "statusTitle": "Estado",
+      "fieldId": "ID da vulnerabilidade",
+      "fieldSeverity": "Severidade",
+      "fieldStatus": "Estado",
+      "fieldType": "Tipo de vulnerabilidade",
+      "fieldAssets": "Ativos relacionados",
+      "fieldTask": "Tarefa",
+      "taskDeleted": "— (tarefa excluída)",
+      "fieldTime": "Detectada em",
+      "severityChanged": "Severidade alterada para «{label}»",
+      "statusChanged": "Estado alterado para «{label}»"
+    },
+    "traffic": {
+      "title": "Tráfego vinculado",
+      "bind": "Vincular tráfego",
+      "inherited": "Evidência herdada · somente leitura",
+      "description": "Ordene as requisições e respostas na ordem de reprodução. A evidência vinculada permanece intacta mesmo que você limpe o tráfego original.",
+      "retry": "Tentar novamente",
+      "empty": "Não há tráfego vinculado",
+      "emptyHint": "Você pode vincular comparações de referência, provas de vulnerabilidade e requisições de verificação complementar.",
+      "evidenceNo": "Evidência #{id}",
+      "viewRaw": "Ver original",
+      "editNote": "Editar descrição",
+      "moveUp": "Mover a evidência {id} para cima",
+      "moveDown": "Mover a evidência {id} para baixo",
+      "unbind": "Desvincular",
+      "updated": "Evidência de tráfego atualizada",
+      "editTitle": "Editar evidência de tráfego",
+      "editDescription": "Descreva como este par de requisição/resposta sustenta a conclusão da vulnerabilidade.",
+      "roleLabel": "Função",
+      "noteLabel": "Descrição da evidência",
+      "saveNote": "Salvar descrição",
+      "role": {
+        "baseline": "Comparação de referência",
+        "proof": "Prova de vulnerabilidade",
+        "verification": "Verificação complementar",
+        "supporting": "Evidência de apoio"
+      }
+    }
+  },
+  "copyButton": {
+    "label": "Copiar",
+    "success": "Copiado",
+    "error": "Não foi possível copiar. Selecione o texto manualmente para copiá-lo"
+  },
+  "trafficEvidence": {
+    "picker": {
+      "title": "Vincular tráfego",
+      "description": "Filtre solicitações e respostas para selecionar várias entradas; a seleção é mantida ao mudar de página. Após vinculá-las, você pode definir o propósito, a descrição e a ordem.",
+      "host": "Host alvo",
+      "hostPlaceholder": "Domínio ou IP",
+      "method": "Método da solicitação",
+      "allMethods": "Todos os métodos",
+      "keyword": "Palavra-chave",
+      "keywordPlaceholder": "Palavra-chave de URL / corpo",
+      "selectPage": "Selecionar o tráfego não vinculado desta página",
+      "colMethodUrl": "Método / URL",
+      "colTime": "Hora",
+      "colStatus": "Código de status",
+      "colAction": "Ação",
+      "selectOne": "Selecionar tráfego {id}",
+      "bound": "Vinculado",
+      "preview": "Pré-visualização",
+      "loading": "Carregando…",
+      "noMatch": "Não há tráfego correspondente",
+      "selectedSummary": "{selected} selecionados · {total} no total",
+      "prevPage": "Página anterior",
+      "pageNo": "Página {page}",
+      "nextPage": "Próxima página",
+      "cancel": "Cancelar",
+      "saving": "Salvando…",
+      "bindCount": "Vincular {count} entradas de tráfego",
+      "boundToast": "{count} entradas de tráfego vinculadas"
+    },
+    "viewer": {
+      "title": "Evidência de tráfego #{id}",
+      "fallbackDesc": "Ver a solicitação e a resposta salvas ao vincular",
+      "request": "Solicitação",
+      "response": "Resposta",
+      "bodyBytes": "Corpo {bytes} bytes",
+      "previewSuffix": " · Pré-visualização",
+      "downloadRequest": "Baixar o corpo completo da solicitação",
+      "downloadResponse": "Baixar o corpo completo da resposta",
+      "loadMore": "Carregar mais do corpo"
+    },
+    "captured": {
+      "title": "Pré-visualização do tráfego",
+      "description": "ID de tráfego: {id}. O corpo completo é salvo ao vincular."
+    },
+    "code": {
+      "empty": "(vazio)",
+      "copyFailed": "Erro ao copiar. Selecione tudo com Ctrl/Cmd+A e copie.",
+      "wrapOff": "Desativar quebra de linha",
+      "wrapOn": "Ativar quebra de linha",
+      "copiedPacket": "Original copiado",
+      "copyPacket": "Copiar original",
+      "copied": "Copiado",
+      "label": "Código HTTP original"
+    }
+  },
+  "transcript": {
+    "newRound": "Nova rodada",
+    "streaming": "Transmitindo ao vivo…",
+    "loading": "Carregando…",
+    "withThinking": "Com raciocínio",
+    "kind": {
+      "thinking": "Raciocínio",
+      "result": "Resumo",
+      "note": "Nota"
+    },
+    "tool": {
+      "name": "Ferramenta",
+      "running": "Em execução…",
+      "failed": "✕ Falhada",
+      "command": "Comando",
+      "output": "Saída",
+      "empty": "(vazio)",
+      "loadFailed": "(erro ao carregar)",
+      "pinned": "Chamada de ferramenta fixada #{seq}"
+    },
+    "approval": {
+      "request": "Solicitação de aprovação",
+      "historyReadonly": "Histórico · somente leitura",
+      "allowed": "Permitida",
+      "timeout": "Tempo esgotado",
+      "denied": "Negada",
+      "allow": "Permitir",
+      "deny": "Negar",
+      "expand": "Expandir detalhes da aprovação",
+      "collapse": "Recolher detalhes da aprovação",
+      "retry": "Tentar detalhes novamente",
+      "loading": "Carregando detalhes da aprovação…",
+      "loadError": "Erro ao carregar os detalhes da aprovação",
+      "allowedToast": "Execução permitida",
+      "deniedToast": "Execução negada"
+    }
+  },
+  "mentionTextarea": {
+    "inputAria": "Mensagem. Digite @ para citar um registro",
+    "listboxAria": "Selecione um registro para citar",
+    "pickKind": "Selecione um tipo de citação",
+    "searchKind": "Buscar {kind}",
+    "allRecords": "Todos os registros",
+    "hintKeys": "↑↓ para mover · Enter para selecionar · Esc para fechar",
+    "candidatesAria": "Candidatos de citação",
+    "searching": "Buscando…",
+    "searchError": "Erro de busca: {error}. Digite novamente e tente de novo.",
+    "noMatch": "Não há registros correspondentes. Tente com outro nome, endereço ou ID.",
+    "loadingMore": "Carregando mais…",
+    "pageError": "Erro ao carregar. Pressione para tentar novamente",
+    "showingMore": "{count} exibidos · role para baixo para carregar mais",
+    "showingAll": "Exibidos os {count} no total",
+    "searchHint": "Digite um nome, endereço ou ID para buscar registros",
+    "removeAria": "Remover citação {label}",
+    "selectedHint": "Lê os detalhes mais recentes ao enviar · até 10",
+    "kind": {
+      "finding": "Achado",
+      "asset": "Ativo",
+      "company": "Empresa",
+      "endpoint": "Endpoint",
+      "ip": "IP",
+      "app": "App",
+      "root_domain": "Domínio",
+      "subdomain": "Subdomínio",
+      "service": "Serviço"
+    }
+  },
+  "assetInterceptRules": {
+    "action": {
+      "block": "Bloquear",
+      "allow": "Permitir"
+    },
+    "kind": {
+      "exact_domain": "Domínio (correspondência exata)",
+      "exact_ip": "IP (correspondência exata)",
+      "exact_url": "URL (correspondência exata)",
+      "fuzzy_domain": "Domínio (correspondência parcial)",
+      "fuzzy_ip": "IP (correspondência parcial)",
+      "fuzzy_url": "URL (correspondência parcial)",
+      "cidr": "Intervalo CIDR"
+    },
+    "notePlaceholder": "Nota (opcional)",
+    "add": "Adicionar regra"
+  },
+  "interceptPage": {
+    "title": "Interceptação de comandos",
+    "subtitle": "Antes de executar uma ferramenta, primeiro ela é cotejada com as regras de interceptação; os comandos que nenhuma regra captura podem passar ao modelo para uma decisão final",
+    "scope": {
+      "label": "Escopo de interceptação",
+      "empty": "Não há ferramentas habilitadas: nem as regras de interceptação nem o fallback do modelo serão executados",
+      "toolCount": "{count} ferramentas",
+      "adjust": "Ajustar escopo",
+      "dialogTitle": "Escopo de interceptação",
+      "dialogDesc": "Apenas as ferramentas com a interceptação ativada passam pelo cotejo de regras; as demais passam diretamente"
+    },
+    "tab": {
+      "rules": "Regras de interceptação",
+      "model": "Configurações do modelo"
+    },
+    "rules": {
+      "priorityHint": "São cotejadas uma a uma por prioridade (quanto maior o número, primeiro); aplica-se a primeira regra que corresponde",
+      "add": "Adicionar regra",
+      "loading": "Carregando…",
+      "empty": "Não há regras",
+      "addFirst": "Criar a primeira regra",
+      "colPriority": "Prioridade",
+      "colName": "Nome",
+      "colTarget": "Alvo",
+      "colType": "Tipo",
+      "colPattern": "Padrão",
+      "colAction": "Ação",
+      "colEnabled": "Habilitada"
+    },
+    "target": {
+      "tool_name": "Nome da ferramenta",
+      "tool_input": "Entrada"
+    },
+    "matchType": {
+      "regex": "Regex",
+      "string": "String"
+    },
+    "action": {
+      "allow": "Permitir",
+      "deny": "Bloquear",
+      "ask": "Perguntar"
+    },
+    "editor": {
+      "editTitle": "Editar regra",
+      "newTitle": "Adicionar regra",
+      "desc": "Quanto maior a prioridade, mais cedo é cotejada; aplica-se a primeira regra que corresponde e as seguintes são ignoradas",
+      "name": "Nome",
+      "namePlaceholder": "Digite um nome de regra",
+      "priority": "Prioridade (quanto maior o número, cotejada primeiro)",
+      "matchTarget": "Alvo de cotejo",
+      "targetToolName": "Nome da ferramenta (tool_name)",
+      "targetToolInput": "Entrada (tool_input JSON)",
+      "matchTypeLabel": "Tipo de cotejo",
+      "typeStringContains": "A string contém",
+      "typeRegex": "Regex",
+      "pattern": "Padrão",
+      "regexWarn": "Contém sintaxe estendida de Go RE2 (p. ex. <code>(?i)</code>), que não pode ser pré-visualizada no navegador; o servidor a valida ao enviar",
+      "actionLabel": "Ação de interceptação",
+      "actionAllow": "Permitir: passa imediatamente e ignora as regras seguintes",
+      "actionDeny": "Bloquear: bloqueia e devolve uma mensagem de rejeição ao modelo",
+      "actionAsk": "Perguntar ao usuário: aguarda a aprovação",
+      "denyMessage": "Mensagem de rejeição (enviada ao modelo)",
+      "askMessage": "Nota de aprovação (opcional)",
+      "denyMessagePlaceholder": "A ação foi bloqueada pela política de segurança",
+      "enableTimeout": "Usar tempo de espera de aprovação",
+      "enableTimeoutHint": "Quando o tempo de espera é excedido, é tratado automaticamente sem esperar mais",
+      "timeoutSeconds": "Tempo de espera (segundos)",
+      "timeoutAction": "Ação após o tempo de espera",
+      "timeoutDeny": "Bloqueio automático",
+      "timeoutAllow": "Permissão automática",
+      "enableRule": "Habilitar esta regra",
+      "cancel": "Cancelar",
+      "saving": "Salvando…",
+      "save": "Salvar"
+    },
+    "toast": {
+      "ruleUpdated": "Regra atualizada",
+      "ruleCreated": "Regra criada",
+      "ruleDeleted": "Regra excluída",
+      "loadRulesFailed": "Erro ao carregar as regras de interceptação",
+      "nameRequired": "Digite um nome",
+      "patternRequired": "Digite um padrão",
+      "regexInvalid": "A sintaxe do regex não é válida",
+      "scopeSaved": "Escopo de interceptação salvo",
+      "loadFailed": "Erro ao carregar: {error}",
+      "saveFailed": "Erro ao salvar: {error}"
+    },
+    "toolGroup": {
+      "exec": "Execução",
+      "write": "Escrita/edição",
+      "system": "Ferramentas do sistema",
+      "custom": "Ferramentas personalizadas"
+    },
+    "toolDesc": {
+      "Bash": "Executar comandos no shell",
+      "WebFetch": "Enviar solicitações HTTP/HTTPS (com suporte a proxy)",
+      "web_search": "Busca na web",
+      "shell_open": "Abrir uma sessão interativa PTY persistente",
+      "shell_send": "Enviar entrada para uma sessão interativa",
+      "shell_read": "Ler a saída de uma sessão interativa",
+      "shell_close": "Fechar uma sessão interativa",
+      "shell_list": "Ver a lista de todas as sessões interativas",
+      "Write": "Escrever um arquivo",
+      "Edit": "Editar um arquivo (substituição exata)",
+      "MultiEdit": "Editar um arquivo em lote"
+    },
+    "judge": {
+      "title": "Aprovação de fallback do modelo",
+      "desc": "Apenas os comandos dentro do <scope>escopo de interceptação</scope> que <norule>nenhuma regra de interceptação captura</norule> são avaliados pelo modelo (permitir / perguntar / bloquear)",
+      "enabled": "Ativado",
+      "disabled": "Desativado",
+      "promptTitle": "Prompt de aprovação",
+      "promptDesc": "O modelo decide ALLOW / ASK / DENY a partir disto, e você pode editá-lo diretamente",
+      "restoreTemplate": "Restaurar template padrão",
+      "promptPlaceholder": "Deixe em branco para usar o template integrado",
+      "charCount": "{count} caracteres",
+      "modelAndPolicy": "Modelo de avaliação e política",
+      "approvalModel": "Modelo de aprovação",
+      "followActive": "Seguir a configuração ativa",
+      "judgeTimeout": "Tempo de espera de avaliação do modelo (segundos)",
+      "failAction": "Em caso de falha do modelo (erro / tempo esgotado / não interpretável)",
+      "failAllow": "Permitir",
+      "failAsk": "Mudar para perguntar",
+      "failDeny": "Bloquear",
+      "manualApproval": "Aprovação manual (quando o modelo decide «perguntar»)",
+      "askTimeout": "Tempo de espera de aprovação (segundos)",
+      "askTimeoutAction": "Ação padrão após o tempo de espera",
+      "askTimeoutDeny": "Bloquear",
+      "askTimeoutAllow": "Permitir",
+      "saving": "Salvando…",
+      "saveConfig": "Salvar configurações",
+      "loadConfigFailed": "Erro ao carregar as configurações de fallback do modelo: {error}",
+      "configSaved": "Configurações de fallback do modelo salvas",
+      "restored": "O template integrado padrão foi restaurado",
+      "restoreFailed": "Erro ao restaurar: {error}",
+      "usageTitle": "Uso de tokens do juiz",
+      "usageDesc": "Uso acumulado do juiz de modelo (aprovação de fallback). É medido separadamente (worker=judge), sem se misturar com as estatísticas de cada perfil",
+      "usageRefresh": "Atualizar",
+      "usageCalls": "Chamadas ao juiz",
+      "usageInput": "Tokens de entrada",
+      "usageOutput": "Tokens de saída",
+      "usageCacheRead": "Leitura de cache",
+      "usageCacheWrite": "Escrita de cache",
+      "usageDaily": "Uso diário, últimos 30 dias (entrada + saída)",
+      "usageBarTitle": "{date} · {calls} chamadas · {tokens} tokens"
+    }
+  },
+  "assetInterceptPage": {
+    "title": "Bloqueio de ativos",
+    "subtitle": "Uma lista negra global de ativos. Os domínios / IP / URL / intervalos que coincidirem são bloqueados e nenhuma tarefa é executada sobre eles",
+    "intro": "Suporta coincidência exata e parcial de domínios / IP / URL, além de intervalos CIDR. Por padrão, os sites governamentais (.gov / .gov.cn) e educacionais (.edu / .edu.cn) vêm integrados para serem bloqueados por coincidência parcial",
+    "add": "Adicionar regra",
+    "loading": "Carregando…",
+    "empty": "Não há regras de bloqueio de ativos",
+    "addFirst": "Criar a primeira regra",
+    "colType": "Tipo",
+    "colPattern": "Conteúdo de coincidência",
+    "colNote": "Nota",
+    "colEnabled": "Ativada",
+    "builtin": "Integrada",
+    "group": {
+      "exact": "Coincidência exata",
+      "fuzzy": "Coincidência parcial",
+      "cidr": "Intervalo"
+    },
+    "editor": {
+      "editTitle": "Editar regra de bloqueio de ativos",
+      "newTitle": "Adicionar regra de bloqueio de ativos",
+      "desc": "Os ativos-alvo que coincidirem com esta regra são bloqueados de forma global",
+      "matchType": "Tipo de coincidência",
+      "matchContent": "Conteúdo de coincidência",
+      "hintCidr": "Intervalo CIDR, p. ex.: 192.168.0.0/16",
+      "hintFuzzy": "Coincidência parcial: coincide se o alvo contiver este conteúdo",
+      "hintExact": "Coincidência exata: coincide apenas se o alvo for exatamente este conteúdo",
+      "note": "Nota (opcional)",
+      "notePlaceholder": "Descreva para que serve esta regra",
+      "enableRule": "Ativar esta regra",
+      "cancel": "Cancelar",
+      "saving": "Salvando…",
+      "save": "Salvar"
+    },
+    "toast": {
+      "loadFailed": "Não foi possível carregar as regras de bloqueio de ativos",
+      "ruleUpdated": "Regra atualizada",
+      "ruleCreated": "Regra criada",
+      "ruleDeleted": "Regra excluída",
+      "contentRequired": "Insira o conteúdo de coincidência",
+      "cidrInvalid": "Formato CIDR inválido. Insira-o como 192.168.0.0/16"
+    },
+    "deleteConfirm": "Excluir a regra de bloqueio de ativos \"{pattern}\"?"
+  },
+  "scopeEditor": {
+    "defaultLabel": "Escopo de ativos",
+    "defaultDescription": "Informe um por linha; domínios, IP, CIDR, registro ICP e palavras-chave de empresa são detectados automaticamente.",
+    "placeholder": "example.com\n203.0.113.10\n198.51.100.0/24\npalavra-chave do nome da empresa",
+    "kind": {
+      "domain": "Domínio",
+      "ip": "IP",
+      "cidr": "CIDR",
+      "icp": "ICP",
+      "keyword": "Palavra-chave"
+    },
+    "recognized": "{count} detectados",
+    "lineError": "Linha {line}: {error}",
+    "moreErrors": "{count} linhas a mais com erros",
+    "error": {
+      "empty": "Informe um valor de escopo",
+      "tooLong": "Você pode informar até {max} caracteres",
+      "domainSpace": "Informe um domínio ou uma URL válidos sem espaços",
+      "domainInvalid": "Informe um domínio ou uma URL válidos",
+      "ipInvalid": "Informe um IP válido",
+      "cidrInvalid": "Informe um intervalo CIDR válido",
+      "cidrPrefixV4": "O prefixo de intervalo IPv4 deve estar entre /16 e /32",
+      "cidrPrefixV6": "O prefixo de intervalo IPv6 deve estar entre /32 e /128"
+    }
+  },
+  "approvalFocus": {
+    "mismatch": "A origem da aprovação não corresponde à conversa atual",
+    "noSource": "Não foi possível encontrar a execução original",
+    "notFoundDeleted": "Essa chamada de ferramenta não foi encontrada na conversa. É possível que o registro tenha sido excluído.",
+    "notFound": "Essa chamada de ferramenta não foi encontrada na conversa.",
+    "locateFail": "Não encontrado: {error}",
+    "expanded": "A chamada de ferramenta da aprovação #{id} foi expandida",
+    "loading": "Carregando a localização na conversa da aprovação #{id}…",
+    "retry": "Buscar novamente",
+    "cancel": "Cancelar busca"
+  },
+  "todoPopover": {
+    "parseError": "Não foi possível interpretar o Todo",
+    "none": "Não há Todo nesta conversa",
+    "view": "Ver o Todo recente",
+    "recent": "Todo recente",
+    "loadingSuffix": " · Carregando…",
+    "empty": "(Vazio)"
+  },
+  "agentsPage": {
+    "title": "Agentes",
+    "subtitle": "Prompts e configurações dos agentes integrados, e criação e gerenciamento de agentes conversacionais personalizados",
+    "listTitle": "Lista de agentes",
+    "countTotal": "{count} no total",
+    "empty": "(sem agentes)",
+    "new": "Novo agente",
+    "badgeBuiltin": "Integrado",
+    "badgeCustom": "Personalizado",
+    "badgeDisabled": "Desativado",
+    "noDescription": "(sem descrição)",
+    "toolLabel": "Ferramentas",
+    "deleteTitle": "Excluir o agente \"{name}\"?",
+    "deleteDesc": "O prompt, as variáveis, o escopo de exposição e as vinculações de ferramentas deste agente serão excluídos. Esta ação não pode ser desfeita.",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "deleted": "Agente \"{name}\" excluído",
+    "deleteFailed": "Erro ao excluir: {msg}",
+    "created": "Agente \"{name}\" criado",
+    "createFailed": "Erro ao criar: {msg}",
+    "createTitle": "Novo agente personalizado",
+    "createDesc": "Crie um assistente conversacional. A key é usada como identificador interno e não pode ser alterada após a criação. O nome e a descrição são usados para a identificação.",
+    "keyPlaceholder": "p. ex.: research_helper",
+    "keyError": "Deve começar com uma letra minúscula e usar apenas letras minúsculas, dígitos e sublinhados",
+    "nameLabel": "Nome",
+    "namePlaceholder": "p. ex.: Assistente de pesquisa",
+    "descLabel": "Descrição",
+    "descPlaceholder": "Descreva em uma frase o que este agente faz",
+    "create": "Criar",
+    "editorDescFallback": "Prompt, configurações, recursos expostos e vinculações de ferramentas"
+  },
+  "logsPage": {
+    "title": "Registros do sistema",
+    "subtitle": "Fluxo de registros do backend em tempo real (planner / worker / banco de dados / tráfego …)",
+    "filterPlaceholder": "Filtrar (texto / tag)…",
+    "all": "Tudo",
+    "paused": "Em pausa",
+    "pause": "Pausar",
+    "clear": "Limpar",
+    "totalLines": "{count} linhas",
+    "warnCount": "{count} avisos",
+    "errorCount": "{count} erros",
+    "loading": "Carregando…",
+    "loadOlder": "Carregar registros anteriores",
+    "empty": "Não há registros."
+  },
+  "mcpPage": {
+    "subtitle": "Servidores de ferramentas MCP externos · exposição permitida por agente",
+    "addCard": "Adicionar MCP",
+    "enableAria": "Habilitar",
+    "deleteAria": "Excluir",
+    "toolCount": "{count} ferramentas",
+    "noTools": "Ainda não foram detectadas ferramentas",
+    "visibilityLabel": "Escopo de exposição (permitido por agente)",
+    "addServer": "Adicionar servidor MCP",
+    "sheetDesc": "stdio (executar um processo local) ou http (Streamable HTTP remoto)",
+    "tabConfig": "Configuração",
+    "tabTools": "Lista de ferramentas",
+    "save": "Salvar",
+    "add": "Adicionar",
+    "transport": "Transporte",
+    "transportStdio": "stdio (local)",
+    "transportHttp": "http (remoto)",
+    "transportSse": "sse (versão antiga)",
+    "nameLabel": "Nome",
+    "cmdLabel": "Comando",
+    "argsLabel": "Argumentos (separados por espaços)",
+    "urlLabel": "URL remota",
+    "insecureLabel": "Ignorar a verificação do certificado TLS (certificados autoassinados)",
+    "headersLabel": "Cabeçalhos de solicitação (KEY=VALUE por linha, por exemplo Authorization=Bearer xxx)",
+    "envLabel": "Variáveis de ambiente (KEY=VALUE por linha)",
+    "refresh": "Atualizar",
+    "loading": "Carregando…",
+    "toolsEmpty": "Ainda não foram detectadas ferramentas. Clique em Atualizar para obtê-las novamente.",
+    "errNoName": "Insira um nome",
+    "errNoCmd": "Insira um comando",
+    "errNoUrl": "Insira uma URL remota",
+    "saved": "Salvo",
+    "added": "Servidor MCP adicionado",
+    "saveFailed": "Erro ao salvar: {msg}",
+    "foundTools": "{count} ferramentas detectadas",
+    "refreshFailed": "Erro ao atualizar: {msg}",
+    "removed": "Excluído: {name}",
+    "deleteFailed": "Erro ao excluir: {msg}",
+    "actionFailed": "Erro na ação: {msg}",
+    "visibilityGranted": "Exposição permitida para «{name}»",
+    "visibilityRevoked": "Exposição revogada para «{name}»"
+  },
+  "toolsPage": {
+    "title": "Ferramentas",
+    "subtitle": "Descrições e vinculações de ferramentas do sistema, além de ferramentas personalizadas (command/script/http)",
+    "searchPlaceholder": "Buscar nome de ferramenta, descrição, agente…",
+    "tabSystem": "Ferramentas do sistema",
+    "tabCustom": "Ferramentas personalizadas",
+    "systemMatched": "{shown} / {total} correspondências; clique em um cartão para editar a descrição, os valores padrão de parâmetros e as vinculações de agente",
+    "systemTotal": "{total} no total; clique em um cartão para editar a descrição, os valores padrão de parâmetros e as vinculações de agente",
+    "systemNoMatch": "Não há ferramentas do sistema correspondentes",
+    "systemEmpty": "(ainda não há ferramentas do sistema; aguardando o seed do backend)",
+    "customMatched": "shell/command/script/http, {shown} / {total} correspondências; clique em um cartão para editar",
+    "customTotal": "shell (declaração bash) / command (comando) / script (Python) / http (API), {total} no total; clique em um cartão para editar",
+    "newCustom": "Criar ferramenta personalizada",
+    "customNoMatch": "Não há ferramentas personalizadas correspondentes",
+    "customEmpty": "(ainda não há ferramentas personalizadas; clique em \"Criar ferramenta personalizada\" no canto superior direito)",
+    "editSheetDesc": "Edite a descrição, os valores padrão de parâmetros e as vinculações de agente",
+    "badgeSystem": "Sistema",
+    "badgeCustom": "Personalizada",
+    "badgeDisabled": "Desativada",
+    "callsTitle": "{count} chamadas acumuladas",
+    "callsBadge": "{count} chamadas",
+    "noDescription": "(sem descrição)",
+    "noBoundAgents": "(sem agentes vinculados)",
+    "trafficGatedNote": "Esta ferramenta depende da <b>captura de tráfego</b>. Primeiro você deve ativar a captura de tráfego em \"Configurações do sistema\" para poder vinculá-la a um agente e ativá-la.",
+    "bindAgentLabel": "Vinculação de agente (determina a quais agentes esta ferramenta é atribuída)",
+    "bindAgentShort": "Vinculação de agente",
+    "noAgents": "(sem agentes)",
+    "enabled": "Ativada",
+    "descLabel": "Descrição da ferramenta (passada ao modelo)",
+    "paramsLabel": "Parâmetros (nome / tipo / obrigatório são somente leitura; a descrição e o valor padrão são editáveis)",
+    "noParams": "(sem parâmetros)",
+    "required": "Obrigatório",
+    "itemsSubfield": "subcampo items",
+    "rowDesc": "Descrição",
+    "rowDefault": "Valor padrão",
+    "defaultEmptyHint": "(em branco = sem valor padrão)",
+    "scalarOnly": "Apenas escalares",
+    "save": "Salvar",
+    "resetDefault": "Restaurar padrão",
+    "savedTool": "Ferramenta \"{key}\" salva",
+    "saveFailed": "Erro ao salvar: {msg}",
+    "resetDone": "\"{key}\" restaurada ao valor padrão do código",
+    "resetFailed": "Erro ao restaurar: {msg}",
+    "keyError": "A key deve começar com uma letra minúscula e usar apenas letras minúsculas, dígitos e sublinhados",
+    "schemaError": "O JSON Schema de parâmetros está com formato incorreto",
+    "headersError": "O JSON de headers está com formato incorreto",
+    "httpSchemaRequired": "As ferramentas http devem fornecer um JSON Schema de parâmetros (deve incluir properties e não pode estar vazio)",
+    "createdCustom": "Ferramenta personalizada criada",
+    "saved": "Salvo",
+    "deleted": "Excluído",
+    "deleteFailed": "Erro ao excluir: {msg}",
+    "testParamsError": "O JSON de parâmetros de teste está com formato incorreto",
+    "editCustom": "Editar {key}",
+    "customSheetDesc": "shell = declaração de ambiente bash (só são necessários um nome e uma descrição; indica ao modelo que pode ser chamada via bash). command/script/http exigem que você escreva uma especificação de execução.",
+    "keyPlaceholder": "p. ex.: nmap_scan",
+    "descLabelShort": "Descrição (passada ao modelo)",
+    "kindLabel": "Tipo",
+    "kindShell": "shell (declaração de ambiente bash)",
+    "kindCommand": "command (modelo de comando shell)",
+    "kindScript": "script (script de Python)",
+    "kindHttp": "http (solicitação de API)",
+    "shellHint": "Ideal para ferramentas conhecidas como nmap, sqlmap e ffuf. Como o modelo já sabe usá-las, você só precisa declarar \"pode ser chamada pelo bash\". O nome e a descrição são adicionados à descrição da ferramenta Bash.",
+    "cmdTemplateLabel": "Modelo de comando (marcador '{param}', p. ex.: nmap -p '{ports}' '{target}')",
+    "scriptLabel": "Corpo de Python (os parâmetros são passados via JSON de stdin ou os.environ[\"TOOL_X\"])",
+    "httpUrlLabel": "URL (pode incluir '{param}')",
+    "httpHeadersLabel": "Headers (JSON, pode incluir '{param}')",
+    "httpBodyLabel": "Body (pode incluir '{param}')",
+    "proxyLabel": "URL do proxy (em branco = conexão direta)",
+    "useRecordingProxy": "Usar proxy de gravação",
+    "timeoutLabel": "Tempo limite (ms, em branco = padrão)",
+    "schemaLabel": "JSON Schema de parâmetros",
+    "schemaHttpSuffix": "(obrigatório para ferramentas http; deve incluir properties)",
+    "schemaDefaultSuffix": "(em branco = aplica automaticamente um invólucro leve '{args}')",
+    "deferredLabel": "deferred (ative-o apenas quando tiver muitas ferramentas de uso pouco frequente)",
+    "testSectionLabel": "Execução de teste (usa o formulário atual, não é salvo)",
+    "testParamsPlaceholder": "JSON de parâmetros de exemplo, p. ex.: '{\"target\":\"example.com\"}'",
+    "testRun": "Executar teste",
+    "testRunning": "Executando…",
+    "noOutput": "(sem saída)",
+    "create": "Criar",
+    "delete": "Excluir"
+  },
+  "skillsPage": {
+    "title": "Skills",
+    "subtitle": "Biblioteca de skills · especificação agentskills.io · permissões de visibilidade por agente",
+    "missingCount": "{count} chamadas sem correspondência",
+    "missingHint": "Skills que um agente nomeou e chamou mas que não existem na biblioteca de skills. Ordenadas pelo número de vezes que foram nomeadas.",
+    "newSkill": "Nova skill",
+    "uploadTitle": "Enviar um arquivo .zip que contenha SKILL.md",
+    "uploading": "Enviando…",
+    "uploadZip": "Enviar arquivo",
+    "emptySidebar": "Não há skills. Clique em «Nova skill» para começar.",
+    "callCountTitle": "Chamada {count} vezes · Última {last}",
+    "newFile": "Novo arquivo",
+    "newFolder": "Nova pasta",
+    "deleteFolder": "Excluir pasta",
+    "deleteFile": "Excluir arquivo",
+    "deleteSkillAction": "Excluir skill",
+    "emptyOverview": "Não há skills. Clique em «Nova skill» ou «Enviar arquivo» à esquerda para começar.",
+    "statTotal": "Total de skills",
+    "statTotalHint": "{count} chamadas",
+    "statCalls": "Chamadas acumuladas",
+    "statUnused": "Sem uso",
+    "statUnusedHintSome": "Nenhum agente as carregou",
+    "statUnusedHintNone": "Todas em uso",
+    "statMissing": "Chamadas sem correspondência",
+    "statMissingHintSome": "{count} skills inexistentes",
+    "statMissingHintNone": "Nenhuma",
+    "overviewTitle": "Visão geral da biblioteca de skills",
+    "overviewDesc": "Selecione uma skill à esquerda para ver seus detalhes e seu histórico de chamadas. Ou veja aqui uma visão rápida do uso geral.",
+    "ranking": "Ranking de chamadas",
+    "rankingEmpty": "Ainda não há histórico de chamadas de skills.",
+    "callsCount": "{count} vezes",
+    "recent": "Chamadas recentes",
+    "recentEmpty": "Não há histórico.",
+    "unusedSkills": "Skills sem uso",
+    "allUsed": "Todas as skills já foram chamadas alguma vez.",
+    "neverCalled": "Nunca chamada",
+    "installed": "Skill instalada: {name} ({files} arquivos)",
+    "overwriteConfirm": "{msg}\n\nSobrescrever a skill com o mesmo nome?",
+    "uploadFailed": "Erro ao enviar: {msg}",
+    "readFileFailed": "Não foi possível ler o arquivo",
+    "folderCreated": "Pasta criada: {path}",
+    "fileCreated": "Arquivo criado: {path}",
+    "createFailed": "Erro ao criar: {msg}",
+    "deleted": "Excluído: {path}",
+    "deleteFailed": "Erro ao excluir: {msg}",
+    "skillDeleted": "Skill excluída: {name}",
+    "saved": "Salvo",
+    "saveFailed": "Erro ao salvar: {msg}",
+    "mcpLinked": "«{name}» vinculado",
+    "mcpUnlinked": "«{name}» desvinculado",
+    "opFailed": "Operação falhou: {msg}",
+    "visGranted": "Visibilidade concedida a «{name}»",
+    "visRevoked": "Visibilidade revogada para «{name}»",
+    "needName": "Insira um nome",
+    "needDesc": "A descrição é obrigatória",
+    "skillCreated": "Skill criada",
+    "callStats": "Estatísticas de chamadas",
+    "totalCalls": "Total de chamadas",
+    "coveredTasks": "Tarefas relacionadas",
+    "callers": "Invocadores:",
+    "loadingCalls": "Carregando detalhes de chamadas…",
+    "recentCallsCount": "{count} chamadas recentes",
+    "taskRef": "Tarefa #{id}",
+    "sessionRef": "Sessão de conversa",
+    "noCallsYet": "Ainda não há histórico de chamadas.",
+    "linkedMcp": "MCP vinculado",
+    "linkedMcpHint": "(Essas ferramentas são expostas/desbloqueadas apenas quando a skill é carregada)",
+    "noMcp": "Não há MCP. Você pode adicionar um na página «MCP».",
+    "visibility": "Escopo de visibilidade (permissões por agente)",
+    "noAgents": "(Não há agentes)",
+    "saving": "Salvando…",
+    "save": "Salvar",
+    "loading": "Carregando…",
+    "deleteSkillQ": "Excluir a skill «{name}»?",
+    "deleteFolderQ": "Excluir a pasta «{path}»?",
+    "deleteFileQ": "Excluir o arquivo «{path}»?",
+    "deleteSkillDesc": "Exclui todos os arquivos, vínculos de MCP e a configuração de visibilidade desta skill. Esta ação não pode ser desfeita.",
+    "deleteFolderDesc": "Exclui todos os arquivos desta pasta. Esta ação não pode ser desfeita.",
+    "irreversible": "Esta ação não pode ser desfeita.",
+    "cancel": "Cancelar",
+    "deleting": "Excluindo…",
+    "delete": "Excluir",
+    "tabBasic": "Informações básicas",
+    "tabVisibility": "Visibilidade",
+    "nameLabel": "Nome",
+    "nameHint": "Minúsculas / dígitos / hífens, 1-64 caracteres",
+    "descLabel": "Descrição",
+    "descPlaceholder": "O que esta skill faz e quando usá-la.",
+    "compatPlaceholder": "Requer sqlmap, python3",
+    "bodyLabel": "Corpo",
+    "bodyHint": "(Deixe em branco para gerar automaticamente um esqueleto)",
+    "bodyPlaceholder": "## Como executar\n\n1. Primeiro detectar erros\n2. Distinguir os tipos de injeção cega\n\nColoque os scripts no diretório scripts/.",
+    "mcpSheetHint": "As ferramentas do MCP selecionado são expostas/desbloqueadas apenas quando a skill é carregada.",
+    "visSheetHint": "Os agentes selecionados podem ver esta skill logo após ser criada.",
+    "creating": "Criando…",
+    "create": "Criar"
+  },
+  "changePasswordDialog": {
+    "title": "Alterar senha",
+    "description": "O nome de usuário é fixo: <b>ARTEX</b>. Primeiro você deve se autenticar inserindo sua senha atual, e após alterar a senha, os Tokens de login já emitidos continuam válidos até expirarem.",
+    "currentPassword": "Senha atual",
+    "newPassword": "Nova senha",
+    "confirmPassword": "Confirmar nova senha",
+    "cancel": "Cancelar",
+    "submit": "Alterar",
+    "submitting": "Alterando…",
+    "errorRequired": "Insira sua senha atual e a nova senha",
+    "errorMismatch": "As novas senhas que você inseriu não coincidem",
+    "success": "Senha alterada",
+    "failed": "Não foi possível alterar a senha: {msg}"
+  },
+  "commands": {
+    "title": "Execução de ferramentas",
+    "searchPlaceholder": "Buscar ferramentas / argumentos…",
+    "taskIdPlaceholder": "ID da tarefa",
+    "stats": "Estatísticas",
+    "colTime": "Hora",
+    "colTask": "Tarefa",
+    "colTool": "Ferramenta",
+    "colInput": "Entrada",
+    "colStatus": "Status",
+    "empty": "Não há registros de execução de ferramentas",
+    "failed": "Com falha",
+    "success": "Correta",
+    "statsTitle": "Estatísticas de chamadas a ferramentas",
+    "statsDescFiltered": "Todos os registros que correspondem ao filtro atual",
+    "statsDescAll": "Todos os registros de execução de ferramentas",
+    "unitTools": "ferramentas",
+    "unitCalls": "chamadas",
+    "statsEmpty": "Não há dados estatísticos",
+    "detailTitle": "Detalhes de execução da ferramenta",
+    "inputLabel": "Entrada",
+    "outputLabel": "Saída",
+    "emptyOutput": "(vazio)"
+  },
+  "workspace": {
+    "crumbRoot": "Espaço de trabalho",
+    "newFolder": "Nova pasta",
+    "upload": "Enviar",
+    "refresh": "Atualizar",
+    "colName": "Nome",
+    "colSize": "Tamanho",
+    "colMtime": "Modificado",
+    "colActions": "Ações",
+    "loading": "Carregando…",
+    "empty": "Pasta vazia",
+    "download": "Baixar",
+    "delete": "Excluir",
+    "downloadFile": "Baixar arquivo",
+    "tooLarge": "O arquivo é grande demais para ser pré-visualizado ou editado inline.",
+    "binary": "É um arquivo binário, portanto a pré-visualização e a edição inline não são suportadas.",
+    "dirty": "Alterações não salvas",
+    "synced": "Sincronizado",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "folderNamePlaceholder": "Nome da pasta",
+    "cancel": "Cancelar",
+    "create": "Criar",
+    "confirmDelete": "{kind, select, dir {Excluir a pasta «{name}»? (incluindo todo o seu conteúdo)} other {Excluir o arquivo «{name}»?}}",
+    "readDirFailed": "Erro ao ler a pasta: {msg}",
+    "openFileFailed": "Erro ao abrir o arquivo: {msg}",
+    "saved": "Salvo",
+    "saveFailed": "Erro ao salvar: {msg}",
+    "deleted": "Excluído",
+    "deleteFailed": "Erro ao excluir: {msg}",
+    "uploaded": "{n} arquivos enviados",
+    "uploadFailed": "Erro ao enviar: {msg}",
+    "folderCreated": "Pasta criada",
+    "createFailed": "Erro ao criar: {msg}",
+    "downloadFailed": "Erro ao baixar: {msg}"
+  },
+  "llmRecords": {
+    "title": "Registros de LLM",
+    "searchPlaceholder": "Buscar Session ID…",
+    "taskPlaceholder": "Selecione uma tarefa…",
+    "taskEmpty": "Não há registros de tarefas",
+    "deleteTaskConversations": "Excluir conversas da tarefa",
+    "selectTaskFirst": "Primeiro selecione uma tarefa acima",
+    "recording": "Gravando",
+    "recordingOff": "Desativado",
+    "colTime": "Hora",
+    "colTask": "Tarefa",
+    "colLatency": "Latência",
+    "colStatus": "Status",
+    "empty": "Não há registros de chamadas a LLM",
+    "taskBadge": "Tarefa #{id}",
+    "rawTooltipHas": "Ver o HTTP original realmente trocado com o provider",
+    "rawTooltipNone": "Este registro foi criado antes de essa função ser adicionada, portanto não há dados originais",
+    "raw": "Original",
+    "loading": "Carregando…",
+    "emptyContent": "(Vazio)",
+    "copyCopied": "Copiado",
+    "copyTooltip": "Copiar conteúdo",
+    "deleteTitle": "Excluir todas as conversas de LLM da tarefa «{taskId}»?",
+    "deleteDesc": "Exclui permanentemente todos os registros de chamadas a LLM desta tarefa (incluindo os originais de solicitações/respostas). Esta ação não pode ser desfeita.",
+    "cancel": "Cancelar",
+    "deleting": "Excluindo…",
+    "confirmDelete": "Excluir"
+  },
+  "assetSync": {
+    "title": "Sincronização de ativos",
+    "subtitle": "Sincroniza e registra ativos de fontes de dados externas",
+    "notReady": "Quando a fonte de dados estiver pronta, você poderá selecionar projetos/tarefas para sincronizar.",
+    "statusLoadFailed": "Não foi possível ler o estado da fonte de dados: {msg}",
+    "dsTitle": "Estado da fonte de dados",
+    "refresh": "Atualizar",
+    "created": "Fonte de dados ScopeSentry criada. Insira o endereço e a chave",
+    "createFailed": "Erro ao criar: {msg}",
+    "urlRequired": "Insira o endereço do MCP",
+    "savedEnabled": "Fonte de dados salva e ativada",
+    "savedPending": "Salvo (as condições de ativação ainda não foram atendidas)",
+    "saveFailed": "Erro ao salvar: {msg}",
+    "notCreatedDesc": "Você ainda não criou a fonte de dados ScopeSentry. Ao criá-la, é adicionado um MCP de marcador de posição (com endereço/chave vazios e no estado desativado).",
+    "createDs": "Criar fonte de dados",
+    "notConfigured": "A fonte de dados foi criada, mas ainda não foi configurada. Insira o endereço do MCP e a API Key e, em seguida, ative-a.",
+    "notEnabled": "A fonte de dados está configurada, mas ainda não ativada. Ao salvar, é ativada automaticamente.",
+    "mcpUrl": "Endereço do MCP",
+    "mcpUrlPlaceholder": "http://seu-host:8082/mcp",
+    "apiKeyLabel": "API Key (X-API-Key, deixe vazio para manter o valor existente)",
+    "saveEnable": "Salvar e ativar",
+    "toolsFound": "{count} ferramentas encontradas",
+    "badgeChecking": "Verificando…",
+    "badgeNotCreated": "Não criada",
+    "badgeNotConfigured": "Não configurada",
+    "badgeNotEnabled": "Desativada",
+    "badgeConnected": "Conectada",
+    "badgeUnreachable": "Inacessível",
+    "listLoadFailed": "Não foi possível carregar a lista: {msg}",
+    "selectAtLeastOneTarget": "{dim, select, project {Selecione pelo menos um projeto} other {Selecione pelo menos uma tarefa}}",
+    "selectAtLeastOneType": "Selecione pelo menos um tipo de ativo",
+    "syncDone": "Sincronização concluída; {total} ativos registrados",
+    "syncFailed": "Erro de sincronização: {msg}",
+    "loading": "Carregando…",
+    "noData": "Sem dados",
+    "workbenchTitle": "Selecione os dados para sincronizar",
+    "dimProject": "Por projeto",
+    "dimTask": "Por tarefa",
+    "syncAssetsLabel": "Ativos para sincronizar:",
+    "createCompany": "Criar uma empresa por projeto e registrá-la no escopo de ativos",
+    "searchProject": "Buscar nome de projeto",
+    "searchTask": "Buscar nome de tarefa",
+    "selectedCount": "{count} selecionados",
+    "syncSelected": "Sincronizar selecionados",
+    "colProjectName": "Nome do projeto",
+    "colTaskName": "Nome da tarefa",
+    "colTag": "Etiqueta",
+    "colAssetCount": "Número de ativos",
+    "colStatus": "Status",
+    "colTime": "Hora",
+    "pageNo": "Página {page}",
+    "assetType": {
+      "subdomain": "Subdomínio",
+      "service": "Serviço",
+      "app": "App",
+      "ip": "IP"
+    },
+    "resultCompanies": "Empresas novas/atualizadas: {names}",
+    "moreErrors": "… {count} erros no total"
+  },
+  "assets": {
+    "title": "Ativos",
+    "totalAssets": "<n>{count}</n> no total",
+    "deleteSelected": "Excluir selecionados ({count})",
+    "refresh": "Atualizar",
+    "companyTable": {
+      "name": "Empresa",
+      "count": "Número de ativos",
+      "scope": "Escopo de ativos",
+      "actions": "Ações"
+    },
+    "noScope": "Sem escopo definido",
+    "deleteCompanyAria": "Excluir empresa {name}",
+    "companyEmpty": "Ainda não há empresas registradas. Clique em «Adicionar empresa» no canto superior direito e informe um escopo de ativos; o sistema atribuirá automaticamente os ativos que coincidirem.",
+    "tab": {
+      "company": "Empresa",
+      "rootDomain": "Domínio raiz",
+      "ip": "IP",
+      "subdomain": "Subdomínio",
+      "app": "Aplicação",
+      "service": "Serviço",
+      "endpoint": "Endpoint"
+    },
+    "col": {
+      "domain": "Domínio",
+      "icp": "Registro ICP",
+      "ownerCompany": "Empresa proprietária",
+      "cSegment": "Segmento C",
+      "boundDomains": "Domínios vinculados",
+      "openPorts": "Portas abertas",
+      "rootDomain": "Domínio raiz",
+      "recordType": "Tipo de registro",
+      "recordValue": "Valor do registro",
+      "appName": "Nome da aplicação",
+      "category": "Categoria",
+      "service": "Serviço",
+      "port": "Porta",
+      "statusCode": "Código de status",
+      "pageTitle": "Título",
+      "fingerprint": "Fingerprint",
+      "auth": "Autenticação",
+      "method": "Método",
+      "fullUrl": "URL completa",
+      "params": "Parâmetros"
+    },
+    "unassigned": "Não atribuído",
+    "deleteAssetAria": "Excluir ativo {target}",
+    "authFallback": "Autenticação",
+    "emptyData": "Não há dados",
+    "loading": "Carregando…",
+    "deleteDialog": {
+      "title": "Confirmar exclusão",
+      "body": "Isto exclui permanentemente <n>{count}</n> registros de ativos. Esta ação não pode ser desfeita.",
+      "confirm": "Confirmar exclusão"
+    },
+    "deleteCompanyDialog": {
+      "title": "Excluir empresa · {name}",
+      "body": "Esta ação exclui permanentemente a empresa e a configuração do seu escopo de ativos, e não pode ser desfeita.",
+      "alsoDeleteAssets": "Excluir também todos os ativos que pertencem a esta empresa",
+      "alsoDeleteHint": "Se não for selecionado, os ativos são mantidos e apenas sua atribuição é liberada"
+    },
+    "cancel": "Cancelar",
+    "saving": "Salvando…",
+    "save": "Salvar",
+    "deleting": "Excluindo…",
+    "fixInvalidScope": "Corrija o escopo de ativos inválido",
+    "saveFailed": "Erro ao salvar: {msg}",
+    "reasonLabel": "Justificativa da atribuição (opcional)",
+    "reasonPlaceholder": "p. ex. certificado / whois / evidência de ASN",
+    "toast": {
+      "deleted": "Foram excluídos {count} ativos",
+      "deleteFailed": "Erro ao excluir: {msg}",
+      "companyDeletedWithAssets": "A empresa foi excluída junto com {count} ativos",
+      "companyDeleted": "Empresa excluída"
+    },
+    "companyDialog": {
+      "addButton": "Adicionar empresa",
+      "title": "Adicionar empresa",
+      "description": "Configure uma empresa e seu escopo de ativos. As palavras-chave são usadas apenas como pistas para o Agent e não atribuem ativos automaticamente.",
+      "nameLabel": "Nome da empresa",
+      "namePlaceholder": "p. ex. Acme Corp (o nome deve ser único)",
+      "nameRequired": "Informe um nome de empresa",
+      "createdWithInvalid": "Empresa criada com {added} entradas de escopo adicionadas. {invalid} linhas são inválidas",
+      "created": "Empresa criada com {added} entradas de escopo adicionadas",
+      "exists": "A empresa já existe. Use outro nome"
+    },
+    "editScope": {
+      "button": "Editar",
+      "title": "Editar escopo de ativos · {name}",
+      "description": "Ao editar, todo o escopo existente é substituído. O ICP faz a correspondência dos ativos com precisão, enquanto as palavras-chave da empresa são usadas apenas como pistas para o Agent.",
+      "overwrite": "Sobrescrever e salvar",
+      "savedWithInvalid": "Salvo. {invalid} linhas são inválidas",
+      "updated": "Escopo atualizado. {added} no total"
+    },
+    "appendScope": {
+      "button": "Adicionar",
+      "title": "Adicionar escopo de ativos · {name}",
+      "description": "O novo escopo é somado ao escopo existente. O ICP faz a correspondência dos ativos com precisão, enquanto as palavras-chave da empresa são usadas apenas como pistas para o Agent.",
+      "scopeRequired": "Informe o escopo que deseja adicionar",
+      "appended": "Foram adicionadas {added} entradas de escopo"
+    }
+  },
+  "tasksPage": {
+    "tab": {
+      "current": "Tarefas atuais",
+      "archived": "Arquivadas"
+    },
+    "filter": {
+      "searchPlaceholder": "Buscar descrição / objetivo / ID",
+      "clearSearch": "Limpar busca",
+      "statusPlaceholder": "Status",
+      "allStatus": "Todos os status",
+      "categoryPlaceholder": "Categoria da tarefa",
+      "allCategory": "Todas as categorias",
+      "uncategorized": "Sem categoria"
+    },
+    "count": "{shown}/{total}",
+    "selected": "{count} selecionadas",
+    "clearSelection": "Cancelar seleção",
+    "batchPause": "Pausar {count}",
+    "batchResume": "Retomar {count}",
+    "batchArchive": "Arquivar {count}",
+    "empty": {
+      "noTasks": "Não há tarefas. Clique em «Nova tarefa» no canto superior direito para começar.",
+      "noMatch": "Não há tarefas correspondentes."
+    },
+    "table": {
+      "selectAllAria": "Selecionar todas as tarefas desta página",
+      "name": "Nome",
+      "description": "Descrição",
+      "target": "Objetivo",
+      "status": "Status",
+      "goalProgress": "Progresso do objetivo",
+      "findings": "Achados",
+      "findingsSub": "Crítico/Alto/Médio/Baixo",
+      "findingsTitle": "Crítico / Alto / Médio / Baixo",
+      "runningWorker": "Workers em execução",
+      "created": "Criado",
+      "duration": "Duração",
+      "actions": "Ações"
+    },
+    "delete": {
+      "detailAssets": "{n} ativos excluídos",
+      "detailAssetsDetached": "{n} vínculos de ativos compartilhados excluídos",
+      "detailTraffic": "{n} registros de tráfego excluídos",
+      "detailFiles": "Arquivos da tarefa excluídos",
+      "detailFindings": "{n} achados excluídos",
+      "detailLlm": "{n} registros de solicitação/resposta LLM excluídos",
+      "summary": "Tarefa excluída ({details})",
+      "summaryBare": "Tarefa excluída"
+    },
+    "toast": {
+      "deleteWarn": "{summary}. Não foi possível limpar alguns dados externos: {warning}",
+      "deleteFailed": "Erro ao excluir: {msg}",
+      "paused": "Tarefa #{id} pausada",
+      "resumed": "{queued, select, yes {Tarefa #{id} retomada (adicionada à fila)} other {Tarefa #{id} retomada}}",
+      "controlFailed": "{action, select, pause {Erro ao pausar: {msg}} other {Erro ao retomar: {msg}}}",
+      "renamed": "Tarefa #{id} renomeada",
+      "renameFailed": "Erro ao renomear: {msg}",
+      "pinned": "Tarefa #{id} fixada",
+      "unpinned": "Tarefa #{id} desfixada",
+      "pinFailed": "{pinned, select, yes {Erro ao desfixar: {msg}} other {Erro ao fixar: {msg}}}",
+      "archiveQueued": "Tarefa #{id} adicionada à fila de arquivamento",
+      "archiveFailed": "Erro ao arquivar: {msg}"
+    },
+    "row": {
+      "selectAria": "Selecionar tarefa {id}",
+      "pinnedBadge": "Fixada",
+      "unnamed": "Sem nome",
+      "viewDetail": "Ver detalhes da tarefa",
+      "tokenTitle": "Entrada {input} · Cache {cache} · Saída {output}",
+      "tokenIn": "Ent",
+      "tokenCache": "Ca",
+      "tokenOut": "Saí",
+      "nameAria": "Nome da tarefa #{id}",
+      "renameAria": "Renomear tarefa #{id}",
+      "renameTitle": "Renomear",
+      "pinAria": "Fixar tarefa #{id}",
+      "unpinAria": "Desfixar tarefa #{id}",
+      "pinTitle": "Fixar",
+      "unpinTitle": "Desfixar",
+      "resumeTask": "Retomar tarefa",
+      "pauseTask": "Pausar tarefa",
+      "controlDisabled": "Não é possível pausar ou retomar neste status",
+      "archiveAria": "Arquivar tarefa #{id}"
+    },
+    "archiveBlock": {
+      "queued": "As tarefas na fila precisam ser pausadas primeiro",
+      "running": "As tarefas em execução ou não finalizadas precisam ser pausadas primeiro",
+      "inherited": "A tarefa não arquivada #{id} herda diretamente esta tarefa; arquive primeiro a tarefa dependente"
+    },
+    "archiveDialog": {
+      "title": "{count, plural, =1 {Arquivar esta tarefa?} other {Arquivar # tarefas?}}",
+      "description": "Ao arquivar, o agendamento da tarefa é interrompido e o grafo, os registros LLM, os arquivos e os ativos e o tráfego dedicados são comprimidos em armazenamento a frio local. Quando o arquivamento terminar, você poderá restaurá-la em «Arquivadas».",
+      "cancel": "Cancelar",
+      "confirm": "Confirmar arquivamento"
+    },
+    "batch": {
+      "deleted": "{count} tarefas excluídas",
+      "deletedDetails": "{count} tarefas excluídas ({details})",
+      "deleteWarn": "{summary}. Não foi possível limpar alguns dados externos: {warnings}",
+      "deleteFailed": "Erro ao excluir {count} tarefas: {items}{truncated, select, yes { e mais} other {}}",
+      "archiveQueued": "{count} tarefas adicionadas à fila de arquivamento",
+      "archiveFailed": "Não é possível arquivar {count} tarefas: {items}",
+      "controlLimit": "Só é possível controlar até 100 tarefas por vez",
+      "paused": "{count} tarefas pausadas",
+      "resumed": "{queued, select, yes {{count} tarefas retomadas (algumas foram colocadas na fila)} other {{count} tarefas retomadas}}",
+      "controlFailed": "Erro ao processar {count} tarefas: {items}{truncated, select, yes { e mais} other {}}",
+      "controlBatchFailed": "{action, select, pause {Erro ao pausar em lote: {msg}} other {Erro ao retomar em lote: {msg}}}",
+      "moveLimit": "Só é possível alterar a categoria de até 100 tarefas por vez",
+      "moved": "{count} tarefas movidas para «{target}»",
+      "moveFailed": "Erro ao mover {count} tarefas: {items}{truncated, select, yes { e mais} other {}}",
+      "moveCategoryFailed": "Erro ao alterar a categoria: {msg}",
+      "statusChanged": "Status alterado",
+      "taskGone": "A tarefa não existe mais"
+    },
+    "upload": {
+      "marker": "[Arquivos enviados (caminhos absolutos)]",
+      "hint": "O worker pode abrir estes caminhos com Read/Bash:",
+      "failed": "Erro ao enviar: {msg}"
+    },
+    "taskRef": "Tarefa #{id}",
+    "sort": {
+      "default": "Ordenar por {label} em ordem decrescente",
+      "active": "Atualmente ordenado por {label} em ordem {direction, select, asc {crescente} other {decrescente}}. Clique para alterar a direção"
+    },
+    "concurrency": {
+      "aria": "Configurações de concorrência de tarefas",
+      "trigger": "Configurações de concorrência",
+      "title": "Limite de concorrência de tarefas",
+      "description": "Limita quantas tarefas são executadas ao mesmo tempo. Ao atingir o limite, as novas tarefas são colocadas na fila por ordem de criação e iniciadas automaticamente quando há espaço.",
+      "enableLabel": "Ativar o limite de concorrência de tarefas",
+      "defaultOff": "Desativado por padrão",
+      "limitLabel": "Limite de concorrência",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "enabledToast": "Limite de concorrência ativado. São executadas até {count} tarefas ao mesmo tempo",
+      "disabledToast": "Limite de concorrência de tarefas desativado",
+      "saveFailed": "Erro ao salvar: {msg}"
+    },
+    "archive": {
+      "state": {
+        "archive_queued": "Arquivamento na fila",
+        "archiving": "Arquivando",
+        "archive_failed": "Erro ao arquivar",
+        "ready": "Restaurável",
+        "restore_queued": "Restauração na fila",
+        "restoring": "Restaurando",
+        "restore_failed": "Erro ao restaurar",
+        "delete_queued": "Exclusão na fila",
+        "deleting": "Excluindo",
+        "delete_failed": "Erro ao excluir"
+      },
+      "compression": "{size} · {percent}% economizado",
+      "deleteTitle": "Excluir permanentemente {count} tarefas arquivadas?",
+      "deleteDescription": "Exclui permanentemente cerca de {size} de pacotes de arquivamento e {rows} instantâneos de dados associados. Esta ação não pode ser desfeita.",
+      "deleteCancel": "Cancelar",
+      "deleteConfirm": "Excluir permanentemente",
+      "loadFailed": "Não foi possível carregar a lista de arquivados: {msg}",
+      "restoreQueued": "{count} tarefas colocadas na fila para restauração",
+      "restoreRejected": "Não é possível restaurar {count} tarefas",
+      "restoreFailed": "Erro ao restaurar: {msg}",
+      "deleteQueued": "{count} itens arquivados colocados na fila para exclusão permanente",
+      "deleteRejected": "Não é possível excluir {count} itens arquivados",
+      "permDeleteFailed": "Erro na exclusão permanente: {msg}",
+      "retryQueued": "Recolocado na fila de processamento",
+      "retryFailed": "Erro ao tentar novamente: {msg}",
+      "searchPlaceholder": "Buscar nome / descrição / ID da tarefa",
+      "statePlaceholder": "Status de processamento",
+      "allStates": "Todos os status",
+      "total": "{count} arquivadas",
+      "selected": "{count} selecionadas",
+      "restore": "Restaurar {count}",
+      "deleteSelected": "Excluir {count}",
+      "selectPageAria": "Selecionar todos os itens arquivados desta página",
+      "colTask": "Tarefa",
+      "colOriginalStatus": "Status original",
+      "colCategory": "Categoria",
+      "colArchivedAt": "Arquivado em",
+      "colCompressedSize": "Tamanho comprimido",
+      "colDataCount": "Volume de dados",
+      "colProcessingState": "Status de processamento",
+      "colActions": "Ações",
+      "emptyTitle": "Não há tarefas arquivadas",
+      "emptyDescription": "Você pode arquivar tarefas pausadas ou finalizadas na lista de tarefas atuais.",
+      "selectRowAria": "Selecionar tarefa arquivada #{id}",
+      "uncategorized": "Sem categoria",
+      "originalSizeTitle": "{size} antes de comprimir",
+      "retryAria": "Tentar novamente a operação de arquivamento",
+      "retryTitle": "Tentar novamente",
+      "restoreAria": "Restaurar tarefa",
+      "restoreTitle": "Restaurar tarefa",
+      "permDeleteAria": "Excluir permanentemente o item arquivado",
+      "permDeleteTitle": "Excluir permanentemente"
+    },
+    "deleteOptions": {
+      "legend": "Limpar também os dados associados",
+      "allLabel": "Excluir tudo",
+      "allDescription": "Seleciona todos os dados associados abaixo. Inclui ativos, tráfego, arquivos, achados e registros de solicitação/resposta LLM.",
+      "assetsLabel": "Ativos associados",
+      "assetsDescription": "Exclui os ativos que pertencem apenas a esta tarefa. Nos ativos compartilhados, só é excluído o vínculo com a tarefa atual.",
+      "trafficLabel": "Tráfego associado",
+      "trafficDescription": "Exclui com base nos nomes de host exatos dos ativos associados. O tráfego de hosts compartilhados que ainda referenciam outras tarefas é mantido.",
+      "filesLabel": "Arquivos da tarefa",
+      "filesDescription": "Exclui os arquivos enviados, a saída de comandos e outros artefatos do diretório de trabalho desta tarefa.",
+      "findingsLabel": "Achados associados",
+      "findingsDescription": "Exclui permanentemente os registros de achados independentes e os relatórios de achados criados por esta tarefa.",
+      "llmLabel": "Registros de solicitação/resposta LLM",
+      "llmDescription": "Exclui permanentemente os detalhes de solicitação, resposta, tokens e erros LLM registrados por esta tarefa."
+    },
+    "deleteDialog": {
+      "aria": "Excluir tarefa",
+      "title": "Excluir a tarefa #{id}?",
+      "descSuffix": ": seu histórico de execução e trajeto de exploração serão excluídos permanentemente.",
+      "descNoTask": "O histórico de execução e o trajeto de exploração desta tarefa serão excluídos permanentemente.",
+      "cancel": "Cancelar",
+      "deleting": "Excluindo",
+      "delete": "Excluir"
+    },
+    "move": {
+      "trigger": "Alterar categoria",
+      "title": "Alterar a categoria de {count} tarefas selecionadas",
+      "description": "A categoria de destino é aplicada a todas as tarefas selecionadas. Se escolher «Sem categoria», elas são retiradas da categoria atual.",
+      "targetLabel": "Categoria de destino",
+      "selectPlaceholder": "Selecionar categoria",
+      "uncategorized": "Sem categoria",
+      "noCategory": "Ainda não há categorias. Crie uma primeiro em «Gerenciar categorias».",
+      "cancel": "Cancelar",
+      "move": "Mover"
+    },
+    "bulkDelete": {
+      "trigger": "Excluir selecionadas {count}",
+      "title": "Excluir {count} tarefas selecionadas?",
+      "description": "O histórico de execução e os trajetos de exploração destas tarefas serão excluídos permanentemente, e as opções de limpeza a seguir se aplicam a todas as tarefas selecionadas.",
+      "more": "…e mais {count}",
+      "cancel": "Cancelar",
+      "progress": "Excluindo {done}/{total}",
+      "confirm": "Excluir {count} tarefas"
+    },
+    "sourcePicker": {
+      "atLimit": "Você pode vincular até {max} tarefas",
+      "placeholder": "Buscar ID, descrição ou objetivo da tarefa",
+      "empty": "Não há tarefas correspondentes",
+      "unknownTask": "Tarefa desconhecida"
+    },
+    "categoryPicker": {
+      "unknown": "Categoria desconhecida",
+      "placeholder": "Busque uma categoria ou digite um novo nome e pressione Enter para criá-la",
+      "create": "Criar a categoria «{name}»",
+      "hint": "Digite um nome para buscar ou criar uma categoria",
+      "created": "Categoria «{name}» criada",
+      "createFailed": "Erro ao criar a categoria: {msg}"
+    },
+    "companyPicker": {
+      "scopeDomain": "Domínio",
+      "scopeKeyword": "Palavra-chave",
+      "scopeNone": "Sem escopo de ativos definido",
+      "scopeEntry": "{label}: {value}",
+      "scopeMore": "e mais {count}",
+      "placeholder": "Buscar nome da empresa ou escopo de ativos",
+      "empty": "Não há empresas correspondentes",
+      "fallback": "Empresa #{id}",
+      "assetCount": "{count} ativos"
+    },
+    "categoryManage": {
+      "trigger": "Gerenciar categorias",
+      "title": "Gerenciar categorias de tarefas",
+      "description": "As categorias são usadas para filtrar e arquivar tarefas. Editá-las não afeta a execução das tarefas, e ao excluir uma, suas tarefas passam para Sem categoria.",
+      "newCategory": "Nova categoria",
+      "uncategorized": "Sem categoria",
+      "nameLabel": "Nome da categoria",
+      "namePlaceholder": "p. ex. Avaliação de rede externa",
+      "renameHint": "{count} tarefas usam atualmente esta categoria. Ao renomeá-la, a lista de tarefas também é atualizada.",
+      "createHint": "Depois de criada, você poderá usá-la em novas tarefas e no filtro da lista de tarefas.",
+      "categoryTasks": "Tarefas da categoria",
+      "uncategorizedTasks": "Tarefas sem categoria",
+      "categoryTaskCount": "Esta categoria tem {count} tarefas.",
+      "uncategorizedTaskCount": "{count} tarefas ainda não estão categorizadas.",
+      "emptyCategoryTitle": "Não há tarefas nesta categoria",
+      "emptyUncategorizedTitle": "Não há tarefas sem categoria",
+      "emptyDescription": "As tarefas aparecem aqui quando são adicionadas a uma categoria.",
+      "dropHint": "Solte para mover",
+      "taskCount": "{count} tarefas",
+      "dragAria": "Arrastar tarefa #{id}",
+      "dragTitle": "Arrastar tarefa",
+      "deleteCategory": "Excluir categoria",
+      "close": "Fechar",
+      "saving": "Salvando",
+      "create": "Criar categoria",
+      "save": "Salvar alterações",
+      "created": "Categoria criada",
+      "updated": "Categoria atualizada",
+      "createFailed": "Erro ao criar a categoria: {msg}",
+      "updateFailed": "Erro ao atualizar a categoria: {msg}",
+      "deleted": "Categoria excluída; suas tarefas foram movidas para Sem categoria",
+      "deleteFailed": "Erro ao excluir a categoria: {msg}",
+      "targetMissing": "A categoria de destino não foi encontrada. Atualize e tente novamente",
+      "moved": "Tarefa #{id} movida para «{name}»",
+      "moveFailed": "Erro ao mover a tarefa: {msg}",
+      "deleteTitle": "Excluir a categoria «{name}»?",
+      "unnamedCategory": "Categoria sem nome",
+      "deleteDescription": "Ao excluir a categoria, suas {count} tarefas passam automaticamente para Sem categoria; os dados das tarefas não são excluídos.",
+      "deleteCancel": "Cancelar",
+      "deleting": "Excluindo",
+      "deleteConfirm": "Excluir"
+    },
+    "create": {
+      "newTask": "Nova tarefa",
+      "description": "Informe o que você vai testar e o objetivo. Você pode expandir as configurações avançadas quando precisar.",
+      "nameLabel": "Nome (opcional)",
+      "namePlaceholder": "Dê a ela um nome reconhecível. P. ex. Pentest do site da Acme",
+      "categoryLabel": "Categoria da tarefa",
+      "categoryHint": "É opcional e só é possível atribuir uma categoria. É usada para o filtro da lista de tarefas e o arquivamento, e não afeta a execução do Agent.",
+      "descLabel": "Descrição",
+      "descPlaceholder": "O que será testado e o contexto. P. ex. Testar o site example.com",
+      "uploadButton": "Enviar arquivos",
+      "uploadDone": "{count} arquivos enviados e seus caminhos absolutos adicionados ao final da descrição (editável)",
+      "uploadIdle": "Você pode selecionar vários arquivos. Ao enviá-los, seus caminhos absolutos são adicionados à descrição para que o worker possa abri-los com Read/Bash",
+      "goalLabel": "Objetivo",
+      "goalPlaceholder": "O que se quer alcançar. P. ex. Obter acesso ao painel de administração, obter acesso ao servidor",
+      "sourceLabel": "Tarefas vinculadas",
+      "sourceHint": "Você pode vincular até {max} tarefas. A nova tarefa herda em tempo real e em modo somente leitura o blackboard persistente, o escopo de ativos e o tráfego relacionado das tarefas selecionadas, e escreve em seu próprio blackboard independente.",
+      "companyLabel": "Escopo de ativos da empresa vinculada",
+      "companyHint": "Ao criar a tarefa, os ativos que a empresa selecionada possui atualmente são adicionados a «Ativos de teste», e os domínios, os IPs, os CIDRs, o ICP e as palavras-chave da empresa são fornecidos ao Agent como contexto de escopo. Isso não gera intenções automaticamente nem força a mudança do objetivo de execução.",
+      "interceptLabel": "Regras de bloqueio / permissão de ativos por tarefa (opcional)",
+      "interceptHint": "Aplica-se apenas a esta tarefa e não é adicionado às regras globais. A ordem de avaliação é a seguinte. Primeiro os ativos são verificados com as regras de «bloqueio» (incluindo as globais); se uma regra corresponder, o teste é proibido. Se nenhuma corresponder e esta tarefa tiver regras de «permissão» definidas, um ativo deve corresponder a uma regra de permissão para passar; caso contrário, o teste também não é permitido. Se nenhuma regra de permissão for definida, nenhuma lista branca é aplicada.",
+      "llmLabel": "Cadeia de perfis LLM",
+      "llmHint": "Realiza o failover na ordem da lista. O primeiro item é o perfil atual e só muda para o próximo quando a cota se esgota.",
+      "advanced": "Configurações avançadas",
+      "advancedSub": "Tempo de espera · Heartbeat · Primeira intenção",
+      "timeoutLabel": "Tempo de espera da tarefa (minutos, opcional)",
+      "timeoutPlaceholder": "Deixe em branco para não ter limite de tempo",
+      "timeoutHint": "Quando o tempo é atingido, executa um encerramento ordenado (cada agent registra seus resultados + o planner toma a decisão final) e a tarefa passa ao status de finalização por tempo de espera.",
+      "heartbeatLabel": "Heartbeat do planner (minutos)",
+      "heartbeatPlaceholder": "Padrão 10",
+      "heartbeatHint": "Se decorrer este tempo desde que o último planejamento terminou ou desde que a tarefa foi iniciada sem que tenha havido nenhum disparador, uma rodada de planejamento é executada automaticamente (para evitar bloqueios e retomar a supervisão dos workers em execução). O mínimo é de 10 minutos.",
+      "seedLabel": "Enviar a primeira intenção imediatamente (descrição + objetivo)",
+      "seedHint": "Quando ativado, logo após a criação envia «descrição + objetivo» como uma única intenção para que o worker comece imediatamente sem esperar a primeira rodada de planejamento; ao terminar, o planner assume para avaliar e complementar. Recomendado para casos que costumam ser resolvidos com um único work, como CTF; quando desativado, segue o fluxo padrão de planejar primeiro e executar depois.",
+      "coverageLabel": "Função de cobertura de ativos",
+      "coverageHint": "Ativada por padrão. Calcula e exibe a cobertura de testes, mostra o progresso dos testes no mapa de situação e acumula automaticamente o escopo testado. Quando desativada, a cobertura deixa de ser calculada e exibida, o mapa de situação mostra apenas os ativos sem o progresso, e o agent deixa de receber ferramentas relacionadas ao escopo. Desativá-la não afeta o «Escopo de ativos da empresa vinculada».",
+      "cancel": "Cancelar",
+      "creating": "Criando",
+      "create": "Criar",
+      "validateRequired": "Informe uma descrição e um objetivo",
+      "validateSourceLimit": "Você pode vincular até {max} tarefas de origem",
+      "createdToast": "Tarefa criada",
+      "createFailed": "Erro ao criar: {msg}"
+    }
+  },
+  "chatSendMode": {
+    "option": {
+      "enter": "Enter para enviar, Shift+Enter para quebra de linha",
+      "ctrlEnter": "Ctrl+Enter para enviar, Enter para quebra de linha"
+    }
+  },
+  "traffic": {
+    "title": "Tráfego",
+    "subtitle": "Proxy de gravação global · todo o tráfego HTTP",
+    "recording": "Gravando",
+    "stopped": "Parado",
+    "total": "<n></n> no total",
+    "picker": {
+      "selectTarget": "Selecionar destino…",
+      "selectTargetCount": "Selecionar destino ({count})",
+      "batchByTarget": "Excluir em lote por destino",
+      "sortAriaDesc": "O número de pacotes está atualmente em ordem decrescente. Clique para mudar para crescente",
+      "sortAriaAsc": "O número de pacotes está atualmente em ordem crescente. Clique para mudar para decrescente",
+      "sortTipDesc": "Número de pacotes decrescente",
+      "sortTipAsc": "Número de pacotes crescente",
+      "selectAll": "Selecionar tudo",
+      "deselectAll": "Desmarcar tudo",
+      "empty": "Não há registros de tráfego",
+      "deleteSelected": "Excluir selecionados ({count})"
+    },
+    "toolbar": {
+      "hostHint": "Primeiro selecione um destino à esquerda ou insira um host",
+      "deleteHost": "Excluir este destino",
+      "purgeTitle": "Exclui todo o tráfego e compacta o armazenamento",
+      "purgeEmptyTitle": "Não há registros de tráfego no momento",
+      "purgeAll": "Esvaziar tudo",
+      "search": "Buscar em tudo (URL / método / tipo / código de status…)",
+      "method": "Método",
+      "allMethods": "Todos os métodos"
+    },
+    "filters": {
+      "advanced": "Filtros avançados",
+      "body": "Conteúdo da resposta (palavra-chave do corpo, 3+ caracteres)",
+      "path": "Caminho (por exemplo /api/user/…)",
+      "status": "Código de status",
+      "allStatus": "Todos os códigos de status",
+      "respLen": "Tamanho da resposta",
+      "min": "Mín. (B)",
+      "max": "Máx. (B)",
+      "clear": "Limpar filtros"
+    },
+    "selection": {
+      "selected": "{count} entradas de tráfego selecionadas",
+      "linkToVuln": "Vincular a achado",
+      "clear": "Limpar seleção"
+    },
+    "table": {
+      "selectPage": "Selecionar o tráfego desta página",
+      "time": "Hora",
+      "method": "Método",
+      "status": "Código de status",
+      "respLen": "Tamanho da resposta",
+      "selectRow": "Selecionar tráfego {id}",
+      "loading": "Carregando…",
+      "empty": "Não há tráfego correspondente."
+    },
+    "detail": {
+      "request": "Solicitação",
+      "response": "Resposta",
+      "loadingMsg": "Carregando mensagem…",
+      "loadFailed": "(Não foi possível carregar a mensagem)"
+    },
+    "toast": {
+      "purgedWithSpace": "{deleted} entradas de tráfego esvaziadas, {space} de armazenamento liberado",
+      "purged": "{deleted} entradas de tráfego esvaziadas",
+      "purgeFailed": "Erro ao esvaziar: {msg}"
+    },
+    "dialog": {
+      "titlePurge": "Esvaziar todos os registros de tráfego?",
+      "titleSelected": "Excluir todo o tráfego dos {count} destinos selecionados?",
+      "titleFilter": "Excluir todo o tráfego deste destino?",
+      "descPurge": "Exclui permanentemente os <n></n> registros de tráfego (incluindo os originais de solicitação/resposta), ignorando o filtro atual. Esta ação não pode ser desfeita. A evidência de tráfego vinculada a achados é armazenada em um repositório de evidências independente e não é afetada.<br></br><muted>Após o esvaziamento, o armazenamento também é compactado e o espaço em disco que o índice ocupava é devolvido ao sistema. Durante esse processo, a gravação de tráfego é interrompida brevemente.</muted>",
+      "descSelected": "Exclui permanentemente todos os registros de tráfego (incluindo os originais de solicitação/resposta) de <n></n> destinos (<hosts></hosts>). Esta ação não pode ser desfeita.",
+      "descFilter": "Exclui permanentemente todos os registros de tráfego (incluindo os originais de solicitação/resposta) cujo host contenha <host></host>. Esta ação não pode ser desfeita.",
+      "cancel": "Cancelar",
+      "confirmPurge": "Confirmar esvaziamento",
+      "confirmDelete": "Confirmar exclusão",
+      "purging": "Esvaziando…",
+      "deleting": "Excluindo…"
+    }
+  },
+  "chat": {
+    "live": "Ao vivo",
+    "custom": "Personalizado",
+    "emptyStart": "Inicie uma conversa com «{agent}»",
+    "turnsTooltip": "Iterações do agente (número de chamadas ao modelo)",
+    "turnsCount": "{turns}×",
+    "loadEarlierHint": "Role para cima para carregar mensagens anteriores…",
+    "running": "Em execução",
+    "untitledConversation": "Nova conversa",
+    "newConversation": "Nova conversa",
+    "filterByAgentAria": "Filtrar conversas por agente",
+    "allAgents": "Todos os agentes",
+    "agentOption": "{name} ({count})",
+    "selectAllAria": "Selecionar todas as conversas do filtro atual",
+    "selectedCount": "{count} selecionadas",
+    "done": "Pronto",
+    "multiSelect": "Seleção múltipla",
+    "emptyAll": "Não há conversas",
+    "emptyForAgent": "Não há conversas para este agente",
+    "loadMore": "Carregar mais",
+    "deletedConversation": "Conversa excluída",
+    "loadingConversation": "Carregando a conversa…",
+    "totalCount": "{count} no total",
+    "filteredCount": "{shown} / {total}",
+    "conversationNotFound": "Conversa não encontrada",
+    "bulkDeleted": "{count} conversas excluídas",
+    "bulkDeleteFailDetail": "#{id} ({error})",
+    "bulkDeleteFailed": "Erro ao excluir {count} conversas: {details}",
+    "andMore": " e mais",
+    "bulkDeleteError": "Erro ao excluir em lote: {msg}",
+    "bulkDeleteTitle": "Excluir {count} conversas selecionadas?",
+    "bulkDeleteDesc": "As mensagens da conversa e o histórico de execução são excluídos juntos, e esta ação não pode ser desfeita.",
+    "deleting": "Excluindo",
+    "confirmDelete": "Confirmar exclusão",
+    "composer": {
+      "removeAttachment": "Remover",
+      "uploadFile": "Enviar arquivo",
+      "sendSideQuestion": "Enviar pergunta paralela",
+      "stopRun": "Interromper esta execução",
+      "sendMessage": "Enviar mensagem",
+      "placeholder": "Digite uma mensagem. Use @ para citar registros, Enter para enviar",
+      "placeholderRunning": "O agente está respondendo. Você pode perguntar com /btw…"
+    },
+    "llmProfile": {
+      "default": "Padrão",
+      "defaultNamed": "Padrão ({name})",
+      "change": "Alterar",
+      "select": "Selecionar perfil LLM"
+    },
+    "agentPicker": {
+      "placeholder": "Selecionar agente…"
+    },
+    "item": {
+      "selectAria": "Selecionar a conversa «{title}»",
+      "renameHint": "Dê um clique duplo para renomear",
+      "pinnedAria": "Fixada",
+      "runningTooltip": "Agente em execução",
+      "manageAria": "Gerenciar a conversa «{title}»",
+      "rename": "Renomear",
+      "pin": "Fixar",
+      "unpin": "Desfixar",
+      "delete": "Excluir",
+      "deleteTitle": "Excluir a conversa «{title}»?",
+      "deleteDesc": "Esta ação não pode ser desfeita.",
+      "cancel": "Cancelar"
+    },
+    "group": {
+      "expand": "Expandir «{name}»",
+      "collapse": "Recolher «{name}»",
+      "activeInside": "A conversa atual está neste grupo",
+      "runningAria": "{count} conversas em execução"
+    },
+    "toast": {
+      "sendFailed": "Erro ao enviar: {msg}",
+      "uploadFailed": "Erro ao enviar: {msg}",
+      "switchLlmFailed": "Erro ao trocar de LLM: {msg}",
+      "stopFailed": "Erro ao interromper: {msg}",
+      "deleteFailed": "Erro ao excluir: {msg}",
+      "renameFailed": "Erro ao renomear: {msg}",
+      "pinFailed": "Erro ao fixar: {msg}",
+      "unpinFailed": "Erro ao desfixar: {msg}"
+    }
+  },
+  "linkTraffic": {
+    "title": "Vincular a vulnerabilidade",
+    "description": "Salva os {count} itens de tráfego selecionados como evidência de uma vulnerabilidade existente.",
+    "findLabel": "Buscar vulnerabilidade",
+    "searchPlaceholder": "Nome / resumo / tipo de vulnerabilidade",
+    "loading": "Carregando…",
+    "empty": "Não há vulnerabilidades correspondentes. Registre primeiro uma vulnerabilidade",
+    "prevPage": "Página anterior",
+    "nextPage": "Próxima página",
+    "pageInfo": "Página {page} · {total} no total",
+    "selected": "Vulnerabilidade selecionada: #{id} {name}",
+    "selectPrompt": "Selecione uma vulnerabilidade",
+    "cancel": "Cancelar",
+    "saving": "Salvando…",
+    "confirm": "Confirmar vínculo",
+    "boundToast": "{count} itens de tráfego foram vinculados à vulnerabilidade #{id}"
+  },
+  "sortableHead": {
+    "sortBy": "Ordenar por {label} de forma decrescente",
+    "active": "{label} atualmente ordenado de forma {direction, select, asc {crescente} other {decrescente}}, clique para inverter a ordem"
+  },
+  "sessions": {
+    "token": {
+      "inShort": "Ent",
+      "cacheShort": "Cache",
+      "outShort": "Saí",
+      "inLong": "Entrada",
+      "cacheLong": "Cache",
+      "outLong": "Saída"
+    },
+    "item": {
+      "sourceTask": "Origem #{id}",
+      "deleted": "Excluído",
+      "live": "Ao vivo",
+      "deleteTitle": "Excluir esta intenção (requer um motivo; escolha exclusão suave ou completa)"
+    },
+    "asset": {
+      "current": "Ativo atual: {label}",
+      "sourceTask": "Tarefa de origem #{id}",
+      "type": {
+        "app": "App",
+        "endpoint": "Endpoint",
+        "ip": "IP",
+        "root_domain": "Domínio raiz",
+        "service": "Serviço",
+        "subdomain": "Subdomínio"
+      },
+      "source": {
+        "agent": "Descoberto pelo agente",
+        "anchor": "Âncora de quadro",
+        "api": "API de ativos",
+        "company": "Associação de empresa",
+        "legacy": "Associação legada",
+        "manual": "Adicionado manualmente",
+        "system": "Associação do sistema",
+        "task": "Inicialização de tarefa"
+      }
+    },
+    "toast": {
+      "uploadFailed": "Erro ao fazer upload: {msg}",
+      "createSessionFailed": "Erro ao criar a sessão: {msg}",
+      "reasonRequired": "Insira um motivo de exclusão",
+      "workerPaused": "Worker #{id} em pausa",
+      "workerResumed": "Worker #{id} retomado, aguardando reatribuição",
+      "hardDeleteExtra": "(inclui {intents} intenções / {facts} fatos / {findings} achados)",
+      "workerHardDeleted": "Worker #{id} e seus nós filhos exclusivos excluídos por completo{extra}",
+      "workerSoftDeleted": "Worker #{id} excluído (motivo registrado; o planejador replanejará de acordo)",
+      "workerActionFailed": "Erro na ação do Worker: {msg}",
+      "loadFailed": "Erro ao carregar",
+      "sendFailed": "Erro ao enviar: {msg}",
+      "retryLater": "Tente novamente em um instante",
+      "messageTooLong": "A mensagem não pode exceder {max} caracteres",
+      "workerMessageSent": "Mensagem enviada ao Worker #{id}. A execução é retomada imediatamente"
+    },
+    "role": {
+      "mainagent": "Agente principal",
+      "planner": "Planejador",
+      "worker": "Workers",
+      "system": "Auditoria do sistema"
+    },
+    "title": {
+      "main": "Agente principal · sessão #{n}",
+      "planner": "Planejador · avaliação da situação",
+      "system": "Eventos do sistema · failover de LLM"
+    },
+    "resolution": {
+      "unnamed": "Perfil sem nome",
+      "current": "Perfil atual: {label}",
+      "unavailable": "Modelo não disponível",
+      "noConfig": "Não há nenhum perfil de LLM disponível"
+    },
+    "list": {
+      "title": "Lista de sessões"
+    },
+    "sse": {
+      "live": "Ao vivo",
+      "reconnecting": "Reconectando",
+      "titleLive": "Conexão em tempo real correta",
+      "titleDown": "A conexão em tempo real caiu; reconectando automaticamente (você pode continuar vendo o histórico)"
+    },
+    "taskTotal": "Total da tarefa",
+    "tokens": {
+      "full": "Entrada {input} · saída {output} · leitura de cache {cacheRead} · escrita de cache {cacheWrite}"
+    },
+    "newMain": {
+      "title": "Nova sessão do agente principal (limpa o contexto, conserva o estado da tarefa)",
+      "aria": "Nova sessão do agente principal",
+      "label": "Novo"
+    },
+    "worker": {
+      "loadOlder": "Carregar mais Workers anteriores",
+      "noRunning": "Não há sessões de Worker em execução.",
+      "execSession": "Sessão de execução do Worker"
+    },
+    "header": {
+      "sourceTask": "Tarefa de origem #{id} · histórico somente leitura",
+      "interactive": "Interativo",
+      "runDurationTitle": "Tempo de execução (primeiro passo → último passo)",
+      "olderHistoryTitle": "Role para cima para carregar o histórico anterior",
+      "olderHistoryLabel": "↑ Histórico anterior"
+    },
+    "deletedNotice": {
+      "heading": "O usuário excluiu esta intenção",
+      "detail": "(a execução foi interrompida e o planejador foi notificado; a intenção e seus resultados são conservados, e você pode ver o histórico abaixo)",
+      "reason": "Motivo de exclusão: "
+    },
+    "transcript": {
+      "loadingMore": "Carregando o histórico anterior…",
+      "loadingActivity": "Carregando o fluxo de atividade…",
+      "loadError": "Erro ao carregar: {error}",
+      "retry": "Tentar novamente",
+      "emptyMain": "Ainda não há conversa. Envie uma mensagem ao agente principal abaixo para guiar a exploração ou intervir no fluxo.",
+      "emptyWorker": "Não há histórico de atividade."
+    },
+    "composer": {
+      "attachmentRemove": "Remover",
+      "mainAria": "Enviar uma mensagem ao agente principal",
+      "mainBusyPlaceholder": "O agente principal está em execução. Você pode perguntar com /btw…",
+      "mainPlaceholder": "Escreva ao agente principal; use @ para citar achados, ativos e mais…",
+      "uploadTitle": "Enviar arquivo",
+      "sideQuestion": "Enviar pergunta lateral",
+      "stopTitle": "Interromper a execução atual",
+      "sendTitle": "Enviar mensagem",
+      "workerAria": "Enviar uma mensagem ao Worker #{id}",
+      "workerPlaceholder": "Escreva ao Worker #{id}; use @ para citar registros e ajustar sua execução…",
+      "pauseTitle": "Pausar o Worker atual",
+      "resumeTitle": "Continuar a execução sem mensagem",
+      "resumeAria": "Continuar imediatamente",
+      "resumeLabel": "Continuar"
+    },
+    "deleteDialog": {
+      "title": "Excluir o Worker #{id}?",
+      "hardDesc": "A <s>exclusão completa</s> exclui fisicamente a intenção e os nós filhos que <s>sustentam apenas essa intenção</s> (em cascata até as folhas, sem deixar dados órfãos), conservando os nós compartilhados, os objetivos e os fatos raiz da tarefa. <s>Esta ação não pode ser desfeita.</s> O planejador recebe o aviso de exclusão e replaneja de acordo.",
+      "softDesc": "A <s>exclusão suave</s> marca a intenção como «Excluída» e registra o motivo, enquanto o nó de intenção, o histórico de execução e os fatos e achados registrados <s>são todos conservados</s>. O planejador recebe «o usuário excluiu esta intenção + motivo» e replaneja de acordo.",
+      "softLabel": "Exclusão suave",
+      "softHint": "Conserva os dados, rastreável",
+      "hardLabel": "Exclusão completa",
+      "hardHint": "Exclusão em cascata, irrecuperável",
+      "reasonLabel": "Motivo de exclusão (obrigatório)",
+      "reasonPlaceholder": "Explique por que está excluindo esta intenção. p. ex. erro de endereço / o objetivo não existe mais / duplicata de outra intenção…",
+      "back": "Voltar",
+      "confirmHard": "Excluir por completo",
+      "confirmSoft": "Confirmar exclusão"
+    },
+    "newSession": {
+      "title": "Iniciar uma nova sessão?",
+      "desc": "A sessão atual é arquivada (você pode voltar a ela a qualquer momento) e o agente principal continua com um contexto limpo. O grafo, os ativos e os objetivos da tarefa não são afetados.",
+      "cancel": "Cancelar",
+      "starting": "Iniciando…",
+      "start": "Iniciar nova sessão"
+    }
+  },
+  "settingsPage": {
+    "title": "Configurações do sistema",
+    "subtitle": "Interruptores globais de runtime",
+    "save": "Salvar",
+    "configured": "Configurado",
+    "onSuffix": " · Ativado",
+    "offSuffix": " · Desativado",
+    "toast": {
+      "saveFailed": "Erro ao salvar: {error}",
+      "workersInvalid": "O número de workers paralelos deve ser um inteiro maior que 0",
+      "workersSaved": "O número de agentes worker paralelos foi salvo (aplica-se às tarefas iniciadas depois)",
+      "pythonSaved": "A configuração do interpretador de Python foi salva",
+      "bindingOn": "A vinculação automática de tráfego do agente foi ativada",
+      "bindingOff": "A vinculação automática de tráfego do agente foi desativada",
+      "noaOn": "A compressão de contexto noa foi ativada (aplica-se às execuções iniciadas depois)",
+      "noaOff": "A compressão de contexto noa foi desativada (a compressão integrada foi restaurada)",
+      "webSearchSaved": "A configuração de busca web foi salva",
+      "braveKeySaved": "A API Key do Brave foi salva",
+      "tavilyKeySaved": "A API Key do Tavily foi salva",
+      "proxySaved": "O proxy de saída foi salvo",
+      "proxyCleared": "O proxy de saída foi removido (alterado para conexão direta)",
+      "globalProxySaved": "O proxy global foi salvo",
+      "globalProxyCleared": "O proxy global foi removido (alterado para conexão direta)",
+      "testSuccess": "Teste de busca bem-sucedido · {backend} retornou {count} resultados",
+      "testFailed": "Teste de busca falhou: {error}",
+      "testUnknownError": "Erro desconhecido"
+    },
+    "trafficCapture": {
+      "title": "Captura de tráfego",
+      "desc": "Quando ativado, todo o tráfego HTTP dos agentes passa pelo proxy de registro e é salvo por completo, e são injetadas nos agentes as ferramentas traffic_search / traffic_get e a configuração do proxy (o prompt inclui uma descrição do proxy).<br></br>Quando desativado (padrão), nenhum tráfego é registrado. Os agentes <b>não recebem</b> a configuração do proxy nem as ferramentas de tráfego, e o prompt <b>não inclui</b> nenhum conteúdo relacionado ao proxy. Ao alterá-lo, os agentes são regerados imediatamente para aplicar a mudança.",
+      "on": "Ativado · Registrando tráfego e injetando o proxy",
+      "off": "Desativado · Sem registro nem injeção de proxy"
+    },
+    "agentBinding": {
+      "title": "Vinculação automática de tráfego do agente",
+      "desc": "Desativado por padrão. Quando ativado, o agente de relatórios executado ao registrar uma vulnerabilidade coteja as requisições/respostas HTTP existentes, vincula o tráfego correspondente e depois redige o relatório. <b>Inspecionar pacotes e fazer chamadas adicionais a ferramentas aumenta o consumo de tokens.</b><br></br>Também é possível gerar relatórios normalmente quando o tráfego é TCP, quando não foram capturados pacotes ou quando não há tráfego correspondente. Este interruptor não afeta a captura de tráfego, a vinculação manual nem a consulta de evidências salvas. Aplica-se a partir da próxima rodada de agentes e, ao desativá-lo, as novas vinculações automáticas são rejeitadas imediatamente.",
+      "on": "Ativado · Aumenta o consumo de tokens",
+      "off": "Desativado · A vinculação manual continua disponível"
+    },
+    "globalProxy": {
+      "title": "Proxy global",
+      "desc": "O <b>tráfego de destino</b> de todos os agentes sai por este proxy (oculta o IP de origem / usa um servidor intermediário). Suporta <b>http / https / socks5</b> e pode incluir autenticação <code>user:pass</code>. Se deixado em branco, a conexão é direta.<br></br>Quando a <b>Captura de tráfego</b> está ativada, este proxy se torna o <b>upstream</b> do proxy de registro (o tráfego continua sendo salvo por completo e depois sai novamente por este proxy). Quando a captura está desativada, ele é injetado diretamente na saída de bash / WebFetch dos agentes. É independente do proxy de busca web e do proxy de LLM.<br></br><b>Observação</b>: com a <b>captura desativada</b>, o socks5 depende de cada ferramenta de linha de comando suportar <code>ALL_PROXY</code> (o curl suporta, mas algumas ferramentas podem ignorá-lo). Se você usar principalmente socks5, convém ativar a Captura de tráfego. Nesse caminho, o MITM estabelece a conexão diretamente, por isso ele se aplica de forma confiável mesmo que uma ferramenta não o detecte.",
+      "addrLabel": "Endereço do proxy",
+      "placeholder": "socks5://user:pass@host:1080 ou http://host:port (vazio para conexão direta)",
+      "configured": "Configurado · Todo o tráfego de destino sai por este proxy",
+      "notConfigured": "Sem configuração · O tráfego de destino sai por conexão direta"
+    },
+    "constraints": {
+      "title": "Injeção de restrições de comportamento",
+      "desc": "Quando ativado, as <b>restrições de comportamento</b> de cada tarefa (os itens allow/deny gerenciados em «Restrições de comportamento» do resumo da tarefa) são adicionadas ao prompt do sistema desse agente para limitar o escopo da exploração (p. ex., «Testar apenas a porta atual», «Força bruta proibida»).<br></br>Você pode controlar a injeção separadamente para o <b>planner</b> e o <b>worker</b>; ambos estão ativados por padrão. As mudanças são aplicadas imediatamente (são lidas na próxima rodada) sem necessidade de regerar os agentes. Quando desativado, esse agente deixa de ver as restrições.",
+      "injectPlanner": "Injetar no planner",
+      "injectWorker": "Injetar no worker"
+    },
+    "experimental": {
+      "title": "Funções experimentais",
+      "desc": "Estas funções ainda estão em validação e estão desativadas por padrão. Elas podem alterar o comportamento do agente ou afetar a estabilidade, por isso ative-as apenas depois de entender seu impacto.<br></br><b>Compressão de contexto noa</b>: o modelo comprime diretamente o longo histórico de conversa (norma v0.4.0). Quando ativada, os quatro tipos de agentes conectados à plataforma (<b>planner / worker / agente principal / conversa</b>) cedem o contexto ao noa em vez de usar a compressão integrada, e a saída original da compressão é mantida no diretório de trabalho da tarefa para que você possa revisá-la facilmente. As mudanças são aplicadas imediatamente (às execuções iniciadas depois) sem necessidade de regerar os agentes. Ao desativá-la, a compressão integrada é restaurada imediatamente.",
+      "noaLabel": "Compressão de contexto noa"
+    },
+    "webSearch": {
+      "title": "Busca web",
+      "desc": "O <b>interruptor principal + a configuração de fontes</b> da busca web. Somente quando está ativado é possível escolher o uso de <b>web_search</b> individualmente em <b>cada configuração de agente</b> (retorna apenas o título/link/resumo e não obtém o corpo; da coleta do corpo cuida o WebFetch). A busca web <b>não passa pelo</b> proxy de registro e é independente da Captura de tráfego.<br></br>Como fonte, você pode escolher entre <b>DuckDuckGo (ddgs)</b> (não precisa de Key), <b>Brave (versão gratuita)</b> (requer uma API Key do Brave), <b>Tavily</b> (requer uma API Key do Tavily) e <b>DeepSeek</b> (reutiliza a configuração atual de LLM). Quando o interruptor principal está desativado, o interruptor de busca web de cada agente não pode ser usado.",
+      "on": "Interruptor principal ativado · Pode ser ativado individualmente em cada configuração de agente",
+      "off": "Desativado · Não é possível ativar a busca web em nenhum agente",
+      "sourceLabel": "Fonte de busca",
+      "sourcePlaceholder": "Selecione uma fonte",
+      "sourceDdgs": "DuckDuckGo (ddgs · grátis, sem Key)",
+      "sourceBrave": "Brave (versão gratuita · requer Key)",
+      "sourceTavily": "Tavily (requer Key)",
+      "sourceDeepseek": "DeepSeek (oficial)",
+      "deepseekTitle": "Busca web oficial do DeepSeek",
+      "deepseekDesc1": "Esta fonte reutiliza exatamente a <b>configuração de LLM ativa no momento</b>. Por isso, <b>só suporta os modelos oficiais do DeepSeek</b>, e essa configuração <b>deve usar o protocolo anthropic</b>. O endpoint com protocolo OpenAI do DeepSeek não suporta a busca do lado do servidor. Se você alterar a configuração de LLM, é possível que esta fonte deixe de funcionar.",
+      "deepseekDesc2": "Diferentemente de outras fontes, a busca é <b>executada pelo servidor do DeepSeek</b>. Cada busca consome uma chamada adicional ao modelo (com o consequente custo de tokens), e a requisição de busca <b>não passa pelo proxy de saída acima</b> nem <b>é incluída no registro de tráfego</b>. Os resultados retornados contêm <b>apenas títulos e links</b> (sem resumo); se você precisar do corpo, o WebFetch o obtém.",
+      "deepseekDesc3": "Você mesmo deve verificar se as condições acima são atendidas; o sistema não impede isso. Você pode usar o botão «Teste de busca» abaixo para executá-la uma vez e verificar.",
+      "braveKeyLabel": "Brave Search API Key",
+      "braveKeyPlaceholderSet": "Configurado (deixe em branco para manter)",
+      "braveKeyPlaceholderUnset": "Insira a API Key do Brave",
+      "braveNeedsKey": "Você selecionou o Brave, mas ainda não configurou uma Key. A ferramenta de busca não será ativada até que você salve uma Key.",
+      "braveQuota": "A versão gratuita permite cerca de 2000 consultas por mês. Obtenha uma Key em https://brave.com/search/api/.",
+      "tavilyKeyLabel": "Tavily Search API Key",
+      "tavilyKeyPlaceholderSet": "Configurado (deixe em branco para manter)",
+      "tavilyKeyPlaceholderUnset": "Insira a API Key do Tavily (tvly-…)",
+      "tavilyNeedsKey": "Você selecionou o Tavily, mas ainda não configurou uma Key. A ferramenta de busca não será ativada até que você salve uma Key.",
+      "tavilyGetKey": "Cadastre-se em https://tavily.com e obtenha uma API Key.",
+      "proxyLabel": "Proxy de saída (opcional)",
+      "proxyPlaceholder": "http://host:port ou socks5://host:port (vazio para conexão direta)",
+      "proxyHint": "Um proxy de saída independente usado apenas para acessar o endpoint de busca (VPN/SOCKS, etc.). Não tem relação com o proxy MITM que registra o tráfego; quando a rede está bloqueada, as conexões passam por este proxy.",
+      "testHint": "Executa uma busca real de «test» com a configuração atual (fonte + proxy + Key) para verificar se funciona.",
+      "testRunning": "Testando…",
+      "testButton": "Teste de busca"
+    },
+    "python": {
+      "title": "Scripts personalizados · Interpretador de Python",
+      "desc": "As ferramentas personalizadas do tipo <b>script</b> executam Python com este interpretador. Ele é detectado automaticamente ao iniciar (dá-se preferência ao python3); aqui você pode inserir o caminho absoluto de um venv ou de uma versão específica, e se deixado em branco é detectado automaticamente no momento da execução.",
+      "placeholder": "/usr/bin/python3 (vazio para detecção automática)",
+      "detect": "Detectar novamente"
+    },
+    "workers": {
+      "title": "Paralelismo de tarefas · Número de agentes worker",
+      "desc": "O número de agentes worker executados em paralelo em cada tarefa (valor padrão 3). Um valor mais alto explora mais em paralelo e consome mais. As mudanças <b>aplicam-se às tarefas iniciadas depois</b>; as tarefas em execução não são afetadas."
+    },
+    "sendKey": {
+      "title": "Tecla de envio do campo de entrada da sessão",
+      "desc": "A página de conversa e o campo de entrada da sessão do agente principal nos detalhes da tarefa compartilham esta configuração; ao selecioná-la, ela é aplicada imediatamente sem necessidade de salvar.<br></br>Esta configuração é <b>salva somente neste navegador</b> e não é sincronizada com a sua conta, portanto, se você trocar de navegador ou apagar os dados do site, terá que configurá-la novamente.",
+      "label": "Método de envio"
+    },
+    "update": {
+      "title": "Versão e atualizações",
+      "desc": "Verifica e instala novas versões do GitHub. Ao atualizar, o programa é reiniciado e as tarefas em execução são interrompidas.",
+      "currentVersion": "Versão atual",
+      "latestVersion": "Última versão",
+      "modeDocker": "Docker",
+      "modeStandalone": "Programa independente",
+      "changelog": "Registro de alterações",
+      "connectError": "Não é possível conectar com o GitHub: {error} Você pode configurar o proxy global acima e tentar novamente.",
+      "noAsset": "{latest} não tem um pacote de lançamento para {os}/{arch} (falta {asset}), por isso não é possível atualizar automaticamente.",
+      "willDownloadPrefix": "Será baixado: ",
+      "willDownloadSize": " ({size})",
+      "willDownloadSuffix": ". Só é substituído após passar na verificação SHA256 e em um teste de fumaça; se algum falhar, a versão atual é mantida automaticamente.",
+      "upToDate": "Você já está na última versão.",
+      "dockerNote": "Em um ambiente Docker, a atualização substitui apenas o programa em si e não atualiza a cadeia de ferramentas da imagem, como playwright / nmap. Além disso, se você recriar o contêiner com <code>docker compose up -d</code>, volta-se à versão incluída na imagem. Para atualizar também a imagem, execute <code>docker compose pull artex && docker compose up -d artex</code>.",
+      "restarting": "Reiniciando e aplicando a nova versão. Aguarde um momento (a página será atualizada automaticamente)…",
+      "check": "Verificar atualizações",
+      "updateToVersion": "Atualizar para {latest}",
+      "updateNow": "Atualizar agora",
+      "rollback": "Reverter para a versão anterior",
+      "footer": "A atualização com um clique depende de que o script do daemon reinicie o programa. Inicie o ARTEX com <code>start.sh</code> (<code>start.bat</code> no Windows). Se você executar diretamente o binário do artex, ele não será reiniciado automaticamente depois que o programa for encerrado.",
+      "toast": {
+        "checkFailed": "Erro ao verificar atualizações: {error}",
+        "found": "Nova versão {latest} encontrada",
+        "upToDate": "Você já está na última versão",
+        "updated": "Atualizado para {version}. Recarregando a página",
+        "restartTimeout": "O tempo de espera para o reinício do serviço se esgotou. Verifique os registros do backend ou confirme se o artex foi iniciado com start.sh / start.bat.",
+        "updateFailed": "Erro na atualização: {error}",
+        "startFailed": "Não foi possível iniciar a atualização: {error}",
+        "rollbackSwitched": "Alterado para a versão anterior. Reiniciando…",
+        "rollbackFailed": "Erro na reversão: {error}",
+        "preparing": "Preparando…"
+      },
+      "confirm": {
+        "title": "Atualizar para {latest}?",
+        "restart": "Ao atualizar, o programa é reiniciado e as tarefas em execução são interrompidas.",
+        "docker": "Observação: a atualização dentro do contêiner substitui apenas o programa em si e não atualiza a cadeia de ferramentas da imagem, como playwright / nmap. Se a nova versão depender de novas ferramentas, altere-a e execute-a com docker compose pull.",
+        "rollback": "Reverter para a versão anterior?\n\nO programa será reiniciado e as tarefas em execução serão interrompidas.\nObservação: a estrutura do banco de dados não é revertida, e é possível que a versão anterior não reconheça os dados gravados pela nova versão."
+      }
+    },
+    "language": {
+      "title": "Idioma da interface",
+      "desc": "O idioma do texto na tela e dos relatórios, resumos e respostas de chat que os agentes escrevem. Aplica-se imediatamente, sem necessidade de salvar. O idioma da tela é salvo somente neste navegador, por isso você terá que escolhê-lo novamente se trocar de navegador ou apagar os dados do site. O idioma de saída dos agentes é salvo no servidor e aplica-se a partir de qualquer navegador.",
+      "label": "Idioma"
+    }
+  },
+  "llmPage": {
+    "page": {
+      "subtitle": "Configuração de formato / modelo / limite de taxa compartilhada por todos os agentes. Clique em um cartão para editá-lo; a estrela indica o perfil ativo.",
+      "poolConfig": "Configuração de rotação",
+      "enabled": "Ativado",
+      "new": "Novo",
+      "tab": {
+        "profiles": "Perfis de modelo",
+        "retry": "Novas tentativas e backoff"
+      },
+      "empty": "Ainda não há perfis de modelo. Adicione o primeiro com «Novo» no canto superior direito.",
+      "toast": {
+        "activated": "Ativado: {name}",
+        "activateFailed": "Erro ao ativar: {msg}",
+        "cannotDeleteActive": "Não é possível excluir o perfil ativo",
+        "deleted": "Excluído: {name}",
+        "deleteFailed": "Erro ao excluir: {msg}"
+      }
+    },
+    "card": {
+      "proxy": "Proxy {proxy}",
+      "thinking": "Raciocínio {effort}",
+      "thinkingOff": "Desativado",
+      "excluded": "Excluído da rotação",
+      "priority": "Prioridade {priority}",
+      "active": "Ativo",
+      "activate": "Definir como ativo",
+      "deleteAria": "Excluir perfil"
+    },
+    "health": {
+      "noKey": {
+        "label": "Sem key",
+        "hint": "A API Key está vazia, não é possível fazer chamadas"
+      },
+      "tripped": "Circuito aberto",
+      "trippedCooldown": "Circuito aberto · {cooldown}",
+      "degraded": "Degradado · {fails} falhas",
+      "ok": "Correto"
+    },
+    "pool": {
+      "title": "Rotação de LLM · failover",
+      "desc": "Quando ativada, os agentes que <b>não especificam um modelo</b> mudam automaticamente para o próximo perfil quando o atual não pode ser usado (saldo insuficiente / key expirada / limite de chamadas / erro do serviço).",
+      "enable": {
+        "label": "Ativar rotação",
+        "hint": "Desativada por padrão. Quando desativada, sempre se usa apenas o perfil ativo e, se falhar, simplesmente falha.",
+        "aria": "Interruptor de rotação de LLM"
+      },
+      "bindFallback": {
+        "label": "Fazer fallback mesmo que o modelo fixado falhe",
+        "hint": "Desativada por padrão: quando um agente ou uma tarefa fixa um perfil específico, apenas esse perfil é usado e, se falhar, simplesmente falha (não muda de modelo às escondidas). Quando ativada, um perfil fixado que falha recorre à cadeia de rotação abaixo.",
+        "aria": "Interruptor de fallback ao falhar o perfil fixado"
+      },
+      "order": {
+        "label": "Ordem de rotação",
+        "tooFew": "Atualmente há apenas {n} perfil(is) disponível(is), portanto a rotação não funciona. É necessário preencher as API Keys e ter pelo menos 2 perfis participando da rotação."
+      },
+      "recoverAll": "Recuperar tudo",
+      "badge": {
+        "active": "Ativo",
+        "excluded": "Excluído"
+      },
+      "cooldown": "Cooldown {cooldown}",
+      "consecutiveFails": "{fails} falhas consecutivas",
+      "recoverNow": {
+        "aria": "Recuperar agora",
+        "title": "Recuperar agora: libera o corte do circuito e tenta novamente este perfil na próxima chamada"
+      },
+      "priority": "Prioridade {priority}",
+      "empty": "Sem perfis",
+      "note": "O perfil ativo sempre vai primeiro; o restante segue por ordem de prioridade (definida em cada perfil). Quando um perfil falha, entra em cooldown (60s → 5min → 30min), é omitido durante o cooldown e volta a ser incluído automaticamente ao se recuperar. Os perfis cuja janela de contexto não comporta a solicitação atual são omitidos. Os agentes e as tarefas que fixam um modelo não participam da rotação por padrão.",
+      "toast": {
+        "enabled": "Rotação de LLM ativada",
+        "disabled": "Rotação de LLM desativada",
+        "fallbackUpdated": "Configuração de fallback atualizada",
+        "setFailed": "Erro ao atualizar: {msg}",
+        "recoveredOne": "Perfil recuperado",
+        "recoveredAll": "Todos os perfis recuperados",
+        "recoverFailed": "Erro na recuperação: {msg}"
+      }
+    },
+    "profile": {
+      "titleNew": "Novo perfil de modelo",
+      "titleEdit": "Editar: {name}",
+      "activeBadge": "Ativo",
+      "descNew": "Um perfil novo não é ativado automaticamente. Use-o clicando em «Definir como ativo» no seu cartão.",
+      "descEdit": "Faça as alterações e clique em Salvar. Ao salvar, o perfil ativo é aplicado a todos os agentes imediatamente.",
+      "name": {
+        "label": "Nome",
+        "placeholder": "p. ex. OpenAI produção"
+      },
+      "format": {
+        "label": "Formato",
+        "placeholder": "Selecione um formato"
+      },
+      "model": {
+        "label": "Modelo",
+        "loadTitle": "Carregar os modelos disponíveis a partir da API"
+      },
+      "baseUrl": {
+        "label": "Base URL (opcional)"
+      },
+      "proxy": {
+        "label": "Proxy (opcional)",
+        "hint": "Apenas as solicitações de saída de LLM passam por este proxy. Admite http/https/socks5 e pode incluir usuário e senha (p. ex. socks5://user:pass@host:port; codifique a senha na URL se ela contiver caracteres especiais). Deixe vazio para não usar proxy (conexão direta)."
+      },
+      "sessionHeader": {
+        "label": "Cabeçalho de sessão personalizado (opcional)",
+        "placeholder": "p. ex. x-session-id (não é enviado se estiver vazio)",
+        "hint": "Se você preencher um nome de cabeçalho, este cabeçalho HTTP é enviado em cada solicitação, com seu valor fixado automaticamente no <b>session id da sessão atual</b> (conv-12 para sessões de chat, exp3-worker-i87 para workers, etc.). É para gateways que usam um cabeçalho session-id para cache de prompt / roteamento sticky. A mesma sessão se mantém estável entre turnos, e sessões distintas diferem entre si. Não é enviado se estiver vazio."
+      },
+      "apiKey": {
+        "placeholderSet": "Configurada ({hint}); deixe vazia para conservá-la"
+      },
+      "rps": "Limite de taxa por segundo",
+      "rpm": "Limite de taxa por minuto",
+      "cw": "Janela de contexto (K)",
+      "rateHint": "Limite de taxa 0 = sem limite, compartilhado por todos os agentes. A janela de contexto é expressa em K (milhares de tokens): 0 = 200K por padrão, máximo 1000 (ou seja, 1M). Se você defini-lo muito alto, a compactação não será acionada.",
+      "priority": {
+        "label": "Prioridade de rotação",
+        "hint": "Quanto maior o número, mais cedo é escolhido. O perfil ativo sempre vai primeiro, independentemente deste valor. Os perfis com a mesma prioridade se revezam para ir primeiro, dividindo a cota de forma natural."
+      },
+      "exclude": {
+        "label": "Excluir da rotação",
+        "hint": "Quando ativado, este perfil nunca é usado como destino de failover (continua disponível se um agente ou uma tarefa o fixar explicitamente). Ideal para um perfil custoso que você queira «reservar para um agente específico, para que não seja consumido quando outros falham».",
+        "aria": "Excluir da rotação"
+      },
+      "streaming": {
+        "label": "Saída em streaming · streaming",
+        "hint": "Quando ativado (padrão), funciona com SSE em streaming para ver o progresso em tempo real e a contagem de tokens ao vivo durante a execução. Quando desativado, funciona realmente sem streaming (stream:false, devolvendo a resposta completa de uma vez), o que pode contornar implementações SSE defeituosas de alguns gateways (frames vazios / frames sem o campo de raciocínio), mas perde o progresso em tempo real durante a execução.",
+        "aria": "Saída em streaming"
+      },
+      "maxTokens": {
+        "label": "Limite de saída · max tokens",
+        "hint": "O número máximo de tokens a gerar em uma única resposta, enviado com cada solicitação. 0 (padrão) = não enviar este campo e seguir o valor padrão do servidor. Isso difere da «Janela de contexto» acima, que é a capacidade total do modelo e só é usada para calcular o limiar de compactação localmente. Se você defini-lo muito baixo, um modelo de raciocínio é cortado na fase de raciocínio e não consegue responder nem um único caractere."
+      },
+      "maxTokensField": {
+        "label": "Nome do campo do limite",
+        "opt": {
+          "default": "max_tokens (padrão)"
+        }
+      },
+      "maxTokensFieldHint": {
+        "openai": "Com qual key enviar o limite. max_tokens é o valor padrão e a maioria dos gateways compatíveis reconhece apenas este. Em contrapartida, os modelos de raciocínio oficiais da OpenAI (série o / GPT-5) reconhecem apenas max_completion_tokens e, assim que recebem max_tokens, lançam um erro unsupported_parameter.",
+        "anthropic": "Só pode ser selecionado no formato openai. O nome do campo da Anthropic está fixado em max_tokens.",
+        "openai-responses": "Só pode ser selecionado no formato openai. O nome do campo da Responses API está fixado em max_output_tokens."
+      },
+      "thinkingType": {
+        "label": "Interruptor de raciocínio · thinking.type",
+        "hint": "Controla se o campo thinking é enviado. Não enviar = omitir este campo (compatível com modelos que não o admitem, como MiniMax); Desativado = enviar disabled; Ativado = enviar enabled. É independente da intensidade abaixo.",
+        "opt": {
+          "none": "Não enviar (padrão)",
+          "disabled": "Desativado",
+          "enabled": "Ativado"
+        }
+      },
+      "effort": {
+        "label": "Intensidade de raciocínio · reasoning_effort",
+        "hint": "Um nível de intensidade independente (OpenAI reasoning_effort / Anthropic output_config.effort). Algumas interfaces não têm campo thinking e ativam o raciocínio apenas com a intensidade, então você pode definir a intensidade separadamente sem enviar o interruptor de raciocínio.",
+        "opt": {
+          "none": "Não enviar (padrão)"
+        }
+      },
+      "testing": "Testando…",
+      "testConnection": "Testar conexão",
+      "create": "Criar",
+      "save": "Salvar",
+      "toast": {
+        "modelsLoaded": "{n} modelos carregados",
+        "loadModelsFailed": "Erro ao carregar os modelos: {error}",
+        "noModels": "Nenhum modelo foi retornado",
+        "loadModelsError": "Erro ao carregar os modelos: {msg}",
+        "testOk": "Conectado · {latency}ms · {model}",
+        "testReply": "Resposta: {reply}",
+        "testFailed": "Erro de conexão: {error}",
+        "unknown": "Desconhecido",
+        "testError": "Erro de teste: {msg}",
+        "nameModelRequired": "Insira um nome e um modelo",
+        "created": "Criado: {name} (use-o clicando em «Definir como ativo» no seu cartão)",
+        "savedActive": "Salvo. O perfil ativo é aplicado imediatamente, sem necessidade de reiniciar",
+        "saved": "Salvo",
+        "saveFailed": "Erro ao salvar: {msg}"
+      }
+    },
+    "retryLayer": {
+      "connect": {
+        "title": "Nova tentativa de conexão",
+        "where": "SDK · antes de receber um 200",
+        "trigger": "Quando a conexão não é estabelecida ou ainda não se recebeu um 200: erros da camada de rede como reinício de conexão / tempo limite de leitura-escrita / falha de DNS, além de HTTP 408·429·500·502·503·504.",
+        "skips": "Outros códigos de status (400 / 401 / 403 / 404 / 413 / 422, etc.) são rejeições definitivas que falhariam igualmente ao reenviar, portanto são elevadas diretamente.",
+        "desc": "Reenvia a mesma solicitação como está. Uma vez iniciado o stream (já se recebeu um 200), esta camada não se ocupa mais de uma queda no meio do stream.",
+        "attemptsLabel": "Número de novas tentativas",
+        "defInterval": "0.5s→1s→2s exponencial (máx. 8s)",
+        "offHint": "-1 = nunca tentar novamente; elevar a falha imediatamente"
+      },
+      "empty": {
+        "title": "Nova tentativa de resposta vazia",
+        "where": "SDK · apenas formato openai",
+        "trigger": "HTTP 200 com finish_reason normal stop, mas toda a resposta não contém nenhum bloco de conteúdo. Os frames vazios de gateway, os frames sem o campo de raciocínio e os soluços de amostragem se manifestam todos dessa forma.",
+        "skips": "Exclui os casos sem conteúdo por corte de max_tokens (isso deve ser resolvido aumentando o limite de saída; um reenvio volta a bater na mesma parede).",
+        "desc": "Reenvia todo o prompt, o que é custoso em contextos longos, então convém não definir um número alto.",
+        "attemptsLabel": "Número de novas tentativas",
+        "defInterval": "0.5s→1s→2s exponencial (máx. 8s)",
+        "offHint": "-1 = emitir a resposta vazia como está"
+      },
+      "stream": {
+        "title": "Nova tentativa em janela segura do mesmo provider",
+        "where": "Este projeto · antes de entregar a saída",
+        "trigger": "Um problema que surge depois de estabelecido o stream (recebeu-se um 200): uma desconexão no meio do stream, provider overloaded, ou um evento de erro 429 / 5xx dentro do stream, quando ainda não se entregou nem um token ao chamador.",
+        "skips": "Não tenta novamente o esgotamento de cota (402 / insufficient_quota, que a rotação gerencia mudando de perfil), o excesso de contexto (413 / context length, que a compactação gerencia), nem as rejeições definitivas 400 / 401 / 403 / 404 / 422.",
+        "desc": "Reproduz a mesma solicitação no mesmo perfil. Como ainda não se entregou nenhuma saída, reproduzi-la não duplica a saída do modelo nem a execução de ferramentas.",
+        "attemptsLabel": "Número de novas tentativas",
+        "defInterval": "0.5s→1s exponencial (máx. 4s)",
+        "offHint": "-1 = se o stream cair, passar imediatamente à reexecução de intenção da camada externa"
+      },
+      "breaker": {
+        "title": "Corte de circuito de rotação",
+        "where": "Este projeto · por processo, um global",
+        "trigger": "É disparado quando as falhas transitórias (429 · 5xx · erros de rede) se acumulam de forma consecutiva até o limiar. As falhas definitivas como saldo insuficiente (402), key expirada (401 / 403) e modelo inexistente (404) disparam imediatamente a partir da primeira, sem olhar o limiar.",
+        "skips": "Um único sucesso reinicia a contagem para 0, então um perfil que só dá problemas de vez em quando não se acumula aos poucos até disparar.",
+        "desc": "Ao disparar, entra em cooldown e, durante o cooldown, a rotação omite este perfil. O estado é salvo no BD, então sobrevive a um reinício.",
+        "attemptsLabel": "Falhas consecutivas antes de disparar",
+        "defInterval": "Passos 1min→5min→30min",
+        "offHint": "-1 = nunca disparar por falhas transitórias (as falhas definitivas continuam disparando-o)"
+      },
+      "intent": {
+        "title": "Reexecução de intenção",
+        "where": "Este projeto · por processo, um global",
+        "trigger": "Quando as camadas anteriores não o detiveram: um worker termina em model_error. Ou as novas tentativas internas estão todas esgotadas, ou o stream caiu depois de ter começado a entregar saída (então reproduzir não é seguro e é preciso executar tudo de novo).",
+        "skips": "O esgotamento de cota já é gerenciado pela rotação mudando de perfil, então não há reexecução aqui. Quando uma tarefa entra em pausa / parada / encerramento, cede imediatamente e não ocupa tempo de backoff.",
+        "desc": "Executa novamente toda a intenção desde o início. Por ser a camada mais externa, uma única reexecução multiplica mais uma vez os números de todas as camadas internas.",
+        "attemptsLabel": "Número de reexecuções",
+        "defInterval": "Fixo 3s",
+        "offHint": "-1 = não reexecutar; marcar a intenção como blocked imediatamente"
+      }
+    },
+    "retry": {
+      "defaultN": "Padrão {n}",
+      "triggerLabel": "Disparador",
+      "skipsLabel": "Omite esta camada",
+      "intervalMs": "Intervalo ms",
+      "defaultBackoff": "Backoff padrão",
+      "fixed": "Fixo {human}",
+      "emptyLine": "Deixe vazio para usar o valor padrão. {hint}.",
+      "override": {
+        "label": "Substituição de novas tentativas",
+        "hint": "Aplica-se apenas a este perfil e substitui os valores padrão globais de «Novas tentativas e backoff». Deixe um campo vazio para seguir o valor global. Coloque -1 no número para desativar as novas tentativas desta camada. Preencha um intervalo para usar um intervalo fixo em vez do backoff exponencial. O corte de circuito e a reexecução de intenção são por processo, então só podem ser ajustados na página global."
+      },
+      "loading": "Carregando a política de novas tentativas…",
+      "intro": "A falha de uma chamada ao modelo passa por cinco camadas de novas tentativas, em ordem de dentro para fora: <chain>conexão → resposta vazia → janela segura do mesmo provider → corte de circuito de rotação → reexecução de intenção</chain>. A vez de uma camada externa só chega quando a interna se esgota, então os números <emph>se multiplicam entre si</emph>. Se você levar cada camada ao máximo, um único contratempo pode queimar dezenas de solicitações. Deixá-las todas vazias é o valor padrão atual, exatamente o comportamento de quando esta página não existia. As três primeiras camadas podem ser substituídas separadamente em cada perfil de modelo.",
+      "save": "Salvar",
+      "resetAll": "Redefinir tudo para os valores padrão",
+      "toast": {
+        "loadFailed": "Erro ao ler a política de novas tentativas: {msg}",
+        "saved": "Salvo. Aplica-se imediatamente (uma chamada já em andamento continua usando os valores anteriores)",
+        "saveFailed": "Erro ao salvar: {msg}"
+      }
+    }
+  },
+  "notifyPage": {
+    "title": "Notificações",
+    "subtitle": "Quando uma vulnerabilidade é detectada, são enviadas notificações para canais como DingTalk, Feishu e WeCom. Cada canal pode ter seu próprio momento de envio e regras de filtragem.",
+    "globalSwitch": "Interruptor geral",
+    "addChannel": "Adicionar canal",
+    "disabled": "Desativado",
+    "aria": {
+      "globalSwitch": "Interruptor geral de notificações",
+      "enable": "Ativar",
+      "delete": "Excluir",
+      "statusChange": "Receber mudanças de estado"
+    },
+    "toast": {
+      "loadConfigFailed": "Não foi possível carregar a configuração de notificações: {msg}",
+      "loadChannelsFailed": "Não foi possível carregar a lista de canais: {msg}",
+      "nameRequired": "Informe um nome de canal",
+      "saved": "Salvo",
+      "channelAdded": "Canal adicionado",
+      "saveFailed": "Não foi possível salvar: {msg}",
+      "testSent": "Mensagem de teste enviada ({ms} ms). Verifique no canal",
+      "testFailed": "O teste falhou: {msg}",
+      "deleted": "Excluído: {name}",
+      "deleteFailed": "Não foi possível excluir: {msg}",
+      "actionFailed": "Não foi possível concluir a ação: {msg}",
+      "globalOn": "Notificações ativadas",
+      "globalOff": "Notificações desativadas"
+    },
+    "stats": {
+      "channels": "Canais",
+      "channelsHint": "Ativos / total",
+      "sentToday": "Enviados hoje",
+      "pending": "Pendentes",
+      "failed": "Falhados",
+      "backlog": "Maior acúmulo",
+      "backlogStuck": "O envio pode estar parado"
+    },
+    "global": {
+      "title": "Configuração global",
+      "baseUrl": "URL base dos links",
+      "baseUrlHint": "O endereço para o qual aponta o botão \"Ver detalhes\" da mensagem. Deixe em branco para omitir o botão.",
+      "digest": "Intervalo do resumo (minutos)",
+      "digestHint": "Aplica-se apenas aos canais no modo \"Resumo\".",
+      "save": "Salvar configuração global"
+    },
+    "tab": {
+      "channels": "Canais",
+      "deliveries": "Registro de envios"
+    },
+    "mode": {
+      "realtime": "Tempo real",
+      "digest": "Resumo"
+    },
+    "kind": {
+      "dingtalk": "DingTalk",
+      "feishu": "Feishu",
+      "wecom": "WeCom",
+      "webhook": "Webhook genérico",
+      "telegram": "Telegram",
+      "email": "E-mail"
+    },
+    "sheet": {
+      "addTitle": "Adicionar canal de notificação",
+      "rateLimited": " · Limite padrão {rate}/min",
+      "rateUnlimited": " · Sem limite",
+      "kindLabel": "Tipo de canal",
+      "kindLocked": "O tipo de canal não pode ser alterado. Mudar o tipo equivale a substituir todas as credenciais, então crie um novo canal.",
+      "nameLabel": "Nome do canal",
+      "namePlaceholder": "Resposta a incidentes / avisos diários",
+      "noFields": "O formulário de entrada deste canal ainda não está definido (não há uma entrada CHANNEL_FIELDS no frontend). Adicione a entrada e tente novamente.",
+      "modeLabel": "Momento de envio",
+      "modeRealtime": "Tempo real · uma mensagem por vulnerabilidade",
+      "modeDigest": "Resumo · uma mensagem agrupada por intervalo",
+      "modeHint": "Para algo como \"alta ou superior em tempo real, o restante como resumo\", crie dois canais. Configure um em tempo real + severidade mínima Alta, e o outro em resumo + sem limite de severidade.",
+      "rateLabel": "Limite de envio (por minuto)",
+      "ratePlaceholder": "0 = sem limite",
+      "rateHint": "Deixe em branco para usar o valor padrão do canal. 0 significa sem limite. Quando o limite é ultrapassado, as mensagens são atrasadas em vez de descartadas.",
+      "enable": "Ativar este canal",
+      "save": "Salvar",
+      "add": "Adicionar",
+      "sendTest": "Enviar mensagem de teste"
+    },
+    "filter": {
+      "title": "Regras de filtragem (em branco = sem filtragem)",
+      "minSeverity": "Severidade mínima",
+      "includeLabel": "Enviar apenas estes tipos de vulnerabilidade",
+      "includePlaceholder": "Injeção de SQL\nExecução de comandos",
+      "includeHint": "Uma palavra-chave por linha. Correspondência de substring sem distinção de maiúsculas. Em branco significa todos os tipos.",
+      "excludeLabel": "Excluir estes tipos de vulnerabilidade",
+      "excludePlaceholder": "Divulgação de informações",
+      "excludeHint": "A exclusão tem prioridade sobre a inclusão. Se ambas coincidirem, o item é excluído.",
+      "taskIds": "Limitar por ID de tarefa",
+      "assetIds": "Limitar por ID de ativo",
+      "idsHint": "Deixe tarefa/ativo em branco para não limitar. Se um valor for informado, a vulnerabilidade deve intersectar com eles.",
+      "onStatusChange": "Enviar também quando o estado de gestão de uma vulnerabilidade muda (apenas modo tempo real)"
+    },
+    "severityOpt": {
+      "all": "Sem limite",
+      "low": "Baixa ou superior",
+      "medium": "Média ou superior",
+      "high": "Alta ou superior",
+      "critical": "Apenas crítica"
+    },
+    "masked": {
+      "savedTail": "Salvo (termina em {tail}) · informe um novo valor para sobrescrever, ou deixe em branco para remover este campo",
+      "saved": "Salvo · informe um novo valor para sobrescrever, ou deixe em branco para remover este campo"
+    },
+    "summary": {
+      "includeCount": "{n} tipos incluídos",
+      "excludeCount": "{n} excluídos",
+      "taskCount": "{n} tarefas",
+      "assetCount": "{n} ativos",
+      "statusChange": "Inclui mudanças de estado",
+      "all": "Todas as vulnerabilidades"
+    },
+    "field": {
+      "dingtalk": {
+        "webhook": {
+          "label": "URL do webhook"
+        },
+        "secret": {
+          "label": "Chave secreta de assinatura",
+          "help": "Informe-a quando selecionar \"Assinatura\" na configuração de segurança do bot. Deixe em branco se escolheu \"Palavras-chave personalizadas\" ou não ativou a configuração de segurança."
+        }
+      },
+      "feishu": {
+        "webhook": {
+          "label": "URL do webhook"
+        },
+        "secret": {
+          "label": "Chave secreta de verificação de assinatura",
+          "help": "Informe-a quando a \"Verificação de assinatura\" estiver ativada no bot; caso contrário, deixe em branco."
+        }
+      },
+      "wecom": {
+        "webhook": {
+          "label": "URL do webhook"
+        }
+      },
+      "webhook": {
+        "url": {
+          "label": "URL de destino"
+        },
+        "method": {
+          "label": "Método de requisição",
+          "opt": {
+            "POST": "POST (com corpo de requisição)",
+            "PUT": "PUT (com corpo de requisição)",
+            "PATCH": "PATCH (com corpo de requisição)",
+            "GET": "GET (sem corpo de requisição)"
+          }
+        },
+        "headers": {
+          "label": "Cabeçalhos de requisição personalizados",
+          "help": "Um KEY=VALUE por linha. Exemplo: Authorization=Bearer xxx"
+        },
+        "body_template": {
+          "label": "Modelo do corpo de requisição",
+          "help": "Deixe em branco para usar o modelo padrão integrado. Variáveis: '{{.Title}} {{.Batch}} {{.Count}} {{.HomeURL}} {{.SentAt}}', além de .Name/.VulnClass/.Severity/.Summary/.Assets/.DetailURL/.StatusLabel dentro de range .Items. Ao inserir uma string, use '{{json .Xxx}}' em vez de '{{.Xxx}}'; caso contrário, as aspas do título quebrarão o JSON."
+        }
+      },
+      "telegram": {
+        "bot_token": {
+          "label": "Bot Token"
+        },
+        "chat_id": {
+          "label": "Chat ID"
+        },
+        "base_url": {
+          "label": "URL da API",
+          "help": "Deixe em branco para usar a URL oficial. Informe-a ao usar seu próprio proxy reverso da Bot API."
+        }
+      },
+      "email": {
+        "host": {
+          "label": "Servidor SMTP"
+        },
+        "port": {
+          "label": "Porta",
+          "help": "A porta 587 usa STARTTLS. Para a 465, ative \"TLS implícito\"."
+        },
+        "username": {
+          "label": "Conta"
+        },
+        "password": {
+          "label": "Senha / senha de aplicativo"
+        },
+        "from": {
+          "label": "Remetente"
+        },
+        "to": {
+          "label": "Destinatários",
+          "help": "Separe vários endereços com vírgulas."
+        },
+        "tls": {
+          "label": "TLS implícito",
+          "help": "Ative-o para a porta 465 e desative-o para a 587 (STARTTLS é usado automaticamente)."
+        }
+      }
+    },
+    "delivery": {
+      "loadFailed": "Não foi possível carregar o registro de envios: {msg}",
+      "requeued": "Recolocado na fila",
+      "resendFailed": "O reenvio falhou: {msg}",
+      "allChannels": "Todos os canais",
+      "allStates": "Todos os estados",
+      "refresh": "Atualizar",
+      "totalCount": "{total} no total",
+      "colTime": "Hora",
+      "colFinding": "Vulnerabilidade",
+      "colChannel": "Canal",
+      "colState": "Estado",
+      "colAttempts": "Tentativas",
+      "colError": "Erro",
+      "loading": "Carregando…",
+      "empty": "Não há registros de envio",
+      "noTitle": "(sem título)",
+      "statusChanged": "Estado alterado",
+      "resend": "Reenviar"
+    },
+    "unit": {
+      "sec": "{n} s",
+      "min": "{n} min",
+      "hour": "{n} h"
+    }
+  },
+  "builtinAgents": {
+    "goals": {
+      "name": "Decomposição de objetivos",
+      "description": "Decompõe o objetivo do teste de penetração em vários subobjetivos independentes e verificáveis.",
+      "vars": {
+        "EngagementDescription": "Descrição do encargo (objetivo / contexto)"
+      }
+    },
+    "planner": {
+      "name": "Planejamento",
+      "description": "Lê a situação e determina objetivos, adicionando intenções de exploração somente quando há uma direção nova realmente não coberta (um laço de planejamento por tarefa).",
+      "vars": {
+        "Goal": "Objetivo geral da tarefa",
+        "AssetSummary": "Resumo de contagem / distribuição por tipo de ativos (opcional)"
+      }
+    },
+    "mainagent": {
+      "name": "Principal",
+      "description": "Interface pessoa-máquina: observa o progresso e converte a intenção humana em pistas ou intenções de alta prioridade.",
+      "vars": {
+        "Goal": "Objetivo atual da tarefa",
+        "AssetSummary": "Resumo da situação inicial (opcional)",
+        "FindingsSummary": "Resumo de achados confirmados (opcional)"
+      }
+    },
+    "worker": {
+      "name": "Execução",
+      "description": "Toma uma única intenção e a executa, registrando os fatos / vulnerabilidades descobertos no grafo de conhecimento antes de parar.",
+      "vars": {
+        "ProxyAddr": "Endereço do proxy de registro (determina o texto do ramo if)",
+        "WorkerName": "Identificador próprio do worker (opcional)"
+      }
+    },
+    "auto": {
+      "name": "Auto",
+      "description": "Assistente de operações da plataforma: usa ferramentas para gerenciar tarefas (criar / ver / pausar / dar pistas) e ativos, e pode criar ou modificar skills, ferramentas personalizadas e MCP."
+    },
+    "pentest": {
+      "name": "Teste de penetração",
+      "description": "Agente de pentest autônomo: executa sozinho toda a cadeia, desde reconhecimento → descoberta de superfície de ataque → exploração profunda → verificação → encerramento, planejando, executando e verificando de forma adversária por conta própria."
+    },
+    "retester": {
+      "name": "Reteste de vulnerabilidade",
+      "description": "Inicia-se manualmente a partir do detalhe de um achado; lê a evidência original e salva uma conclusão de reteste independente."
+    }
+  }
+}

@@ -1,6 +1,7 @@
-// 지원 locale 과 기본값. artex-global 은 영어를 기본으로 하고, 한국어·중국어·스페인어·일본어를
-// 더해 다섯 언어를 사용자 설정으로 전환할 수 있다. 중국어("zh")는 상류 원문 대조용으로도 함께 둔다.
-export const LOCALES = ["en", "ko", "zh", "es", "ja"] as const;
+// 지원 locale 과 기본값. artex-global 은 영어를 기본으로 하고, 한국어·중국어·스페인어·일본어·
+// 포르투갈어(브라질)를 더해 여섯 언어를 사용자 설정으로 전환할 수 있다. 중국어("zh")는 상류
+// 원문 대조용으로도 함께 둔다. "pt" 는 브라질 포르투갈어이며 날짜 태그는 pt-BR 로 둔다(datetime.ts).
+export const LOCALES = ["en", "ko", "zh", "es", "ja", "pt"] as const;
 export type Locale = (typeof LOCALES)[number];
 
 // 기본 표시 언어는 영어다. 한국어·중국어·스페인어·일본어는 설정으로 전환하는 언어다. 빌드 시
@@ -15,6 +16,7 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   zh: "中文",
   es: "Español",
   ja: "日本語",
+  pt: "Português (Brasil)",
 };
 
 // 사용자가 고른 표시 언어를 저장하는 키. 화면은 localStorage 값을 읽는다. 쿠키에도 같은

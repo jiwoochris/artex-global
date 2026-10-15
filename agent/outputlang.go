@@ -1,12 +1,12 @@
 package agent
 
-// 사용자 대면 출력 언어(展示语言) 선택. artex-global 은 영어·한국어·중국어·스페인어·일본어
-// 다섯 언어 중 하나로 에이전트가 사용자에게 보이는 자연어를 쓰도록 강제한다. 에이전트의
+// 사용자 대면 출력 언어(展示语言) 선택. artex-global 은 영어·한국어·중국어·스페인어·일본어·
+// 포르투갈어(브라질) 여섯 언어 중 하나로 에이전트가 사용자에게 보이는 자연어를 쓰도록 강제한다. 에이전트의
 // "뇌"(벤치마크된 중국어 추론 본문 段[A])는 언어와 무관하게 그대로 둔다. 여기서 정하는
 // 것은 오직 사용자가 읽는 표면의 언어다.
 
 // OutputLanguage 는 서버가 설정(config 의 ARTEX_LANG, 런타임 settings KV)에서 고른
-// 출력 언어 코드("en"/"ko"/"zh"/"es"/"ja")를 돌려주도록 서버가 배선하는 훅이다. nil 이거나
+// 출력 언어 코드("en"/"ko"/"zh"/"es"/"ja"/"pt")를 돌려주도록 서버가 배선하는 훅이다. nil 이거나
 // 빈 값이면 아래 기본값으로 떨어진다. PromptOverride 와 같은 방식으로 서버가 주입한다.
 var OutputLanguage func() string
 
@@ -16,7 +16,7 @@ var OutputLanguage func() string
 const defaultOutputLang = "ko"
 
 // SupportedOutputLangs 는 전환할 수 있는 출력 언어 코드 목록이다.
-var SupportedOutputLangs = []string{"en", "ko", "zh", "es", "ja"}
+var SupportedOutputLangs = []string{"en", "ko", "zh", "es", "ja", "pt"}
 
 // normalizeLang 은 지원 목록 밖의 코드를 기본값으로 좁힌다.
 func normalizeLang(code string) string {
@@ -47,6 +47,7 @@ var langPhrase = map[string]string{
 	"zh": "中文（简体中文）",
 	"es": "西班牙语（Español）",
 	"ja": "日语（日本語）",
+	"pt": "葡萄牙语（巴西葡萄牙语·Português do Brasil）",
 }
 
 // langBare 는 지시문 안에서 반복 지목할 때 쓰는 짧은 언어명이다.
@@ -56,4 +57,5 @@ var langBare = map[string]string{
 	"zh": "中文",
 	"es": "西班牙语",
 	"ja": "日语",
+	"pt": "葡萄牙语",
 }

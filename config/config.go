@@ -29,18 +29,20 @@ type Config struct {
 	Database Database `json:"database"`
 	SkillDir string   `json:"skill_dir"`
 	// Language is the bootstrap/default user-facing output language for the
-	// artex-global ("en"/"ko"/"zh"/"es"/"ja"). Empty → DefaultLanguage. At
+	// artex-global ("en"/"ko"/"zh"/"es"/"ja"/"pt"). Empty → DefaultLanguage. At
 	// runtime a value stored in the settings table (edited in the UI) overrides it.
 	Language string `json:"language"`
 }
 
 // SupportedLanguages lists the user-facing output languages artex-global can
 // switch between. Agent output, UI strings and backend messages all key off these.
-var SupportedLanguages = []string{"en", "ko", "zh", "es", "ja"}
+// "pt" is Brazilian Portuguese (date tag pt-BR on the web side).
+var SupportedLanguages = []string{"en", "ko", "zh", "es", "ja", "pt"}
 
 // DefaultLanguage is the out-of-box user-facing language when nothing is
-// configured. artex-global defaults to English; Korean, Chinese, Spanish and
-// Japanese are selectable at runtime via the language setting (and ARTEX_LANG).
+// configured. artex-global defaults to English; Korean, Chinese, Spanish,
+// Japanese and Brazilian Portuguese are selectable at runtime via the language
+// setting (and ARTEX_LANG).
 const DefaultLanguage = "en"
 
 // NormalizeLanguage lower-cases and validates a language code, returning "" when

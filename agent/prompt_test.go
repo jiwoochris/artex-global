@@ -91,10 +91,11 @@ var langMarker = map[string]string{
 	"zh": "简体中文",
 	"es": "Español",
 	"ja": "日本語",
+	"pt": "Português",
 }
 
 // TestLangDirectiveLocalized pins the output-language tail across all
-// four display languages: each language's directive names that language, preserves
+// six display languages: each language's directive names that language, preserves
 // raw technical strings, forbids mirroring the target/material language, and names
 // the planner situation summary. For every non-Chinese display language the "never
 // emit Chinese to the user" clause is present; for Chinese it is absent (Chinese

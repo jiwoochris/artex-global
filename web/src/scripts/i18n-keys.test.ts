@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 const MESSAGES_DIR = path.resolve(process.cwd(), "messages");
-const LOCALES = ["ko", "en", "zh", "es", "ja"] as const;
+const LOCALES = ["ko", "en", "zh", "es", "ja", "pt"] as const;
 
 function readKeys(locale: string): Set<string> {
   const tree = JSON.parse(readFileSync(path.join(MESSAGES_DIR, `${locale}.json`), "utf8")) as unknown;
@@ -13,7 +13,7 @@ function readKeys(locale: string): Set<string> {
 }
 
 describe("i18n key parity guard", () => {
-  it("treats all five locale key sets as identical to the ko baseline", () => {
+  it("treats all six locale key sets as identical to the ko baseline", () => {
     const baseline = readKeys("ko");
     expect(baseline.size).toBeGreaterThan(0);
     for (const locale of LOCALES) {

@@ -4,16 +4,18 @@ import { DEFAULT_LOCALE, isLocale, LOCALE_LABELS, LOCALES, resolveLocale } from 
 
 describe("i18n config", () => {
   it("exposes the supported locales with native labels", () => {
-    expect([...LOCALES]).toEqual(["en", "ko", "zh", "es", "ja"]);
+    expect([...LOCALES]).toEqual(["en", "ko", "zh", "es", "ja", "pt"]);
     expect(Object.keys(LOCALE_LABELS).sort()).toEqual([...LOCALES].sort());
     expect(LOCALE_LABELS.ko).toBe("한국어");
     expect(LOCALE_LABELS.ja).toBe("日本語");
+    expect(LOCALE_LABELS.pt).toBe("Português (Brasil)");
   });
 
   it("isLocale narrows known locale strings only", () => {
     expect(isLocale("ko")).toBe(true);
     expect(isLocale("es")).toBe(true);
     expect(isLocale("ja")).toBe(true);
+    expect(isLocale("pt")).toBe(true);
     expect(isLocale("fr")).toBe(false);
     expect(isLocale("")).toBe(false);
     expect(isLocale(null)).toBe(false);
