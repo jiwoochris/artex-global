@@ -4,6 +4,25 @@ This is the translated upstream ARTEX history from baseline `160fe13`, preservin
 
 ## [Unreleased]
 
+### Authentication
+
+#### Added
+
+- Added a first-run setup token. Setting the admin password on `/setup` now requires the token, which is either the `ARTEX_SETUP_TOKEN` environment value (never logged) or a random 32-character value the server prints once per start in an `[auth]` log line. `GET /api/auth/status` returns only `initialized` and `setup_token_required`, so the token is not obtainable through any API. `ARTEX_ADMIN_PASSWORD` initializes the password at boot for unattended deploys. Passwords must be at least 8 characters and at most 72 bytes, matching the bcrypt limit.
+- `POST /api/auth/change-password` now returns a fresh token. Because the JWT signing key is derived from the password hash, changing the password invalidates every existing session, so the client must replace its stored token with the returned one.
+- Added login throttling shared between `/auth/login` and `/auth/init`: five failures in ten minutes trigger an escalating cooldown, capped at ten minutes. The client key comes from the real TCP peer rather than `X-Forwarded-For`, which a client can forge. `reset-password.sh` writes the hash directly, and the server notices within its two-second hash cache, so no restart is needed.
+
+#### Changed
+
+- The server binds to `127.0.0.1:8787` by default instead of all interfaces, so the setup screen is not reachable from the network before a password exists. The proxy defaults to `127.0.0.1:8788`. Pass `-addr :8787` for other hosts; the server logs a warning while no admin password is set. Docker Compose publishes to `${ARTEX_BIND:-127.0.0.1}` and the container still listens on all interfaces internally.
+- CORS no longer allows every origin. The defaults are `http://localhost:5173` and `http://127.0.0.1:5173`; `ARTEX_CORS_ORIGINS` sets a comma-separated allowlist and `*` restores the permissive behavior. Allowed responses now carry `Vary: Origin`.
+- First-run initialization inserts the password hash atomically and refuses to overwrite an existing password, so concurrent instances cannot reset a live credential. `ARTEX_ADMIN_PASSWORD` is read only while no password is set.
+
+#### Fixed
+
+- Authentication now fails closed. Previously a database error while reading the password state was indistinguishable from "not initialized", so an unreachable database could trigger a fresh first-run setup. A read failure now skips initialization and surfaces as HTTP 503 on `/auth/status`.
+- Dynamic authentication errors are translated with `locale.Errorf` instead of being pre-formatted, so the exact error text reaches the message catalog in English, Korean and Simplified Chinese.
+
 ### Interception
 
 #### Added

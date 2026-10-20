@@ -122,8 +122,21 @@ cd scopeweaver
 - **② 로컬**: 데이터베이스를 선택(기존 것에 연결하거나 Docker로 하나 띄우기)하면 `config.json`을
   생성하고, `go`로 프런트엔드가 내장된 단일 바이너리를 컴파일한 뒤 시작합니다.
 
-실행되면 **http://localhost:8787**을 엽니다 (첫 방문은 관리자 비밀번호를 설정하는 `/setup`으로
-연결됩니다).
+실행되면 **http://localhost:8787**을 엽니다. 첫 방문은 `/setup`으로 연결되며, 관리자 비밀번호를
+설정하려면 **설정 토큰(setup token)**이 필요합니다.
+
+```bash
+docker compose logs scopeweaver | grep "Setup token:"   # Docker
+# 로컬 빌드: 백엔드를 시작한 콘솔 출력에 토큰이 있습니다
+```
+
+그 토큰을 `/setup` 양식에 붙여넣고 비밀번호를 설정한 뒤 `ARTEX`로 로그인합니다. 어떤 API 응답도
+이 토큰을 반환하지 않으며, 토큰은 해당 로그 줄과 직접 제출하는 값에만 존재합니다. `/setup` 화면을
+건너뛰려면 첫 시작 전에 `.env`의 `ARTEX_ADMIN_PASSWORD`를 설정하세요. 무인 배포와
+`ARTEX_SETUP_TOKEN`은 [첫 실행 인증](#첫-실행-인증)을 참고하세요.
+
+포트는 `127.0.0.1`에만 공개되므로 네트워크의 다른 기기에서 설정 화면에 접근할 수 없습니다. 다른
+호스트에 서비스하려면 `.env`에서 `ARTEX_BIND=0.0.0.0`으로 설정하세요.
 
 > 스크립트는 기본적으로 영어로 안내합니다. 한국어 안내를 원하면 실행 전에
 > `SCOPEWEAVER_LANGUAGE=ko`(또는 `ARTEX_LANGUAGE=ko`)를 설정하세요. 예:
@@ -343,6 +356,27 @@ Pi는 전용 확장을 사용합니다. 기본값은 읽기 전용이며, 작업
 > 설정과 환경 변수 키는 업스트림 호환을 위해 `ARTEX_*` 접두사와 `artex` 데이터베이스 기본값을
 > 유지합니다. 스크립트는 명시된 곳에서 `SCOPEWEAVER_*` 별칭도 받습니다.
 
+### 첫 실행 인증
+
+관리자 비밀번호는 `/setup`에서 한 번만 설정하며, 8자 이상(최대 72바이트)이어야
+합니다. 이후 `ARTEX`로 로그인하고, `POST /api/auth/change-password`는 기존 세션을 모두 무효화하고
+새 토큰을 반환합니다.
+
+| 변수 | 기본값 | 용도 |
+|---|---|---|
+| `ARTEX_SETUP_TOKEN` | 자동 생성 | 토큰을 직접 고정합니다. 값은 어떤 로그에도 기록되지 않습니다. |
+| `ARTEX_ADMIN_PASSWORD` | 미설정 | 부팅 시 비밀번호를 초기화해 `/setup`을 건너뜁니다. 아직 비밀번호가 없을 때만 읽습니다. |
+| `ARTEX_CORS_ORIGINS` | `http://localhost:5173`, `http://127.0.0.1:5173` | API 호출을 허용할 브라우저 origin 목록(쉼표 구분). 내장 UI는 같은 출처입니다. `*`는 기존의 느슨한 동작을 복원합니다. |
+
+`ARTEX_SETUP_TOKEN`이 없으면 서버는 시작할 때마다 무작위 32자 토큰을 `[auth]` 로그 줄에 한 번
+출력합니다. `GET /api/auth/status`는 `initialized`와 `setup_token_required`만 알려주므로 토큰을
+반환하지 않습니다. Docker는 `docker compose logs scopeweaver`, 로컬 빌드는 백엔드 콘솔에서 읽으세요.
+무인 배포에는 `ARTEX_ADMIN_PASSWORD`를, 첫 부팅 전에 토큰을 알아야 한다면 `ARTEX_SETUP_TOKEN`을
+사용합니다. 부팅 시 비밀번호 상태를 읽지 못하면 초기화를 진행하지 않고 건너뜁니다.
+
+`reset-password.sh`처럼 해시를 직접 기록하는 경우를 포함해 비밀번호를 변경하면, 재시작 없이 약 2초
+안에 기존 세션이 무효화됩니다.
+
 **LLM**: `export ANTHROPIC_API_KEY=sk-...`(또는 `OPENAI_API_KEY`), 또는 UI의 "LLM 설정"
 페이지에서 입력합니다. 선택: `ARTEX_LLM_PROVIDER` / `ARTEX_LLM_MODEL` / `ARTEX_LLM_BASE_URL` /
 `ARTEX_LLM_PROXY`. `SCOPEWEAVER_LLM_*` 별칭은 같은 이름의 `ARTEX_LLM_*`보다 우선합니다. Ollama는
@@ -351,8 +385,9 @@ Pi는 전용 확장을 사용합니다. 기본값은 읽기 전용이며, 작업
 
 **동시성**: 작업당 work 에이전트 수는 "시스템 설정"에서 지정합니다 (기본 3).
 
-**자주 쓰는 플래그**: `./start.sh -addr :8787 -proxy :8788` (`-addr`는 프런트엔드+API, `-proxy`는
-트래픽 녹화 프록시). 시작 스크립트는 플래그를 `scopeweaver`로 그대로 전달합니다.
+**자주 쓰는 플래그**: `./start.sh -addr 127.0.0.1:8787 -proxy 127.0.0.1:8788` (`-addr`는
+프런트엔드+API, `-proxy`는 트래픽 녹화 프록시. 둘 다 기본이 루프백이며, 다른 호스트에 서비스하려면
+`-addr :8787`을 전달하세요). 시작 스크립트는 플래그를 `scopeweaver`로 그대로 전달합니다.
 
 ---
 

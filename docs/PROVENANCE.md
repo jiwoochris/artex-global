@@ -22,3 +22,26 @@ token accounting, and fail-closed authentication with atomic initial password
 creation and bounded database pooling. New messages and deployment guidance are
 available in English and Korean. The original authorship is credited in the
 backport commits; the other ScopeWeaver changes remain in place.
+
+Authentication hardening on **2026-10-20** adds a first-run setup token, loopback
+defaults and a CORS allowlist, ported by hand from upstream ARTEX rather than
+cherry-picked: ScopeWeaver's PostgreSQL store, `locale` catalog, frontend i18n
+namespace and startup chat-control recovery are structured differently from
+upstream, so the upstream diff does not apply cleanly. The setup token is either
+the `ARTEX_SETUP_TOKEN` environment value, which is never logged, or a random
+32-character value printed once per start in an `[auth]` log line; no API response
+returns it. `ARTEX_ADMIN_PASSWORD` initializes the password at boot for unattended
+deploys, and is read only while no password exists. Passwords are bounded to 8
+characters minimum and 72 bytes maximum, matching bcrypt. First-run initialization
+inserts the hash atomically and refuses to overwrite an existing password, and a
+failed read of the password state skips initialization instead of treating it as
+unset. The JWT signing key is derived from the password hash, so changing the
+password invalidates existing sessions; `/api/auth/change-password` returns a fresh
+token so the client can continue, and an out-of-process reset through
+`reset-password.sh` takes effect within the two-second hash cache without a
+restart. Login and initialization share a failure limiter keyed on the real TCP
+peer rather than a forgeable `X-Forwarded-For`. The default listen address moves to
+`127.0.0.1:8787`, Docker Compose publishes to `${ARTEX_BIND:-127.0.0.1}` while the
+container still listens on all interfaces, and CORS defaults to the local Vite dev
+origins with `ARTEX_CORS_ORIGINS` as the allowlist. New messages exist in English,
+Korean and Simplified Chinese.

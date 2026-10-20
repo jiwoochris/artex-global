@@ -13,6 +13,10 @@ export const en = {
 
   setupUnavailableTitle: "Cannot confirm setup status",
   setupUnavailableHelp: "The backend or database is temporarily unavailable. Setup is disabled to protect any existing password. Restore the service and retry.",
+  setupTokenLabel: "Setup token",
+  setupTokenPlaceholder: "Token from the server console",
+  setupTokenHelp: "The first-run setup token is printed on the server console in the <code>[auth]</code> log line that starts with <code>The admin password is not set yet. Setup token:</code>. The server never returns it in any API response — you submit it only in the setup request. Set <code>ARTEX_SETUP_TOKEN</code> beforehand for unattended deployments; that value is never logged.",
+  setupTokenRequired: "Enter the setup token from the server console",
   captureDisabled: "When disabled (the default), no traffic is recorded. Agents receive <b>neither proxy settings nor traffic tools</b>, and their prompts contain <b>no proxy instructions</b>. Switching rebuilds Agents immediately to apply the change.",
   binding: "Off by default. When enabled, the report Agent triggered on vulnerability creation reviews existing HTTP requests and responses, links the relevant traffic, then writes the report. <b>Inspecting packets and making extra tool calls increases token usage.</b>",
   proxy: "All Agents’ <b>target traffic</b> uses this outbound proxy to hide the source IP or use a jump host. Supports <b>HTTP, HTTPS, and SOCKS5</b>, optionally with <code>user:pass</code> authentication. Leave blank for a direct connection.",
@@ -58,6 +62,10 @@ export const ko: Record<keyof typeof en, string> = {
 
   setupUnavailableTitle: "초기 설정 상태를 확인할 수 없습니다",
   setupUnavailableHelp: "백엔드 또는 데이터베이스를 일시적으로 사용할 수 없습니다. 기존 암호를 보호하기 위해 초기 설정을 비활성화했습니다. 서비스를 복구한 후 다시 시도하세요.",
+  setupTokenLabel: "설정 토큰",
+  setupTokenPlaceholder: "서버 콘솔의 토큰",
+  setupTokenHelp: "최초 실행 설정 토큰은 서버 콘솔의 <code>[auth]</code> 로그 중 <code>The admin password is not set yet. Setup token:</code>으로 시작하는 줄에 출력됩니다. 서버는 어떤 API 응답에도 이 값을 반환하지 않으며, 설정 요청에서만 제출합니다. 무인 배포를 위해 <code>ARTEX_SETUP_TOKEN</code>을 미리 지정할 수 있습니다. 지정한 값은 로그에 남지 않습니다.",
+  setupTokenRequired: "서버 콘솔의 설정 토큰을 입력하세요",
   captureDisabled: "끄면(기본값) 트래픽을 기록하지 않습니다. 에이전트에 <b>프록시 설정과 트래픽 도구를 제공하지 않으며</b>, 프롬프트에도 <b>프록시 안내를 포함하지 않습니다</b>. 전환하면 에이전트를 즉시 재구성하여 적용합니다.",
   binding: "기본적으로 꺼져 있습니다. 켜면 취약점 등록 시 보고서 에이전트가 기존 HTTP 요청과 응답을 검토하고 관련 트래픽을 연결한 후 보고서를 작성합니다. <b>패킷 확인과 추가 도구 호출로 토큰 사용량이 늘어납니다.</b>",
   proxy: "모든 에이전트의 <b>대상 트래픽</b>을 이 프록시로 보내 원본 IP를 숨기거나 중계 호스트를 사용할 수 있습니다. <b>HTTP, HTTPS, SOCKS5</b>와 선택적 <code>user:pass</code> 인증을 지원합니다. 비우면 직접 연결합니다.",

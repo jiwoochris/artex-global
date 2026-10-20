@@ -1,7 +1,6 @@
 "use client";
 
 import { LanguageSelector } from "@/i18n/language-selector";
-import { translate as swt } from "@/i18n/runtime";
 import { useI18n } from "@/i18n";
 import { useEffect, useState } from "react";
 
@@ -15,20 +14,23 @@ import { auth } from "@/lib/auth";
 
 export default function SetupPage() {
   "use no memo";
-  const { t: swt, locale: swLocale } = useI18n();
+  const { t: swt, rich } = useI18n();
 
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [setupToken, setSetupToken] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
+  const [tokenRequired, setTokenRequired] = useState(false);
 
   useEffect(() => {
     api.authStatus()
-      .then(({ initialized }) => {
+      .then(({ initialized, setup_token_required }) => {
         if (initialized) router.replace("/login");
+        else setTokenRequired(setup_token_required !== false);
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : swt("interface.m0001"));
@@ -47,10 +49,14 @@ export default function SetupPage() {
       setError(swt("interface.m0042"));
       return;
     }
+    if (tokenRequired && !setupToken.trim()) {
+      setError(swt("settings.setupTokenRequired"));
+      return;
+    }
     setLoading(true);
     setError("");
     try {
-      const { token } = await api.initPassword(password);
+      const { token } = await api.initPassword(password, setupToken.trim() || undefined);
       auth.setToken(token);
       router.replace("/function/tasks");
     } catch (err) {
@@ -98,6 +104,23 @@ export default function SetupPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {tokenRequired ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="setup-token">{swt("settings.setupTokenLabel")}</Label>
+                  <Input
+                    id="setup-token"
+                    type="password"
+                    value={setupToken}
+                    onChange={(e) => setSetupToken(e.target.value)}
+                    placeholder={swt("settings.setupTokenPlaceholder")}
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    {rich("settings.setupTokenHelp", {}, { code: (text) => <code className="font-mono">{text}</code> })}
+                  </p>
+                </div>
+              ) : null}
               <div className="space-y-1.5">
                 <Label htmlFor="password">{swt("interface.m0046")}</Label>
                 <Input

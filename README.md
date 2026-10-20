@@ -126,8 +126,21 @@ The script detects (and optionally installs) Docker, then lets you choose **① 
 - **② Local**: pick a database (connect to an existing one, or start one with Docker) → it
   generates `config.json` → `go` compiles a single binary with the frontend embedded → start.
 
-Once it is up, open **http://localhost:8787** (the first visit lands on `/setup` to set the admin
-password).
+Once it is up, open **http://localhost:8787**. The first visit lands on `/setup`, which needs the
+**setup token** before it will accept the admin password.
+
+```bash
+docker compose logs scopeweaver | grep "Setup token:"   # Docker
+# local build: the token is in the console output where the backend was started
+```
+
+Paste that token into the `/setup` form, set the password, then sign in as `ARTEX`. No API response
+ever returns the token — it exists only in that log line and in what you submit yourself. To skip the
+screen, set `ARTEX_ADMIN_PASSWORD` in `.env` before the first start. See
+[First-run authentication](#first-run-authentication) for unattended setups and `ARTEX_SETUP_TOKEN`.
+
+The port is published to `127.0.0.1` only, so nothing else on your network can reach the setup
+screen. Set `ARTEX_BIND=0.0.0.0` in `.env` to serve other hosts.
 
 > The scripts speak English by default. For Korean prompts, set `SCOPEWEAVER_LANGUAGE=ko` (or
 > `ARTEX_LANGUAGE=ko`) before running, for example `SCOPEWEAVER_LANGUAGE=ko ./install.sh`.
@@ -346,6 +359,28 @@ internal agents and model configuration intact.
 > The configuration and environment keys keep the `ARTEX_*` prefix and the `artex` database defaults
 > for compatibility with upstream. Scripts also accept the `SCOPEWEAVER_*` aliases where noted.
 
+### First-run authentication
+
+The admin password is set once, on `/setup`, and must be at least 8
+characters (72 bytes maximum). After that you sign in as `ARTEX`; `POST /api/auth/change-password`
+invalidates every existing session and returns a fresh token.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `ARTEX_SETUP_TOKEN` | generated | Pins the first-run token instead of generating one. Its value is never written to any log. |
+| `ARTEX_ADMIN_PASSWORD` | unset | Initializes the password at boot, skipping `/setup`. Only read while no password exists. |
+| `ARTEX_CORS_ORIGINS` | `http://localhost:5173`, `http://127.0.0.1:5173` | Comma-separated browser origins allowed to call the API. The embedded UI is same-origin. `*` restores the permissive legacy behaviour. |
+
+Without `ARTEX_SETUP_TOKEN`, the server prints a random 32-character token once per start in a
+`[auth]` log line; `GET /api/auth/status` reports only `initialized` and `setup_token_required`. Read
+it from `docker compose logs scopeweaver` (Docker) or the backend console (local build). Set
+`ARTEX_ADMIN_PASSWORD` for unattended deploys, or pin `ARTEX_SETUP_TOKEN` when the token must be
+known ahead of first boot. If the password state cannot be read at startup, initialization is skipped
+rather than allowed to proceed.
+
+Changing the password — including `reset-password.sh`, which writes the hash directly — invalidates
+existing sessions within about two seconds, with no restart.
+
 **LLM**: `export ANTHROPIC_API_KEY=sk-...` (or `OPENAI_API_KEY`), or set it on the UI's "LLM
 configuration" page. Optional: `ARTEX_LLM_PROVIDER` / `ARTEX_LLM_MODEL` / `ARTEX_LLM_BASE_URL` /
 `ARTEX_LLM_PROXY`. Each `SCOPEWEAVER_LLM_*` alias overrides its `ARTEX_LLM_*` counterpart; Ollama
@@ -354,8 +389,9 @@ also accepts `CONTEXT_WINDOW_K`, `MAX_CONCURRENT`, `KEEP_ALIVE` and `MAX_TOKENS`
 
 **Concurrency**: the number of work agents per task is set in "System settings" (default 3).
 
-**Common flags**: `./start.sh -addr :8787 -proxy :8788` (`-addr` is frontend + API, `-proxy` is the
-traffic-capture proxy). The start script passes flags straight through to `scopeweaver`.
+**Common flags**: `./start.sh -addr 127.0.0.1:8787 -proxy 127.0.0.1:8788` (`-addr` is frontend + API,
+`-proxy` is the traffic-capture proxy; both default to loopback, pass `-addr :8787` to serve other
+hosts). The start script passes flags straight through to `scopeweaver`.
 
 ---
 

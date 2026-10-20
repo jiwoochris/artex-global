@@ -9,7 +9,9 @@ cd "$(dirname "$0")"
 cleanup() { kill 0 2>/dev/null || true; }
 trap cleanup EXIT INT TERM
 
-go run ./cmd/artex -addr :8787 -proxy 127.0.0.1:8788 &
+# Local dev binds the backend to loopback only; the browser reaches it through
+# the frontend dev server. Use -addr :8787 only when another device must connect.
+go run ./cmd/artex -addr "${ARTEX_BIND:-127.0.0.1}:8787" -proxy 127.0.0.1:8788 &
 
 ( cd web && npm run dev ) &
 

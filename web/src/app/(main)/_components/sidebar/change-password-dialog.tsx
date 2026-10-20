@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/api";
+import { auth } from "@/lib/auth";
 
 export function ChangePasswordDialog({
   open,
@@ -56,7 +57,10 @@ export function ChangePasswordDialog({
     setSaving(true);
     api
       .changePassword(oldPassword, newPassword)
-      .then(() => {
+      .then((res) => {
+        // The server invalidates every token signed with the old password hash,
+        // so the new one has to land before the next request goes out.
+        if (res.token) auth.setToken(res.token);
         toast.success(swt("interface.m0057"));
         onOpenChange(false);
       })

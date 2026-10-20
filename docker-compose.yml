@@ -43,10 +43,19 @@ services:
       SCOPEWEAVER_LLM_MAX_CONCURRENT: ${SCOPEWEAVER_LLM_MAX_CONCURRENT:-${ARTEX_LLM_MAX_CONCURRENT:-}}
       SCOPEWEAVER_LOCAL_LLM_ONLY: ${SCOPEWEAVER_LOCAL_LLM_ONLY:-${ARTEX_LOCAL_LLM_ONLY:-false}}
       SCOPEWEAVER_LOCAL_LLM_ALLOWED_CIDRS: ${SCOPEWEAVER_LOCAL_LLM_ALLOWED_CIDRS:-${ARTEX_LOCAL_LLM_ALLOWED_CIDRS:-}}
+      # Auth hardening. Empty ARTEX_SETUP_TOKEN makes the server generate a random
+      # token and print it once in the console log; set it for unattended deploys.
+      # ARTEX_ADMIN_PASSWORD skips the /setup screen entirely (no token needed).
+      ARTEX_SETUP_TOKEN: ${ARTEX_SETUP_TOKEN:-}
+      ARTEX_ADMIN_PASSWORD: ${ARTEX_ADMIN_PASSWORD:-}
+      ARTEX_CORS_ORIGINS: ${ARTEX_CORS_ORIGINS:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
-      - "8787:8787"
+      # Published to loopback by default so the setup token is never reachable
+      # from the LAN before the admin password exists. Set ARTEX_BIND=0.0.0.0
+      # in .env to serve other hosts (the server logs a warning if unconfigured).
+      - "${ARTEX_BIND:-127.0.0.1}:8787:8787"
       - "127.0.0.1:8788:8788"
     volumes:
       - ./data:/app/data

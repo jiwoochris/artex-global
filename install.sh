@@ -30,6 +30,26 @@ choose_host_ollama(){
   fi
 }
 
+# ── first-run authentication ──────────────────────────────
+# The admin password is set once on /setup and requires a token that only ever
+# reaches the operator through the server log. Point at it before the server
+# takes over the terminal; never echo a token value from here.
+first_run_hint(){
+  local mode="$1" how
+  if [ "$mode" = docker ]; then
+    how='docker compose logs scopeweaver | grep "Setup token:"'
+  else
+    how='the [auth] "Setup token:" line in the backend console output'
+  fi
+  echo
+  ok "$(msg 'First run: set the admin password' '첫 실행: 관리자 비밀번호 설정')"
+  echo "  $(msg "  1) Open http://localhost:8787 — it redirects to /setup" '  1) http://localhost:8787 을 엽니다 — /setup으로 이동합니다')"
+  echo "  $(msg "  2) Copy the setup token from: $how" "  2) 설정 토큰을 여기서 복사합니다: $how")"
+  echo "  $(msg '  3) Paste it into the setup screen, choose a password (8+ chars), then sign in as ARTEX' '  3) 설정 화면에 붙여넣고 비밀번호(8자 이상)를 정한 뒤 ARTEX로 로그인합니다')"
+  echo "  $(msg 'No API response returns the token. Skip this by setting ARTEX_ADMIN_PASSWORD in .env before the first start.' '어떤 API 응답도 토큰을 반환하지 않습니다. 첫 시작 전에 .env의 ARTEX_ADMIN_PASSWORD를 설정하면 건너뛸 수 있습니다.')"
+  echo
+}
+
 # ── docker environment detection / auto-install ─────────────
 ensure_docker(){
   if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
@@ -77,6 +97,7 @@ install_docker(){
   docker compose up -d
   ok "$(msg 'Started → http://localhost:8787' '시작 완료 → http://localhost:8787')"
   info "$(msg 'View logs: docker compose logs -f scopeweaver' '로그 보기: docker compose logs -f scopeweaver')"
+  first_run_hint docker
 }
 
 # ── ② build and run locally ─────────────────────────────────
@@ -142,6 +163,7 @@ JSON
   fi
   ok "$(msg 'Build complete → ./scopeweaver' '컴파일 완료 → ./scopeweaver')"
 
+  first_run_hint local
   info "$(msg 'Starting… (Ctrl-C to quit)' '시작합니다… (Ctrl-C로 종료)')"
   ./start.sh
 }

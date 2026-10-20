@@ -1057,9 +1057,9 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
   }
 
   // Demo authentication allows entry directly into the app.
-  if (path === "/auth/status") return { initialized: true };
+  if (path === "/auth/status") return { initialized: true, setup_token_required: false };
   if (path === "/auth/login" || path === "/auth/init") return { token: "mock-demo" };
-  if (path === "/auth/change-password") return { ok: true };
+  if (path === "/auth/change-password") return { ok: true, token: "mock-demo" };
 
   // ── task cold archives ──
   if (path === "/task-archives" && m === "GET") {
