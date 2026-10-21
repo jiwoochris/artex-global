@@ -241,6 +241,17 @@ func wireTools(pg *db.DB, domainReg map[string]actool.CoreTool, metadata ...map[
 	// interactive_shell is on, so Bash points at shell_open for interactive programs
 	// without ever referencing a tool that isn't injected (§14.1/§14.2).
 	const bashInteractiveShellNote = "\n\nPrograms requiring interactive input (msfconsole, interactive ssh, mysql/psql/python REPLs, password or yes/no prompts, nc reverse shells) must use shell_open, not Bash, which has no stdin and can hang. Close with shell_close. Keep using Bash for one-shot noninteractive commands."
+	// Metering hook for call sites that build tools directly and therefore never
+	// pass through ToolResolve (goal decomposition is the only one today). Metering
+	// is wrapped once per tool here; ToolResolve keeps its own wrap for catalog tools,
+	// and the two never overlap because this hook is only called on bypass lists.
+	agent.ToolMeter = func(tools []actool.CoreTool, agentKey string, ri agent.RunInfo) []actool.CoreTool {
+		out := make([]actool.CoreTool, 0, len(tools))
+		for _, t := range tools {
+			out = append(out, meterTool(t, pg, t.Name(), agentKey, ri))
+		}
+		return out
+	}
 	agent.ToolResolve = func(ctx context.Context, agentKey string, tools []actool.CoreTool) []actool.CoreTool {
 		rows, err := pg.ListTools()
 		if err != nil {
@@ -252,6 +263,12 @@ func wireTools(pg *db.DB, domainReg map[string]actool.CoreTool, metadata ...map[
 			byKey[t.Key] = t
 		}
 		runInfo := agent.RunInfoFrom(ctx)
+		// SDK default tools (Read/Write/Edit/MultiEdit/LS/Glob/Grep/Bash/sleep) have
+		// no row in the tools table on purpose — the catalog only owns the DB-managed
+		// description/schema. They must still reach the usage ledger, so the
+		// no-row branch meters them by name. MCP/skill/host tools are NOT in this
+		// set and stay untouched (they are metered through their own ledgers).
+		sdkTools := sdkDefaultToolNames()
 		resolve := func(t actool.CoreTool, row *db.Tool) actool.CoreTool {
 			var schema map[string]any
 			if len(row.Schema) > 0 {
@@ -266,7 +283,14 @@ func wireTools(pg *db.DB, domainReg map[string]actool.CoreTool, metadata ...map[
 		out := tools[:0:0]
 		for _, t := range tools {
 			row, known := byKey[t.Name()]
-			if !known { // MCP/skill/host tool: no row → untouched
+			if !known { // no tools-table row
+				// SDK default tools are metered here so their invocations reach
+				// the usage ledger. Everything else without a row (MCP/skill/host)
+				// passes through untouched — it has its own ledger.
+				if sdkTools[t.Name()] {
+					out = append(out, meterTool(t, pg, t.Name(), agentKey, runInfo))
+					continue
+				}
 				out = append(out, t)
 				continue
 			}

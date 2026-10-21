@@ -46,3 +46,23 @@ func (m *meteredTool) Call(ctx context.Context, input json.RawMessage, tc *actoo
 	}
 	return m.CoreTool.Call(ctx, input, tc)
 }
+
+// sdkDefaultToolNames is the set of SDK-provided default tool names
+// (actool.DefaultTools: Read/Write/Edit/MultiEdit/LS/Glob/Grep/Bash/sleep).
+//
+// These tools intentionally have no row in the DB tools table — the catalog owns
+// only DB-managed description/schema for domain tools, and the SDK's own prompt
+// guidance is code-owned. The resolver's no-row branch therefore used to skip
+// them, which silently dropped their invocations from the tool_usage ledger.
+//
+// The set is derived from the SDK itself instead of a hard-coded list, so a new
+// SDK default tool is metered as soon as the dependency adds it. Only these
+// names are metered; MCP/skill/host tools keep their own ledgers and stay
+// untouched.
+func sdkDefaultToolNames() map[string]bool {
+	names := make(map[string]bool)
+	for _, t := range actool.DefaultTools() {
+		names[t.Name()] = true
+	}
+	return names
+}

@@ -106,6 +106,26 @@ func BuiltinToolSeeds() []ToolSeed {
 // traffic) pass through untouched. nil = tools unchanged. Wired in server/assembly.go.
 var ToolResolve func(ctx context.Context, agentKey string, tools []actool.CoreTool) []actool.CoreTool
 
+// ToolMeter, if set, wraps each tool so one usage-ledger row is recorded per real
+// invocation, attributed to ri. The server wires it to the PG tool_usage ledger.
+//
+// ToolResolve cannot cover every path: goal decomposition (agent/goals.go) builds its
+// tool list directly instead of going through the resolver, so set_goals and
+// set_constraints never reached the ledger. ToolMeter exists for those
+// resolver-bypassing call sites; it meters whatever list it is handed and leaves the
+// tools themselves untouched otherwise.
+//
+// nil = no metering (the default outside the server). Wired in server/assembly.go.
+var ToolMeter func(tools []actool.CoreTool, agentKey string, ri RunInfo) []actool.CoreTool
+
+// MeterTools routes tools through ToolMeter, if wired. Safe to call unconditionally.
+func MeterTools(tools []actool.CoreTool, agentKey string, ri RunInfo) []actool.CoreTool {
+	if ToolMeter == nil {
+		return tools
+	}
+	return ToolMeter(tools, agentKey, ri)
+}
+
 // DecorateTool wraps t so Description()/InputSchema() report the DB overrides and
 // Call() injects scalar parameter defaults (from schema's "default" props) whenever
 // the model omitted them. Name/Prompt/permission/scheduler flags delegate to t, so
