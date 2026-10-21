@@ -79,3 +79,6 @@ Thumbs.db
 /scopeweaver.old
 /scopeweaver.failed
 /scopeweaver.upgrade.json
+
+# Local agent-adapter session artifacts
+/adapters/agent/.session-token

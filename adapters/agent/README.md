@@ -69,6 +69,29 @@ The extension registers native Pi tools and uses the same environment variables.
 
 Example requests: “List my ScopeWeaver tasks,” “Show the high-severity findings for task 12,” or, after enabling writes and confirming a local lab scope, “Create a task for this local fixture and show its progress.” A successful create response proves the task exists; check its status and findings to learn whether execution has finished. The adapter does not bypass backend LLM requirements.
 
+## Local operator: issuing a token without the password
+
+The adapter normally authenticates with `SCOPEWEAVER_PASSWORD` (or an existing
+`SCOPEWEAVER_TOKEN`). On a machine you administer, you can instead mint a
+short-lived token from the local key material, without knowing the plaintext
+password:
+
+```sh
+node issue-token.js --root /absolute/path/scopeweaver
+```
+
+The backend signs tokens with HS256 over a key derived as
+`HMAC-SHA256(jwt.key, <stored bcrypt hash>)`. Both inputs are local files/state,
+so the helper reads them and emits a 7-day `ARTEX` token on stdout. Pass
+`--out <file>` to write it to disk, `--dsn <pg dsn>` to point at a different
+database, or `--psql <path>` when `psql.exe` is not on `PATH`.
+
+This is a local self-hosting convenience, not a way to reach a remote
+deployment: it requires filesystem read access to `jwt.key` and to the database
+row holding the password hash. Treat the printed token like the password
+itself — never commit it, and note that changing the password invalidates
+previously issued tokens.
+
 ## Configuration and failures
 
 | Variable | Default / behavior |

@@ -3,16 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node src/mcp.js",
     "test": "node --test test/client.test.js",
     "test:e2e": "node --test test/e2e.test.js",
-    "check": "node --check src/client.js && node --check src/tools.js && node --check src/mcp.js && node --check pi-extension.js"
+    "check": "node --check src/client.js && node --check src/tools.js && node --check src/mcp.js && node --check pi-extension.js && node --check issue-token.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.0",
     "zod": "4.6.5"
   },
-  "pi": { "extensions": ["./pi-extension.js"] }
+  "pi": {
+    "extensions": [
+      "./pi-extension.js"
+    ]
+  }
 }
