@@ -1762,18 +1762,43 @@ func schemeForPort(p int) string {
 	return "http"
 }
 
-// llmHost returns the host of the configured LLM endpoint (to keep it out of scope).
-func (s *Server) llmHost() string {
+// isLLMGatewayTarget reports whether a target host/port IS the configured LLM
+// gateway endpoint. Both parts must match: a gateway on 127.0.0.1:8799 and a
+// legitimate test target on 127.0.0.1:8801 share a host but are different
+// services, so comparing bare hostnames would reject the target.
+//
+// An empty gateway host means no gateway is configured, so nothing is blocked.
+func isLLMGatewayTarget(gwHost string, gwPort int, host string, port int) bool {
+	if gwHost == "" {
+		return false
+	}
+	return host == gwHost && port == gwPort
+}
+
+// llmEndpoint returns the host and effective port of the configured LLM
+// endpoint (to keep it out of scope). The port matters: two services on the
+// same host (e.g. a gateway on 127.0.0.1:8799 and a test target on
+// 127.0.0.1:8801) are different endpoints, so comparing bare hostnames would
+// reject the target as if it were the gateway.
+//
+// An endpoint without an explicit port uses the scheme's default (80/443).
+func (s *Server) llmEndpoint() (string, int) {
 	s.cfgMu.Lock()
 	base := s.llmCfg.BaseURL
 	s.cfgMu.Unlock()
 	if base == "" {
-		return ""
+		return "", 0
 	}
-	if u, err := url.Parse(base); err == nil {
-		return strings.ToLower(u.Hostname())
+	u, err := url.Parse(base)
+	if err != nil {
+		return "", 0
 	}
-	return ""
+	host := strings.ToLower(u.Hostname())
+	if host == "" {
+		return "", 0
+	}
+	port := portOr(u.Port(), defaultPort(strings.ToLower(u.Scheme)))
+	return host, port
 }
 
 func (s *Server) seed(t *Task, text string) {
@@ -1782,9 +1807,13 @@ func (s *Server) seed(t *Task, text string) {
 		log.Printf(locale.Text(locale.ServerDefault(), "[seed] task %s: no target host/IP could be parsed from %q; no site created (configure scope manually)"), t.ID, text)
 		return
 	}
-	// P0-1 guard: never treat the configured LLM gateway as a target.
-	if gw := s.llmHost(); gw != "" && host == gw {
-		log.Printf(locale.Text(locale.ServerDefault(), "[seed] task %s: target %q is an LLM gateway and cannot be used as a testing target"), t.ID, host)
+	// P0-1 guard: never treat the configured LLM gateway as a target. The
+	// comparison is host AND effective port — a different service on the same
+	// host (127.0.0.1:8801 next to a 127.0.0.1:8799 gateway) is a legitimate
+	// target, not the gateway.
+	gwHost, gwPort := s.llmEndpoint()
+	if isLLMGatewayTarget(gwHost, gwPort, host, port) {
+		log.Printf(locale.Text(locale.ServerDefault(), "[seed] task %s: target %q is an LLM gateway and cannot be used as a testing target"), t.ID, host+":"+strconv.Itoa(port))
 		return
 	}
 
