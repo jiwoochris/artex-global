@@ -149,14 +149,19 @@ type provEntry struct {
 // taskID + mergeable let the drainer coalesce several event triggers (finding/goal)
 // from the SAME task into one conversation before it starts (interval fires don't merge).
 type triggeredRun struct {
-	language  locale.Lang
-	agentKey  string
-	title     string
-	message   string // Event body: trigger text, tool, arguments, and result; excludes task description/goal headers.
-	taskID    int64  // source task for finding/goal triggers; 0 for interval/none
-	taskDesc  string // Task description, shared within a task and rendered once when merging.
-	taskGoal  string // Task goals, shared within a task and rendered once when merging.
-	mergeable bool   // true for finding/goal event triggers (merge by taskID)
+	language locale.Lang
+	agentKey string
+	title    string
+	message  string // Event body: trigger text, tool, arguments, and result; excludes task description/goal headers.
+	taskID   int64  // source task for finding/goal triggers; 0 for interval/none
+	// explorationID is the source task's exploration. It travels with the run so the
+	// triggered agent's tool_usage rows are attributed to the task that produced the
+	// event instead of being NULL. 0 when the fire has no single source task
+	// (interval/none) or when several tasks were merged into one conversation.
+	explorationID int64
+	taskDesc      string // Task description, shared within a task and rendered once when merging.
+	taskGoal      string // Task goals, shared within a task and rendered once when merging.
+	mergeable     bool   // true for finding/goal event triggers (merge by taskID)
 }
 
 func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDir string) *Server {

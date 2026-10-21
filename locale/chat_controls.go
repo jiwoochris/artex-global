@@ -14,6 +14,7 @@ func init() {
 	Register("client request ID is required", "client request ID is required", "클라이언트 요청 ID가 필요합니다")
 	Register("prompt is required", "prompt is required", "메시지가 필요합니다")
 	Register("invalid input mode", "invalid input mode", "유효하지 않은 입력 모드입니다")
+	Register("incomplete chat input attribution", "incomplete chat input attribution", "대화 입력의 출처 작업 정보가 불완전합니다")
 	Register("invalid run status", "invalid run status", "유효하지 않은 실행 상태입니다")
 	Register("invalid attachment path", "invalid attachment path", "유효하지 않은 첨부 파일 경로입니다")
 	Register("attachment unavailable: %s", "attachment unavailable: %s", "첨부 파일을 사용할 수 없습니다: %s")

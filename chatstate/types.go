@@ -25,6 +25,10 @@ type SessionRef struct {
 }
 
 func (r SessionRef) Validate() error {
+	// A session is either conversation-owned (conversation_id set) or task-owned
+	// (task_id + exploration_id set) — never both. This is OWNERSHIP only.
+	// Source-task attribution is carried by the input/run (see Run.SourceTaskID),
+	// not by the session, so this rule stays exact.
 	if r.ConversationID > 0 && r.TaskID == 0 && r.ExplorationID == 0 && r.MainSeg == 0 {
 		return nil
 	}
@@ -76,7 +80,14 @@ type Run struct {
 	Active           bool       `json:"active"`
 	Imported         bool       `json:"imported"`
 	SourceRunID      string     `json:"source_run_id,omitempty"`
-	ID               string     `json:"id"`
+	// SourceTaskID / SourceExplorationID attribute the run to the task that
+	// produced it. A server-side trigger (a reporter run fired by a task
+	// finding) runs in its own conversation, so the conversation says nothing
+	// about which task it serves — these fields do. 0 means "not attributed"
+	// (a plain user chat).
+	SourceTaskID        int64 `json:"source_task_id,omitempty,string"`
+	SourceExplorationID int64 `json:"source_exploration_id,omitempty,string"`
+	ID                 string     `json:"id"`
 	InputID          string     `json:"input_id"`
 	TurnID           string     `json:"turn_id"`
 	SupersedesRunID  string     `json:"supersedes_run_id,omitempty"`

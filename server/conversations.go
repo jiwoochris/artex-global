@@ -407,9 +407,20 @@ func (s *Server) pgSendConversationMessage(w http.ResponseWriter, r *http.Reques
 
 // Generated inputs use the durable dispatcher too. The trigger scheduler waits
 // for its own admission, never for whichever input happens to claim first.
-func (s *Server) queueExternalConversation(request context.Context, c *db.Conversation, msg, busyKey string) (chatstate.Admission, error) {
+//
+// taskID/explorationID are the SOURCE task attribution of the input (0 for a
+// plain user message). They are recorded on the input, not on the session: the
+// session's task_id means "this session is owned by that task" and must stay
+// unambiguous. A reporter run triggered by a finding must land on that task,
+// not on an anonymous chat.
+func (s *Server) queueExternalConversation(request context.Context, c *db.Conversation, msg, busyKey string, attribution ...int64) (chatstate.Admission, error) {
 	ctx := locale.WithLang(s.ctx, locale.FromContext(request))
-	input, err := s.m.pg.AdmitExternalChatInput(ctx, chatstate.SessionRef{ConversationID: c.ID}, "external-"+rand.Text(), chatstate.Prompt{Text: msg})
+	ref := chatstate.SessionRef{ConversationID: c.ID}
+	var sourceTaskID, sourceExplorationID int64
+	if len(attribution) >= 2 {
+		sourceTaskID, sourceExplorationID = attribution[0], attribution[1]
+	}
+	input, err := s.m.pg.AdmitAttributedExternalChatInput(ctx, ref, "external-"+rand.Text(), chatstate.Prompt{Text: msg}, sourceTaskID, sourceExplorationID)
 	// Older callers reserve an in-memory marker before admitting. It is not an
 	// active run; only the common dispatcher registers cancellation and claims.
 	s.chatMu.Lock()
@@ -433,23 +444,32 @@ func (s *Server) runConversationWithContext(request context.Context, c *db.Conve
 	return err
 }
 func (s *Server) runConversationSync(c *db.Conversation, msg, busyKey string, langs ...locale.Lang) error {
-	input, err := s.queueExternalConversation(locale.WithLang(s.ctx, locale.First(langs)), c, msg, busyKey)
+	_, err := s.runConversationSyncAttributed(c, msg, busyKey, 0, 0, langs...)
+	return err
+}
+
+// runConversationSyncAttributed is runConversationSync plus the source task
+// attribution (taskID, explorationID). A triggered run passes the task that
+// produced the event so the session row records where the run came from; a
+// plain user message passes 0/0 and stays unattributed.
+func (s *Server) runConversationSyncAttributed(c *db.Conversation, msg, busyKey string, taskID, explorationID int64, langs ...locale.Lang) (chatstate.Admission, error) {
+	input, err := s.queueExternalConversation(locale.WithLang(s.ctx, locale.First(langs)), c, msg, busyKey, taskID, explorationID)
 	if err != nil {
-		return err
+		return input, err
 	}
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		var status string
 		if err = s.m.pg.QueryRowContext(s.ctx, `SELECT status FROM chat_control_inputs WHERE id=$1`, input.ID).Scan(&status); err != nil {
-			return err
+			return input, err
 		}
 		if status != "queued" && status != "claimed" {
-			return nil
+			return input, nil
 		}
 		select {
 		case <-s.ctx.Done():
-			return s.ctx.Err()
+			return input, s.ctx.Err()
 		case <-ticker.C:
 		}
 	}
@@ -571,7 +591,11 @@ func (s *Server) readTriggerBehavior(agentKey string) triggerBehavior {
 // agent's policy decides concurrency + merge: serial → run one at a time (optionally
 // merging by task / all / none); parallel → run each fire in its own concurrent
 // conversation up to trigger_max_parallel. Distinct agents always run concurrently.
-func (s *Server) StartTriggeredRun(agentKey, title, message string, taskID int64, mergeable bool, taskDesc, taskGoal string, langs ...locale.Lang) {
+//
+// explorationID is the source task's exploration (0 when the fire has no single
+// source task). It is carried through to the run's chat session so the triggered
+// agent's tool_usage rows land on that task instead of being unattributed.
+func (s *Server) StartTriggeredRun(agentKey, title, message string, taskID, explorationID int64, mergeable bool, taskDesc, taskGoal string, langs ...locale.Lang) {
 	if s.m.pg == nil || s.chatAgentRef() == nil {
 		return
 	}
@@ -582,7 +606,7 @@ func (s *Server) StartTriggeredRun(agentKey, title, message string, taskID int64
 	cfg := s.readTriggerBehavior(agentKey) // DB read BEFORE the lock (never under queueMu)
 	s.queueMu.Lock()
 	s.triggerCfg[agentKey] = cfg
-	s.triggerQ[agentKey] = append(s.triggerQ[agentKey], triggeredRun{language: lang, agentKey: agentKey, title: title, message: message, taskID: taskID, taskDesc: taskDesc, taskGoal: taskGoal, mergeable: mergeable})
+	s.triggerQ[agentKey] = append(s.triggerQ[agentKey], triggeredRun{language: lang, agentKey: agentKey, title: title, message: message, taskID: taskID, explorationID: explorationID, taskDesc: taskDesc, taskGoal: taskGoal, mergeable: mergeable})
 	s.pumpLocked(agentKey)
 	s.queueMu.Unlock()
 }
@@ -710,12 +734,15 @@ func mergeTriggeredRuns(items []triggeredRun) triggeredRun {
 		fmt.Fprintf(&b, locale.Text(lang, "\n── Trigger %d ──\n%s\n"), i+1, it.message)
 	}
 	return triggeredRun{
-		language:  lang,
-		agentKey:  first.agentKey,
-		title:     fmt.Sprintf(locale.Text(lang, "Merged triggers · task#%d · %d events"), first.taskID, len(items)),
-		message:   b.String(),
-		taskID:    first.taskID,
-		mergeable: true,
+		language: lang,
+		agentKey: first.agentKey,
+		title:    fmt.Sprintf(locale.Text(lang, "Merged triggers · task#%d · %d events"), first.taskID, len(items)),
+		message:  b.String(),
+		taskID:   first.taskID,
+		// Same task → the source exploration still applies: every event in this
+		// merged run came from that one task.
+		explorationID: first.explorationID,
+		mergeable:     true,
 		// taskDesc/taskGoal left empty: header already embedded above.
 	}
 }
@@ -754,12 +781,16 @@ func mergeAllRuns(items []triggeredRun) triggeredRun {
 		}
 	}
 	return triggeredRun{
-		language:  lang,
-		agentKey:  first.agentKey,
-		title:     fmt.Sprintf(locale.Text(lang, "Merged triggers · all · %d events"), len(items)),
-		message:   b.String(),
-		taskID:    first.taskID,
-		mergeable: true,
+		language: lang,
+		agentKey: first.agentKey,
+		title:    fmt.Sprintf(locale.Text(lang, "Merged triggers · all · %d events"), len(items)),
+		message:  b.String(),
+		taskID:   first.taskID,
+		// Events from several tasks were folded into one conversation: there is no
+		// single source task to attribute this run to, so the attribution is dropped
+		// rather than pointing at whichever task happened to come first.
+		explorationID: 0,
+		mergeable:     true,
 		// taskDesc/taskGoal left empty: per-task headers already embedded above.
 	}
 }
@@ -787,7 +818,10 @@ func (s *Server) runTriggeredRun(item triggeredRun) {
 	s.chatMu.Lock()
 	s.chatBusy[busyKey] = true
 	s.chatMu.Unlock()
-	if err := s.runConversationSync(c, msg, busyKey, locale.Resolve(item.language)); err != nil {
+	// The source task attribution travels with the run: the session row records
+	// which task produced this event, so the reporter's tool_usage rows land on
+	// that task instead of being NULL.
+	if _, err := s.runConversationSyncAttributed(c, msg, busyKey, item.taskID, item.explorationID, locale.Resolve(item.language)); err != nil {
 		log.Printf("[trigger] durable admission for %s: %v", item.agentKey, err)
 	}
 }

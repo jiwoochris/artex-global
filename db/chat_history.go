@@ -112,6 +112,9 @@ func chatSessionTx(ctx context.Context, tx *sql.Tx, key string) (ref chatstate.S
 	return
 }
 func ensureChatSessionTx(ctx context.Context, tx *sql.Tx, ref chatstate.SessionRef) error {
+	// The gate and the session record OWNERSHIP only (conversation XOR task —
+	// see chat_control_gates_check / chat_control_sessions_check). Source-task
+	// attribution rides on the input/run rows, never here.
 	if _, err := tx.ExecContext(ctx, `INSERT INTO chat_control_gates(gate_key,conversation_id,task_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`, ref.GateKey(), nullableID(ref.ConversationID), nullableID(ref.TaskID)); err != nil {
 		return err
 	}

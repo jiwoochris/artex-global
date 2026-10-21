@@ -14,6 +14,7 @@ import (
 	"github.com/Autumn-27/artex/chatstate"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/intercept"
+	"github.com/Autumn-27/artex/llmrec"
 	"github.com/Autumn-27/artex/locale"
 	"github.com/Autumn-27/norma/transcript"
 )
@@ -165,6 +166,34 @@ func (s *Server) dispatchChatInput(gate, selected string) error {
 	}()
 	return nil
 }
+// chatRunAttribution attaches the run's source-task attribution to ctx.
+//
+// A conversation-owned run may carry the task and exploration that produced it (a
+// reporter trigger fired by a task finding). The attribution lives on the run,
+// not on the session, so it is read from there.
+//
+// It has to reach TWO ledgers that meter independently:
+//
+//   - tool_usage goes through agent.RunInfo, captured at tool-assembly time.
+//   - llm_usage goes through llmrec, which derives task/worker from the
+//     transcript session id via parseSession — and parseSession only understands
+//     "exp<N>-<lane>". A chat run's session is "conv-N", so without the explicit
+//     llmrec.WithTaskID channel every reporter LLM call is metered with
+//     task_id NULL even though its tool_usage rows are correctly attributed.
+//
+// Both are context values, so the "conv-N" session id the chat agent installs
+// downstream does not clobber them (same approach as the side-question path in
+// side_questions.go).
+//
+// A plain user chat has no source task and stays unattributed.
+func chatRunAttribution(ctx context.Context, run chatstate.Run) context.Context {
+	if run.SourceTaskID <= 0 || run.SourceExplorationID <= 0 {
+		return ctx
+	}
+	ctx = agent.WithRunInfo(ctx, agent.RunInfo{TaskID: run.SourceTaskID, ExplorationID: run.SourceExplorationID})
+	return llmrec.WithTaskID(ctx, strconv.FormatInt(run.SourceTaskID, 10))
+}
+
 func (s *Server) executeChatRun(ctx context.Context, run chatstate.Run) (runErr error) {
 	ctx = locale.WithLang(ctx, locale.Lang(run.Language))
 	defer func() {
@@ -193,6 +222,7 @@ func (s *Server) executeChatRun(ctx context.Context, run chatstate.Run) (runErr 
 		}
 	}
 	ctx = agent.WithChatRun(ctx, run, s.m.pg)
+	ctx = chatRunAttribution(ctx, run)
 	message, err := composeChatMentionMessageForLanguage(s.m.pg, run.Prompt.Text, locale.FromContext(ctx))
 	if err != nil {
 		return err
@@ -211,6 +241,15 @@ func (s *Server) executeChatRun(ctx context.Context, run chatstate.Run) (runErr 
 			return chatstate.ErrGone
 		}
 		ctx = intercept.WithConvID(ctx, c.ID)
+		// Name the token-ledger lane after the agent driving this conversation.
+		// llmrec cannot derive it from a "conv-N" session id (parseSession only
+		// understands "exp<N>-<lane>"), so without this every chat LLM call is
+		// metered with worker NULL and is invisible in the per-agent token views.
+		//
+		// Set before the external-source early return below: triggered reporter
+		// runs (finding/goal/tool/timeout fires) are external sources, and they are
+		// exactly the runs whose token spend must be attributed.
+		ctx = llmrec.WithWorker(ctx, c.AgentKey)
 		if run.SourceKind == "external" {
 			return s.executeExternalConversation(ctx, c, message)
 		}

@@ -1417,7 +1417,16 @@ CREATE TABLE IF NOT EXISTS chat_control_sessions (
  parent_session_key TEXT REFERENCES chat_control_sessions(session_key) ON DELETE SET NULL,
  parent_turn_id TEXT,
  preparing BOOLEAN NOT NULL DEFAULT false,
- CHECK ((conversation_id IS NOT NULL AND task_id IS NULL AND exploration_id IS NULL AND main_seg=0) OR (conversation_id IS NULL AND task_id IS NOT NULL AND exploration_id IS NOT NULL AND main_seg>=0))
+-- A session is either conversation-owned (conversation_id set) or task-owned
+-- (task_id + exploration_id set) — never both. This is the OWNERSHIP of the
+-- session: who owns it, and therefore which gate it belongs to.
+-- Source-task ATTRIBUTION (the task that triggered a reporter run) is NOT
+-- stored here: it belongs to the input/run event, not to the session. Keeping
+-- it off this table is what makes `task_id` a reliable ownership signal
+-- (every "is this a task-owned session?" check reads it) and keeps the
+-- task_id -> tasks CASCADE foreign key from deleting a conversation's session
+-- history when the source task is removed.
+CHECK ((conversation_id IS NOT NULL AND task_id IS NULL AND exploration_id IS NULL AND main_seg=0) OR (conversation_id IS NULL AND task_id IS NOT NULL AND exploration_id IS NOT NULL AND main_seg>=0))
 );
 CREATE TABLE IF NOT EXISTS chat_control_inputs (
  id TEXT PRIMARY KEY,
@@ -1434,6 +1443,19 @@ CREATE TABLE IF NOT EXISTS chat_control_inputs (
  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
  UNIQUE(session_key,client_id)
 );
+-- Source-task attribution of an input. An input that a server-side trigger
+-- queued on behalf of a task (a reporter run fired by a finding) records the
+-- task and exploration that produced it here, so the run it becomes is
+-- attributed to that task instead of to an anonymous conversation.
+-- The attribution lives on the INPUT (an event), not on the session: the
+-- session's own task_id means "this session is owned by that task", and
+-- overloading it would both break the ownership checks and make the
+-- task_id -> tasks CASCADE foreign key delete a conversation's history when
+-- the source task is removed.
+-- ON DELETE SET NULL: losing the source task must not delete the queued
+-- input — the conversation it belongs to survives on its own.
+ALTER TABLE chat_control_inputs ADD COLUMN IF NOT EXISTS source_task_id BIGINT REFERENCES tasks(id) ON DELETE SET NULL;
+ALTER TABLE chat_control_inputs ADD COLUMN IF NOT EXISTS source_exploration_id BIGINT REFERENCES explorations(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_chat_input_pending ON chat_control_inputs(gate_key,ordinal) WHERE status='queued';
 CREATE TABLE IF NOT EXISTS chat_control_runs (
  id TEXT PRIMARY KEY,
@@ -1452,6 +1474,13 @@ CREATE TABLE IF NOT EXISTS chat_control_runs (
  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
  completed_at TIMESTAMPTZ
 );
+-- The run copies the input's source-task attribution. A run is the canonical
+-- record of "which task does this execution belong to", so the attribution has
+-- to survive the input's lifecycle and any restart. ON DELETE SET NULL for the
+-- same reason as on the input: removing the source task must not delete the
+-- run (and with it the conversation's history).
+ALTER TABLE chat_control_runs ADD COLUMN IF NOT EXISTS source_task_id BIGINT REFERENCES tasks(id) ON DELETE SET NULL;
+ALTER TABLE chat_control_runs ADD COLUMN IF NOT EXISTS source_exploration_id BIGINT REFERENCES explorations(id) ON DELETE SET NULL;
 ALTER TABLE activity ADD COLUMN IF NOT EXISTS turn_id TEXT;
 ALTER TABLE activity ADD COLUMN IF NOT EXISTS run_id TEXT;
 ALTER TABLE activity ADD COLUMN IF NOT EXISTS active_attempt BOOLEAN;

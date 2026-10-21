@@ -149,24 +149,28 @@ ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value`, key, value)
 // TaskEvent is a finding/goal event carrying the owning task's info, used to
 // compose the trigger message context.
 type TaskEvent struct {
-	NodeID     int64  `json:"node_id"`
-	TaskID     int64  `json:"task_id"`
-	TaskDesc   string `json:"task_description"`
-	TaskGoal   string `json:"task_goal"`
-	Summary    string `json:"summary"`     // finding summary / goal text
-	VulnClass  string `json:"vulnclass"`   // finding only
-	Severity   string `json:"severity"`    // finding only
-	Tool       string `json:"tool"`        // tool-call only: tool name
-	ToolInput  string `json:"tool_input"`  // Tool-call only: arguments as JSON text.
-	ToolOutput string `json:"tool_output"` // Tool-call only: returned content.
-	ToolIsErr  bool   `json:"tool_is_err"` // Tool-call only: whether the tool result is an error.
+	NodeID   int64  `json:"node_id"`
+	TaskID   int64  `json:"task_id"`
+	TaskDesc string `json:"task_description"`
+	TaskGoal string `json:"task_goal"`
+	// ExplorationID is the task's exploration. It travels with the event so the
+	// triggered run can attribute its tool_usage rows to the source task's
+	// graph instead of leaving them unattributed.
+	ExplorationID int64  `json:"exploration_id"`
+	Summary       string `json:"summary"`     // finding summary / goal text
+	VulnClass     string `json:"vulnclass"`   // finding only
+	Severity      string `json:"severity"`    // finding only
+	Tool          string `json:"tool"`        // tool-call only: tool name
+	ToolInput     string `json:"tool_input"`  // Tool-call only: arguments as JSON text.
+	ToolOutput    string `json:"tool_output"` // Tool-call only: returned content.
+	ToolIsErr     bool   `json:"tool_is_err"` // Tool-call only: whether the tool result is an error.
 }
 
 // NewFindingsSince returns findings with node id > lastID across all live tasks,
 // ordered by id (monotonic watermark → no double-fire).
 func (d *DB) NewFindingsSince(lastID int64) ([]TaskEvent, error) {
 	rows, err := d.Query(`
-SELECT n.id, t.id, t.description, t.goal, n.payload
+SELECT n.id, t.id, t.description, t.goal, n.payload, t.exploration_id
 FROM exploration_nodes n JOIN tasks t ON t.exploration_id = n.exploration_id
 WHERE n.kind='finding' AND n.id > $1 AND t.deleted_at IS NULL
 ORDER BY n.id`, lastID)
@@ -178,7 +182,7 @@ ORDER BY n.id`, lastID)
 	for rows.Next() {
 		var e TaskEvent
 		var payload []byte
-		if err := rows.Scan(&e.NodeID, &e.TaskID, &e.TaskDesc, &e.TaskGoal, &payload); err != nil {
+		if err := rows.Scan(&e.NodeID, &e.TaskID, &e.TaskDesc, &e.TaskGoal, &payload, &e.ExplorationID); err != nil {
 			return nil, err
 		}
 		var p struct{ Summary, Vulnclass, Severity string }
@@ -246,7 +250,7 @@ ORDER BY id`, lastID)
 // (conversation_activities), so a tool-call trigger never fires on its own output.
 func (d *DB) NewToolCallsSince(lastID int64) ([]TaskEvent, error) {
 	rows, err := d.Query(`
-SELECT r.id, t.id, t.description, t.goal, r.tool, COALESCE(u.detail,''), COALESCE(r.detail,''), r.is_error
+SELECT r.id, t.id, t.description, t.goal, r.tool, COALESCE(u.detail,''), COALESCE(r.detail,''), r.is_error, t.exploration_id
 FROM activity r
 JOIN tasks t ON t.exploration_id = r.exploration_id
 LEFT JOIN activity u ON u.exploration_id = r.exploration_id AND u.tool_use_id = r.tool_use_id AND u.kind='tool_use'
@@ -259,7 +263,7 @@ ORDER BY r.id`, lastID)
 	out := []TaskEvent{}
 	for rows.Next() {
 		var e TaskEvent
-		if err := rows.Scan(&e.NodeID, &e.TaskID, &e.TaskDesc, &e.TaskGoal, &e.Tool, &e.ToolInput, &e.ToolOutput, &e.ToolIsErr); err != nil {
+		if err := rows.Scan(&e.NodeID, &e.TaskID, &e.TaskDesc, &e.TaskGoal, &e.Tool, &e.ToolInput, &e.ToolOutput, &e.ToolIsErr, &e.ExplorationID); err != nil {
 			return nil, err
 		}
 		out = append(out, e)
@@ -271,7 +275,7 @@ ORDER BY r.id`, lastID)
 // ones it already fired for via the persisted fired-set).
 func (d *DB) MetGoals() ([]TaskEvent, error) {
 	rows, err := d.Query(`
-SELECT n.id, t.id, t.description, t.goal, n.payload
+SELECT n.id, t.id, t.description, t.goal, n.payload, t.exploration_id
 FROM exploration_nodes n JOIN tasks t ON t.exploration_id = n.exploration_id
 WHERE n.kind='goal' AND n.state='met' AND t.deleted_at IS NULL
 ORDER BY n.id`)
@@ -283,7 +287,7 @@ ORDER BY n.id`)
 	for rows.Next() {
 		var e TaskEvent
 		var payload []byte
-		if err := rows.Scan(&e.NodeID, &e.TaskID, &e.TaskDesc, &e.TaskGoal, &payload); err != nil {
+		if err := rows.Scan(&e.NodeID, &e.TaskID, &e.TaskDesc, &e.TaskGoal, &payload, &e.ExplorationID); err != nil {
 			return nil, err
 		}
 		var p struct{ Text, Summary string }

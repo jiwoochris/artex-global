@@ -145,7 +145,7 @@ func (sc *Scheduler) fireIntervals(triggers []*db.AgentTrigger) {
 		}
 		_ = sc.pg.TouchTriggerFire(tr.ID)
 		ctx := locale.Text(lang, "\n\n[Scheduled trigger]") + now.Format(" 2006-01-02 15:04:05 MST")
-		sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf(locale.Text(lang, "Scheduled trigger · %s"), now.Format("15:04")), reporterTriggerText(tr.IntervalMessage, lang)+ctx, 0, false, "", "", lang)
+		sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf(locale.Text(lang, "Scheduled trigger · %s"), now.Format("15:04")), reporterTriggerText(tr.IntervalMessage, lang)+ctx, 0, 0, false, "", "", lang)
 	}
 }
 
@@ -178,7 +178,7 @@ func (sc *Scheduler) fireFindings(triggers []*db.AgentTrigger) {
 		msgCtx := fmt.Sprintf(locale.Text(lang, "\n\n[Triggered by a task finding]\nFinding: [%s/%s] %s"),
 			e.VulnClass, e.Severity, e.Summary)
 		for _, tr := range want {
-			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf(locale.Text(lang, "Finding trigger · task#%d"), e.TaskID), reporterTriggerText(tr.FindingMessage, lang)+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal, lang)
+			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf(locale.Text(lang, "Finding trigger · task#%d"), e.TaskID), reporterTriggerText(tr.FindingMessage, lang)+msgCtx, e.TaskID, e.ExplorationID, true, e.TaskDesc, e.TaskGoal, lang)
 		}
 	}
 	_ = sc.pg.SetSchedState(schedKeyLastFinding, strconv.FormatInt(maxID, 10))
@@ -212,7 +212,7 @@ func (sc *Scheduler) fireGoals(triggers []*db.AgentTrigger) {
 		}
 		msgCtx := fmt.Sprintf(locale.Text(lang, "\n\n[Triggered by task goal completion]\nCompleted goal: %s"), e.Summary)
 		for _, tr := range want {
-			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf(locale.Text(lang, "Goal trigger · task#%d"), e.TaskID), reporterTriggerText(tr.GoalMessage, lang)+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal, lang)
+			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf(locale.Text(lang, "Goal trigger · task#%d"), e.TaskID), reporterTriggerText(tr.GoalMessage, lang)+msgCtx, e.TaskID, e.ExplorationID, true, e.TaskDesc, e.TaskGoal, lang)
 		}
 	}
 	if changed {
@@ -246,7 +246,7 @@ func (sc *Scheduler) fireTaskTimeouts(triggers []*db.AgentTrigger) {
 		}
 		msgCtx := locale.Text(lang, "\n\n[Triggered by a task timeout]")
 		for _, tr := range want {
-			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf(locale.Text(lang, "Timeout trigger · task#%d"), e.TaskID), reporterTriggerText(tr.TaskTimeoutMessage, lang)+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal, lang)
+			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf(locale.Text(lang, "Timeout trigger · task#%d"), e.TaskID), reporterTriggerText(tr.TaskTimeoutMessage, lang)+msgCtx, e.TaskID, e.ExplorationID, true, e.TaskDesc, e.TaskGoal, lang)
 		}
 	}
 	_ = sc.pg.SetSchedState(schedKeyLastTimeout, strconv.FormatInt(maxID, 10))
@@ -278,7 +278,7 @@ func (sc *Scheduler) fireTaskCreates(triggers []*db.AgentTrigger) {
 		}
 		msgCtx := locale.Text(lang, "\n\n[Triggered by task creation]")
 		for _, tr := range want {
-			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf(locale.Text(lang, "Task creation trigger · task#%d"), e.TaskID), reporterTriggerText(tr.TaskCreateMessage, lang)+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal, lang)
+			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf(locale.Text(lang, "Task creation trigger · task#%d"), e.TaskID), reporterTriggerText(tr.TaskCreateMessage, lang)+msgCtx, e.TaskID, e.ExplorationID, true, e.TaskDesc, e.TaskGoal, lang)
 		}
 	}
 	_ = sc.pg.SetSchedState(schedKeyLastTaskCreate, strconv.FormatInt(maxID, 10))
@@ -324,7 +324,7 @@ func (sc *Scheduler) fireToolCalls(triggers []*db.AgentTrigger) {
 			if !containsFold(tr.ToolNames, e.Tool) {
 				continue
 			}
-			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf(locale.Text(lang, "Tool trigger · %s · task#%d"), e.Tool, e.TaskID), reporterTriggerText(tr.ToolCallMessage, lang)+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal, lang)
+			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf(locale.Text(lang, "Tool trigger · %s · task#%d"), e.Tool, e.TaskID), reporterTriggerText(tr.ToolCallMessage, lang)+msgCtx, e.TaskID, e.ExplorationID, true, e.TaskDesc, e.TaskGoal, lang)
 		}
 	}
 	_ = sc.pg.SetSchedState(schedKeyLastToolCall, strconv.FormatInt(maxID, 10))

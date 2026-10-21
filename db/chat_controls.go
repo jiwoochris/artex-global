@@ -65,6 +65,10 @@ func (d *DB) chatTx(ctx context.Context, ref chatstate.SessionRef, fn func(*sql.
 	if err != nil {
 		return err
 	}
+	// The gate records OWNERSHIP: a conversation gate or a task gate, never both
+	// (chat_control_gates_check). The session row keeps the same exclusive
+	// shape. Source-task attribution is NOT part of ownership: it rides on the
+	// input/run rows, so the gate and session stay unambiguous.
 	_, err = tx.ExecContext(ctx, `INSERT INTO chat_control_gates(gate_key,conversation_id,task_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`, ref.GateKey(), nullableID(ref.ConversationID), nullableID(ref.TaskID))
 	if err != nil {
 		return err
@@ -121,12 +125,37 @@ func (d *DB) AdmitLegacyTaskChatInput(ctx context.Context, ref chatstate.Session
 func (d *DB) AdmitExternalChatInput(ctx context.Context, ref chatstate.SessionRef, clientID string, prompt chatstate.Prompt) (chatstate.Admission, error) {
 	return d.admitChatInput(ctx, ref, clientID, "queue", "", prompt, "external", false)
 }
+
+// AdmitAttributedExternalChatInput queues an input that a server-side trigger
+// raised on behalf of a task: a reporter run fired by a finding belongs to the
+// task that produced the finding, even though it runs in its own conversation.
+//
+// The attribution is stored on the INPUT row (source_task_id /
+// source_exploration_id), never on the session: the session's task_id means
+// "this session is owned by that task" and must stay unambiguous. It is copied
+// to the run when the input is claimed (see claimChatInput).
+//
+// sourceTaskID/sourceExplorationID are 0 for a plain user message.
+func (d *DB) AdmitAttributedExternalChatInput(ctx context.Context, ref chatstate.SessionRef, clientID string, prompt chatstate.Prompt, sourceTaskID, sourceExplorationID int64) (chatstate.Admission, error) {
+	return d.admitChatInputAttributed(ctx, ref, clientID, "queue", "", prompt, "external", false, sourceTaskID, sourceExplorationID)
+}
 func (d *DB) admitChatInput(ctx context.Context, ref chatstate.SessionRef, clientID, mode, targetRunID string, prompt chatstate.Prompt, sourceKind string, allowBlankTask bool) (out chatstate.Admission, err error) {
+	return d.admitChatInputAttributed(ctx, ref, clientID, mode, targetRunID, prompt, sourceKind, allowBlankTask, 0, 0)
+}
+func (d *DB) admitChatInputAttributed(ctx context.Context, ref chatstate.SessionRef, clientID, mode, targetRunID string, prompt chatstate.Prompt, sourceKind string, allowBlankTask bool, sourceTaskID, sourceExplorationID int64) (out chatstate.Admission, err error) {
 	if strings.TrimSpace(clientID) == "" || len(clientID) > 200 || (!allowBlankTask && strings.TrimSpace(prompt.Text) == "" && len(prompt.Attachments) == 0) {
 		return out, locale.Errorf("client request ID and prompt are required")
 	}
 	if mode != "send" && mode != "queue" && mode != "steer" {
 		return out, locale.Errorf("invalid input mode")
+	}
+	// Attribution only makes sense for a conversation-owned session: a
+	// task-owned session already says which task it serves.
+	if sourceTaskID > 0 && ref.ConversationID == 0 {
+		sourceTaskID, sourceExplorationID = 0, 0
+	}
+	if (sourceTaskID > 0) != (sourceExplorationID > 0) {
+		return out, locale.Errorf("incomplete chat input attribution")
 	}
 	// Canonicalize absent manifests for stable idempotency across JSON clients.
 	if prompt.Attachments == nil {
@@ -197,7 +226,7 @@ func (d *DB) admitChatInput(ctx context.Context, ref chatstate.SessionRef, clien
 		}
 		payload, _ := json.Marshal(prompt)
 		out = chatstate.Admission{ID: chatID(), ClientID: clientID, Kind: kind, TargetRunID: targetRunID, Status: "queued", Session: ref, Prompt: prompt, Ordinal: ordinal, Revision: 1}
-		_, e = tx.ExecContext(ctx, `INSERT INTO chat_control_inputs(id,session_key,gate_key,client_id,fingerprint,kind,target_run_id,status,prompt,revision,ordinal,language,source_kind) VALUES($1,$2,$3,$4,$5,$6,$7,'queued',$8,1,$9,$10,$11)`, out.ID, ref.Key(), ref.GateKey(), clientID, fingerprint, kind, targetRunID, payload, ordinal, string(locale.FromContext(ctx)), sourceKind)
+		_, e = tx.ExecContext(ctx, `INSERT INTO chat_control_inputs(id,session_key,gate_key,client_id,fingerprint,kind,target_run_id,status,prompt,revision,ordinal,language,source_kind,source_task_id,source_exploration_id) VALUES($1,$2,$3,$4,$5,$6,$7,'queued',$8,1,$9,$10,$11,$12,$13)`, out.ID, ref.Key(), ref.GateKey(), clientID, fingerprint, kind, targetRunID, payload, ordinal, string(locale.FromContext(ctx)), sourceKind, nullableID(sourceTaskID), nullableID(sourceExplorationID))
 		if e != nil {
 			return e
 		}
@@ -371,11 +400,11 @@ func (d *DB) ReorderChatInputs(ctx context.Context, ref chatstate.SessionRef, ex
 	})
 }
 
-const runCols = `r.id,r.input_id,r.turn_id,COALESCE(r.supersedes_run_id,''),r.transcript_id,r.start_record_uuid,r.end_record_uuid,r.status,r.history_revision,r.prompt,r.turn_ordinal,r.active,r.imported,COALESCE(r.source_run_id,''),r.baseline_recorded,r.before_record_uuid,r.source_kind,r.language,COALESCE(s.conversation_id,0),COALESCE(s.task_id,0),COALESCE(s.exploration_id,0),s.main_seg`
+const runCols = `r.id,r.input_id,r.turn_id,COALESCE(r.supersedes_run_id,''),r.transcript_id,r.start_record_uuid,r.end_record_uuid,r.status,r.history_revision,r.prompt,r.turn_ordinal,r.active,r.imported,COALESCE(r.source_run_id,''),r.baseline_recorded,r.before_record_uuid,r.source_kind,r.language,COALESCE(s.conversation_id,0),COALESCE(s.task_id,0),COALESCE(s.exploration_id,0),s.main_seg,COALESCE(r.source_task_id,0),COALESCE(r.source_exploration_id,0)`
 
 func scanChatRun(row interface{ Scan(...any) error }) (r chatstate.Run, err error) {
 	var prompt []byte
-	err = row.Scan(&r.ID, &r.InputID, &r.TurnID, &r.SupersedesRunID, &r.TranscriptID, &r.StartRecordUUID, &r.EndRecordUUID, &r.Status, &r.HistoryRevision, &prompt, &r.TurnOrdinal, &r.Active, &r.Imported, &r.SourceRunID, &r.BaselineRecorded, &r.BeforeRecordUUID, &r.SourceKind, &r.Language, &r.Session.ConversationID, &r.Session.TaskID, &r.Session.ExplorationID, &r.Session.MainSeg)
+	err = row.Scan(&r.ID, &r.InputID, &r.TurnID, &r.SupersedesRunID, &r.TranscriptID, &r.StartRecordUUID, &r.EndRecordUUID, &r.Status, &r.HistoryRevision, &prompt, &r.TurnOrdinal, &r.Active, &r.Imported, &r.SourceRunID, &r.BaselineRecorded, &r.BeforeRecordUUID, &r.SourceKind, &r.Language, &r.Session.ConversationID, &r.Session.TaskID, &r.Session.ExplorationID, &r.Session.MainSeg, &r.SourceTaskID, &r.SourceExplorationID)
 	if err == nil {
 		err = json.Unmarshal(prompt, &r.Prompt)
 	}
@@ -431,6 +460,12 @@ func (d *DB) claimChatInput(ctx context.Context, gate, selected string) (out *ch
 		if e = tx.QueryRowContext(ctx, `SELECT language,source_kind FROM chat_control_inputs WHERE id=$1`, a.ID).Scan(&r.Language, &r.SourceKind); e != nil {
 			return e
 		}
+		// Copy the input's source-task attribution onto the run. The run is the
+		// canonical record of which task an execution belongs to, so it must
+		// carry the attribution even after the input is consumed.
+		if e = tx.QueryRowContext(ctx, `SELECT COALESCE(source_task_id,0),COALESCE(source_exploration_id,0) FROM chat_control_inputs WHERE id=$1`, a.ID).Scan(&r.SourceTaskID, &r.SourceExplorationID); e != nil {
+			return e
+		}
 		if e = tx.QueryRowContext(ctx, `SELECT history_revision,transcript_id FROM chat_control_sessions WHERE session_key=$1`, a.Session.Key()).Scan(&r.HistoryRevision, &r.TranscriptID); e != nil {
 			return e
 		}
@@ -450,7 +485,7 @@ func (d *DB) claimChatInput(ctx context.Context, gate, selected string) (out *ch
 			r.TranscriptID = r.Session.LegacyTranscriptID()
 		}
 		payload, _ := json.Marshal(a.Prompt)
-		if _, e = tx.ExecContext(ctx, `INSERT INTO chat_control_runs(id,input_id,session_key,turn_id,history_revision,transcript_id,prompt,status,supersedes_run_id,turn_ordinal,language,source_kind) VALUES($1,$2,$3,$4,$5,$6,$7,'running',NULLIF($8,''),$9,$10,$11)`, r.ID, a.ID, a.Session.Key(), r.TurnID, r.HistoryRevision, r.TranscriptID, payload, r.SupersedesRunID, r.TurnOrdinal, r.Language, r.SourceKind); e != nil {
+		if _, e = tx.ExecContext(ctx, `INSERT INTO chat_control_runs(id,input_id,session_key,turn_id,history_revision,transcript_id,prompt,status,supersedes_run_id,turn_ordinal,language,source_kind,source_task_id,source_exploration_id) VALUES($1,$2,$3,$4,$5,$6,$7,'running',NULLIF($8,''),$9,$10,$11,$12,$13)`, r.ID, a.ID, a.Session.Key(), r.TurnID, r.HistoryRevision, r.TranscriptID, payload, r.SupersedesRunID, r.TurnOrdinal, r.Language, r.SourceKind, nullableID(r.SourceTaskID), nullableID(r.SourceExplorationID)); e != nil {
 			return e
 		}
 		if _, e = tx.ExecContext(ctx, `UPDATE chat_control_inputs SET status='claimed',revision=revision+1 WHERE id=$1`, a.ID); e != nil {

@@ -1888,6 +1888,7 @@
   "client request ID is required": "需要客户端请求 ID",
   "prompt is required": "需要消息",
   "invalid input mode": "输入模式无效",
+  "incomplete chat input attribution": "对话输入的来源任务信息不完整",
   "invalid run status": "执行状态无效",
   "invalid attachment path": "附件路径无效",
   "attachment unavailable: %s": "附件不可用：%s",
