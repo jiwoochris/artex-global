@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+﻿import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
 import path from "node:path";
@@ -52,7 +52,9 @@ function checkCatalog(source, translated, locale) {
 }
 
 test("every shipped catalog is complete and preserves placeholders and rich tags", () => {
-  assert.equal(Object.keys(catalogs.en).length, 3270);
+  // 3266 shipped keys + 4 OpenCode Go provider template keys (providers.opencodeGo,
+  // providers.opencodeGoHelp, and the two keys they added to the provider table).
+  assert.equal(Object.keys(catalogs.en).length, 3272);
   assert.deepEqual(catalogLocales.sort(), [...LOCALES].sort());
   assert.deepEqual(Object.keys(catalogs).sort(), [...LOCALES].sort());
   for (const locale of LOCALES) checkCatalog(catalogs.en, catalogs[locale], locale);

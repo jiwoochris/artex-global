@@ -28,6 +28,10 @@ func isolateLLMEnvironment(t *testing.T) {
 	t.Setenv("ANTHROPIC_API_KEY", "anthropic-provider-key")
 	t.Setenv("OPENAI_API_KEY", "openai-provider-key")
 	t.Setenv("OLLAMA_API_KEY", "ollama-provider-key")
+	t.Setenv("OPENCODE_API_KEY", "")
+	if err := os.Unsetenv("OPENCODE_API_KEY"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestFromEnvLocalGatewayAuthentication(t *testing.T) {

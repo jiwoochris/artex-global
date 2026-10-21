@@ -32,11 +32,40 @@ Enter a profile name and your own API key. Applying either template preserves an
 
 Verified against official documentation on **2026-10-03**. Provider availability, account entitlement, and policies may change.
 
+## OpenCode Go (opencode subscription gateway)
+
+Open **LLM → New → Configuration template** and choose **OpenCode Go · glm-5.3-flash**.
+
+| Field | Value |
+| --- | --- |
+| Format | OpenAI Chat Completions |
+| Base URL | `https://opencode.ai/zen/go/v1` |
+| Model | `glm-5.3-flash` |
+| Thinking | omitted (model default) |
+| Reasoning effort | `max` |
+| Context window (K) | `0` (200K default) |
+| Output limit | `16384`, sent as `max_tokens` |
+| Session header | `x-opencode-session` (required by the gateway; the template fills it) |
+
+The gateway is OpenAI-compatible: the opencode 1.18.5 provider definition (`opencode-go`) uses `@ai-sdk/openai-compatible` at `https://opencode.ai/zen/go/v1` with the `OPENCODE_API_KEY` environment key (checked 2026-10-20). GLM-class models accept effort `low`, `high` and `max`; this template deliberately fills `max` at the operator's request, so expect the highest reasoning-token use. **Load models** reads the gateway's model list; the model field stays editable for other ids such as `qwen3.7-plus`. Every request must carry an `x-opencode-session` header (the gateway answers `400 MissingSessionID` without it); the template fills the profile's **Session header** field with that name, and ScopeWeaver sends its own session ids as the value.
+
+**Credential and terms:** the key belongs to your opencode subscription; opencode stores it in its own auth file, which ScopeWeaver never reads. Paste the key into the profile or set `OPENCODE_API_KEY`. The key is governed by opencode's subscription terms — confirm that using it from another tool is permitted before saving. As with the Z.ai Coding Plan boundary, a template here does not establish permission.
+
+Environment configuration:
+
+```bash
+SCOPEWEAVER_LLM_PROVIDER=opencode-go
+SCOPEWEAVER_LLM_MODEL=glm-5.3-flash
+# Key: OPENCODE_API_KEY is used when no generic key is set; SCOPEWEAVER_LLM_API_KEY overrides.
+```
+
+`SCOPEWEAVER_LLM_PROVIDER=opencode-go` resolves to the OpenAI Chat Completions wire format; an unset base URL and model default to the values in the table above.
+
 ## Controlling token use
 
 Every agent turn resends the system prompt, the tool schemas and the conversation so far. Input therefore grows turn by turn until compaction shortens the history, and provider prompt caching decides how much of the repeated input is billed at the cheaper cached rate. This section answers [issue #24](https://github.com/cskwork/scopeweaver/issues/24) for cloud profiles. Native Ollama has its own safeguards, described [below](#runtime-safeguards).
 
-**Evidence status:** measurements use Z.ai GLM-5.3 on the Coding Plan as a proxy for DeepSeek. GLM has a different tokenizer, cache accounting and price, so **DeepSeek numbers are unverified**. DeepSeek, Claude, OpenAI, Qwen, Kimi and OpenRouter support is verified with test fixtures built from each provider's documented responses, not with live calls. This includes all Claude 5.5 request and replay behavior below; no Claude API key was used.
+**Evidence status:** measurements use Z.ai GLM-5.3 on the Coding Plan as a proxy for DeepSeek. GLM has a different tokenizer, cache accounting and price, so **DeepSeek numbers are unverified**. DeepSeek, Claude, OpenAI, Qwen, Kimi, OpenRouter and OpenCode Go support is verified with test fixtures built from each provider's documented responses, not with live calls. This includes all Claude 5.5 request and replay behavior below; no Claude API key was used.
 
 ### Economy templates
 
@@ -274,7 +303,7 @@ ScopeWeaver cannot see what an Ollama server does next. **Ollama can forward req
 
 | Suffix | Meaning |
 | --- | --- |
-| `PROVIDER` | `anthropic`, `openai`, `openai-responses` or `ollama` |
+| `PROVIDER` | `anthropic`, `openai`, `openai-responses`, `opencode-go` or `ollama` |
 | `MODEL`, `BASE_URL`, `PROXY` | Model, endpoint and optional LLM proxy |
 | `API_KEY` | Required for Anthropic/OpenAI formats unless the base URL is explicitly local; optional token for Ollama |
 | `CONTEXT_WINDOW_K`, `MAX_TOKENS`, `KEEP_ALIVE`, `MAX_CONCURRENT` | Controls described above |
@@ -282,7 +311,7 @@ ScopeWeaver cannot see what an Ollama server does next. **Ollama can forward req
 
 Policy variables: `SCOPEWEAVER_LOCAL_LLM_ONLY` / `ARTEX_LOCAL_LLM_ONLY` and comma-separated `SCOPEWEAVER_LOCAL_LLM_ALLOWED_CIDRS` / `ARTEX_LOCAL_LLM_ALLOWED_CIDRS`.
 
-At startup, Anthropic and OpenAI formats use `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` when no generic key is configured, including for authenticated local gateways. To start a deliberately keyless local profile while those provider keys are set, explicitly set `SCOPEWEAVER_LLM_API_KEY=` (or `ARTEX_LLM_API_KEY=`). This overrides file credentials and suppresses provider-key fallback. Native Ollama falls back only to `OLLAMA_API_KEY`, never to Anthropic or OpenAI keys.
+At startup, Anthropic and OpenAI formats use `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` when no generic key is configured, including for authenticated local gateways. The `opencode-go` provider uses `OPENCODE_API_KEY` instead — never `OPENAI_API_KEY` — and is inferred when only `OPENCODE_API_KEY` is set. To start a deliberately keyless local profile while those provider keys are set, explicitly set `SCOPEWEAVER_LLM_API_KEY=` (or `ARTEX_LLM_API_KEY=`). This overrides file credentials and suppresses provider-key fallback. Native Ollama falls back only to `OLLAMA_API_KEY`, never to Anthropic, OpenAI or OpenCode keys.
 
 Saving a new UI profile with a blank key does not import provider environment credentials. **Test connection** with a blank key can reuse an existing profile's saved key when its profile ID is supplied. Without a profile ID, a local Anthropic/OpenAI test reuses the active key only when the format, normalized base URL and proxy all match the active service, including when testing a new draft. A different local endpoint, format or proxy does not inherit the active key; native Ollama never inherits an active cloud key. Existing non-local connection tests retain their active-key fallback.
 

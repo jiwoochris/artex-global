@@ -32,11 +32,40 @@ GLM-5.3은 텍스트 입력과 100만 토큰의 문맥 창을 지원하며 추�
 
 공식 문서 확인일: **2026-10-03**. 모델 제공 여부, 계정 권한 및 정책은 바뀔 수 있습니다.
 
+## OpenCode Go(opencode 구독 게이트웨이)
+
+**LLM → 새로 만들기 → 설정 템플릿**에서 **OpenCode Go · glm-5.3-flash**를 고르세요.
+
+| 필드 | 값 |
+| --- | --- |
+| 형식 | OpenAI Chat Completions |
+| 기본 URL | `https://opencode.ai/zen/go/v1` |
+| 모델 | `glm-5.3-flash` |
+| 추론 | 생략(모델 기본값) |
+| 강도 | `max` |
+| 문맥 창(K) | `0`(기본 200K) |
+| 출력 한도 | `16384`, `max_tokens`로 전송 |
+| 세션 헤더 | `x-opencode-session`(게이트웨이 필수, 템플릿이 채움) |
+
+게이트웨이는 OpenAI 호환입니다. opencode 1.18.5의 제공자 정의(`opencode-go`)는 `https://opencode.ai/zen/go/v1`의 `@ai-sdk/openai-compatible`과 `OPENCODE_API_KEY` 환경 키를 사용합니다(2026-10-20 확인). GLM 계열 모델은 강도 `low`, `high`, `max`를 받으며, 이 템플릿은 운영자의 요청에 따라 의도적으로 `max`를 채우므로 추론 토큰 사용량이 가장 큽니다. **모델 불러오기**는 게이트웨이의 모델 목록을 읽으며, 모델 필드는 `qwen3.7-plus` 같은 다른 ID로 수정할 수 있습니다. 모든 요청에는 `x-opencode-session` 헤더가 필요하고(없으면 `400 MissingSessionID`) 템플릿이 프로필의 **세션 헤더** 필드에 이 이름을 채우며, 값으로는 ScopeWeaver 자체 세션 ID를 보냅니다.
+
+**자격 증명과 약관:** 키는 opencode 구독에 속하며 opencode가 자체 인증 파일에 저장합니다. ScopeWeaver는 이 파일을 읽지 않습니다. 키를 프로필에 직접 붙여넣거나 `OPENCODE_API_KEY`를 설정하세요. 키는 opencode 구독 약관의 적용을 받으므로 다른 도구에서 사용해도 되는지 먼저 확인하세요. Z.ai Coding Plan 범위와 마찬가지로, 여기의 템플릿은 사용 허가를 의미하지 않습니다.
+
+환경 설정:
+
+```bash
+SCOPEWEAVER_LLM_PROVIDER=opencode-go
+SCOPEWEAVER_LLM_MODEL=glm-5.3-flash
+# 키: 일반 키가 없으면 OPENCODE_API_KEY를 사용하며, SCOPEWEAVER_LLM_API_KEY가 우선합니다.
+```
+
+`SCOPEWEAVER_LLM_PROVIDER=opencode-go`는 OpenAI Chat Completions 와이어 형식으로 해석되며, 기본 URL과 모델이 비어 있으면 위 표의 기본값을 사용합니다.
+
 ## 토큰 사용량 줄이기
 
 에이전트는 턴마다 시스템 프롬프트, 도구 스키마, 지금까지의 대화를 다시 보냅니다. 그래서 입력은 압축으로 기록이 줄어들 때까지 턴마다 늘어나고, 반복되는 입력 중 얼마가 더 싼 캐시 요금으로 과금되는지는 제공자의 프롬프트 캐시가 정합니다. 이 절은 클라우드 프로필 기준으로 [이슈 #24](https://github.com/cskwork/scopeweaver/issues/24)에 답합니다. 기본 Ollama의 보호 장치는 [아래](#실행-중-보호-장치)에 따로 설명합니다.
 
-**근거 수준:** 측정은 DeepSeek 대신 Z.ai Coding Plan의 GLM-5.3으로 했습니다. GLM은 토크나이저, 캐시 집계, 요금이 다르므로 **DeepSeek 수치는 검증되지 않았습니다**. DeepSeek, Claude, OpenAI, Qwen, Kimi, OpenRouter 지원은 각 제공자 문서의 응답 형식으로 만든 테스트 픽스처로 확인했으며 실제 호출로 확인하지 않았습니다. 아래의 Claude 5.5 요청·재전송 동작도 모두 마찬가지이며 Claude API 키는 쓰지 않았습니다.
+**근거 수준:** 측정은 DeepSeek 대신 Z.ai Coding Plan의 GLM-5.3으로 했습니다. GLM은 토크나이저, 캐시 집계, 요금이 다르므로 **DeepSeek 수치는 검증되지 않았습니다**. DeepSeek, Claude, OpenAI, Qwen, Kimi, OpenRouter, OpenCode Go 지원은 각 제공자 문서의 응답 형식으로 만든 테스트 픽스처로 확인했으며 실제 호출로 확인하지 않았습니다. 아래의 Claude 5.5 요청·재전송 동작도 모두 마찬가지이며 Claude API 키는 쓰지 않았습니다.
 
 ### 절약형 템플릿
 
@@ -274,7 +303,7 @@ ScopeWeaver는 Ollama 서버가 이후에 하는 일을 볼 수 없습니다. **
 
 | 접미사 | 의미 |
 | --- | --- |
-| `PROVIDER` | `anthropic`, `openai`, `openai-responses`, `ollama` |
+| `PROVIDER` | `anthropic`, `openai`, `openai-responses`, `opencode-go` 또는 `ollama` |
 | `MODEL`, `BASE_URL`, `PROXY` | 모델, 엔드포인트, 선택적 LLM 프록시 |
 | `API_KEY` | Anthropic·OpenAI 형식은 기본 URL이 명시적 로컬이 아니면 필수, Ollama는 선택적 토큰 |
 | `CONTEXT_WINDOW_K`, `MAX_TOKENS`, `KEEP_ALIVE`, `MAX_CONCURRENT` | 위에서 설명한 설정 |
@@ -282,7 +311,7 @@ ScopeWeaver는 Ollama 서버가 이후에 하는 일을 볼 수 없습니다. **
 
 정책 변수: `SCOPEWEAVER_LOCAL_LLM_ONLY` / `ARTEX_LOCAL_LLM_ONLY`, 쉼표로 구분한 `SCOPEWEAVER_LOCAL_LLM_ALLOWED_CIDRS` / `ARTEX_LOCAL_LLM_ALLOWED_CIDRS`.
 
-시작 시 Anthropic·OpenAI 형식에 공통 키가 설정되어 있지 않으면 `ANTHROPIC_API_KEY` 또는 `OPENAI_API_KEY`를 사용합니다. 인증이 필요한 로컬 게이트웨이도 같습니다. 제공자 키가 설정된 환경에서 키 없는 로컬 프로필로 시작하려면 `SCOPEWEAVER_LLM_API_KEY=`(또는 `ARTEX_LLM_API_KEY=`)를 명시적으로 비워 설정하세요. 설정 파일의 키를 덮어쓰고 제공자 키도 사용하지 않습니다. 네이티브 Ollama는 `OLLAMA_API_KEY`만 사용하며 Anthropic·OpenAI 키를 가져오지 않습니다.
+시작 시 Anthropic·OpenAI 형식에 공통 키가 설정되어 있지 않으면 `ANTHROPIC_API_KEY` 또는 `OPENAI_API_KEY`를 사용합니다. 인증이 필요한 로컬 게이트웨이도 같습니다. `opencode-go` 제공자는 `OPENAI_API_KEY`가 아니라 `OPENCODE_API_KEY`를 사용하며, `OPENCODE_API_KEY`만 설정되어 있으면 이 제공자를 추론합니다. 제공자 키가 설정된 환경에서 키 없는 로컬 프로필로 시작하려면 `SCOPEWEAVER_LLM_API_KEY=`(또는 `ARTEX_LLM_API_KEY=`)를 명시적으로 비워 설정하세요. 설정 파일의 키를 덮어쓰고 제공자 키도 사용하지 않습니다. 네이티브 Ollama는 `OLLAMA_API_KEY`만 사용하며 Anthropic·OpenAI·OpenCode 키를 가져오지 않습니다.
 
 UI에서 새 프로필의 키를 비워 저장하면 제공자 환경 변수의 키를 가져오지 않습니다. **연결 테스트**에서는 프로필 ID가 있으면 해당 프로필의 저장된 키를 사용할 수 있습니다. 프로필 ID 없이 로컬 Anthropic·OpenAI 연결을 테스트할 때는 형식, 정규화된 기본 URL, 프록시가 활성 서비스와 모두 같을 때만 활성 키를 사용합니다. 새 초안을 테스트할 때도 같은 기준입니다. 로컬 엔드포인트, 형식, 프록시 중 하나라도 다르면 활성 키를 가져오지 않으며, 네이티브 Ollama는 활성 클라우드 키를 가져오지 않습니다. 로컬이 아닌 연결 테스트는 기존처럼 활성 키를 사용할 수 있습니다.
 

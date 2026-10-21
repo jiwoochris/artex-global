@@ -72,6 +72,7 @@ const CLOUD_PRESETS = [
   { id: "qwen", key: "providers.qwen", help: "providers.qwenHelp" },
   { id: "kimi", key: "providers.kimi", help: "providers.kimiHelp" },
   { id: "openrouter", key: "providers.openrouter", help: "providers.openrouterHelp" },
+  { id: "opencode-go", key: "providers.opencodeGo", help: "providers.opencodeGoHelp" },
 ] as const;
 const OLLAMA_PRESETS = [
   { id: "ollama-host", key: "providers.ollamaHost", help: "providers.ollamaHostHelp" },
@@ -433,6 +434,9 @@ function ProfileSheet({
     setCw(String(next.context_window_k));
     setMaxTokens(String(next.max_tokens));
     setMaxTokensField(fromStore(next.max_tokens_field));
+    // A preset that defines a required session header (opencode-go) fills the field;
+    // presets without one keep whatever the user entered.
+    if (next.session_header_key) setSessionHeaderKey(next.session_header_key);
     if (next.format === "ollama") {
       setApiKey(next.api_key);
       setKeepAlive(next.keep_alive);

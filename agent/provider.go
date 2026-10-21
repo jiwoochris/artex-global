@@ -161,20 +161,22 @@ func compactionConfig(windowTokens int) *compaction.Config {
 
 // FromEnv resolves the LLM provider config:
 //
-//	ARTEX_LLM_PROVIDER = anthropic|openai (default: inferred from keys)
+//	ARTEX_LLM_PROVIDER = anthropic|openai|opencode-go (default: inferred from keys)
 //	ARTEX_LLM_MODEL    = model id        (default: per provider)
 //	ARTEX_LLM_BASE_URL = endpoint        (optional)
 //	ARTEX_LLM_PROXY    = proxy URL        (optional; http/https/socks5)
-//	ANTHROPIC_API_KEY / OPENAI_API_KEY         = credentials
+//	ANTHROPIC_API_KEY / OPENAI_API_KEY / OPENCODE_API_KEY = credentials
 func FromEnv() (Config, bool) {
 	file := runtimeconfig.ResolveLLM()
-	prov := file.Provider
+	prov := strings.TrimSpace(file.Provider)
 	if prov == "" {
 		switch {
 		case os.Getenv("ANTHROPIC_API_KEY") != "":
 			prov = "anthropic"
 		case os.Getenv("OPENAI_API_KEY") != "":
 			prov = "openai"
+		case os.Getenv("OPENCODE_API_KEY") != "":
+			prov = "opencode-go"
 		default:
 			return Config{}, false
 		}
@@ -183,13 +185,19 @@ func FromEnv() (Config, bool) {
 	// Native Ollama never falls back to a cloud credential.
 	_, explicitKey := runtimeconfig.LLMEnv("API_KEY")
 	if c.APIKey == "" && !explicitKey {
-		switch c.Provider() {
-		case "ollama":
-			c.APIKey = os.Getenv("OLLAMA_API_KEY")
-		case "anthropic":
-			c.APIKey = os.Getenv("ANTHROPIC_API_KEY")
-		default:
-			c.APIKey = os.Getenv("OPENAI_API_KEY")
+		if prov == "opencode-go" {
+			// The wire format resolved to "openai", but the credential is the
+			// OpenCode subscription key — never OPENAI_API_KEY.
+			c.APIKey = os.Getenv("OPENCODE_API_KEY")
+		} else {
+			switch c.Provider() {
+			case "ollama":
+				c.APIKey = os.Getenv("OLLAMA_API_KEY")
+			case "anthropic":
+				c.APIKey = os.Getenv("ANTHROPIC_API_KEY")
+			default:
+				c.APIKey = os.Getenv("OPENAI_API_KEY")
+			}
 		}
 	}
 	if file.Stream != nil {
@@ -239,6 +247,24 @@ func ConfigFrom(provider, model, baseURL, apiKey, proxy string) Config {
 		c.BaseURL = strings.TrimRight(strings.TrimSuffix(c.BaseURL, "/chat/completions"), "/")
 		if c.Model == "" {
 			c.Model = "gpt-4o"
+		}
+	case "opencode-go":
+		// OpenCode Go (the OpenCode subscription gateway) is an OpenAI-compatible
+		// endpoint: it resolves to the openai wire format at
+		// https://opencode.ai/zen/go/v1 and is authenticated with
+		// OPENCODE_API_KEY, never OPENAI_API_KEY (see FromEnv). The gateway
+		// rejects requests without x-opencode-session (HTTP 400 MissingSessionID),
+		// so the session header is required; the UI template prefills it too.
+		c.Format = llm.FormatOpenAI
+		c.SessionHeaderKey = "x-opencode-session"
+		if c.BaseURL == "" {
+			c.BaseURL = "https://opencode.ai/zen/go/v1"
+		} else {
+			// provider appends "/chat/completions"; tolerate a full endpoint URL.
+			c.BaseURL = strings.TrimRight(strings.TrimSuffix(c.BaseURL, "/chat/completions"), "/")
+		}
+		if c.Model == "" {
+			c.Model = "glm-5.3-flash"
 		}
 	case "openai-responses":
 		c.Format = llm.FormatOpenAIResponses
@@ -394,6 +420,9 @@ type quotaAwareTransport struct {
 }
 
 func (t quotaAwareTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if _, explicit := req.Header["User-Agent"]; !explicit {
+		req.Header.Set("User-Agent", "scopeweaver")
+	}
 	if t.claude != nil {
 		if err := t.claude.rewrite(req); err != nil {
 			return nil, err

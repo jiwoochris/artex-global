@@ -2064,11 +2064,16 @@ func (s *Server) pgListModels(w http.ResponseWriter, r *http.Request) {
 
 	var candidates []candidate
 	switch provider {
-	case "openai", "openai-responses":
+	case "openai", "openai-responses", "opencode-go":
 		// Responses API shares the OpenAI model list at /v1/models; tolerate a full
-		// endpoint URL of either format.
+		// endpoint URL of either format. OpenCode Go shares the OpenAI model list
+		// at its own /v1 root.
 		if baseURL == "" {
-			baseURL = "https://api.openai.com/v1"
+			if provider == "opencode-go" {
+				baseURL = "https://opencode.ai/zen/go/v1"
+			} else {
+				baseURL = "https://api.openai.com/v1"
+			}
 		}
 		b := strings.TrimRight(strings.TrimSuffix(strings.TrimSuffix(baseURL, "/chat/completions"), "/responses"), "/")
 		candidates = append(candidates, candidate{b + "/models", bearerHdr()})

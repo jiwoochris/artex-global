@@ -13,6 +13,7 @@ export const LLM_PROFILE_PRESET_IDS = [
   "qwen",
   "kimi",
   "openrouter",
+  "opencode-go",
   "ollama-host",
   "ollama-docker-host",
   "ollama-compose",
@@ -28,20 +29,26 @@ export interface ZaiPresetFields {
   context_window_k: number;
   max_tokens: number;
   max_tokens_field: "";
+  // Optional required session header; when a preset defines it, the form fills it.
+  session_header_key?: string;
 }
 
 // Opt-in economy defaults: low effort and a 16384-token output cap. context_window_k 0 keeps
 // the 200K compaction default. Empty thinking/effort values omit the request field.
+// The opencode-go gateway template deliberately selects effort max at the user's request;
+// every other cloud template keeps the measured economy low default.
 export interface CloudPresetFields {
   format: "openai" | "anthropic" | "openai-responses";
   model: string;
   base_url: string;
   thinking_type: "" | "disabled";
-  reasoning_effort: "" | "low";
+  reasoning_effort: "" | "low" | "max";
   context_window_k: number;
   max_tokens: number;
   // Empty sends max_tokens in openai format; anthropic and openai-responses use fixed fields.
   max_tokens_field: "" | "max_completion_tokens";
+  // Optional required session header; when a preset defines it, the form fills it.
+  session_header_key?: string;
 }
 
 export interface OllamaPresetFields {
@@ -59,6 +66,8 @@ export interface OllamaPresetFields {
   max_tokens_field: "";
   keep_alive: string;
   llm_max_concurrent: number;
+  // Ollama templates never set a session header; an entered one is kept.
+  session_header_key?: string;
 }
 
 export type LLMProfilePresetFields = ZaiPresetFields | CloudPresetFields | OllamaPresetFields;
@@ -69,7 +78,7 @@ const OLLAMA_TARGETS: Record<string, { base_url: string }> = {
   "ollama-compose": { base_url: "http://ollama:11434" },
 };
 
-type CloudTarget = Pick<CloudPresetFields, "format" | "base_url" | "model" | "thinking_type" | "reasoning_effort" | "max_tokens_field">;
+type CloudTarget = Pick<CloudPresetFields, "format" | "base_url" | "model" | "thinking_type" | "reasoning_effort" | "max_tokens_field" | "session_header_key">;
 
 const CLOUD_TARGETS: Record<string, CloudTarget> = {
   deepseek: { format: "openai", base_url: "https://api.deepseek.com", model: "deepseek-flash", thinking_type: "", reasoning_effort: "low", max_tokens_field: "" },
@@ -81,6 +90,12 @@ const CLOUD_TARGETS: Record<string, CloudTarget> = {
   kimi: { format: "openai", base_url: "https://api.moonshot.ai/v1", model: "kimi-k3", thinking_type: "", reasoning_effort: "low", max_tokens_field: "max_completion_tokens" },
   // OpenRouter lists reasoning_effort among this model's supported parameters.
   openrouter: { format: "openai", base_url: "https://openrouter.ai/api/v1", model: "deepseek/deepseek-v4.1-flash", thinking_type: "", reasoning_effort: "low", max_tokens_field: "" },
+  // OpenCode Go (opencode subscription gateway, provider id "opencode-go" in opencode 1.18.5):
+  // @ai-sdk/openai-compatible at https://opencode.ai/zen/go/v1, OPENCODE_API_KEY. GLM-5.3-class
+  // models accept effort low/high/max; this template deliberately fills max at the user's request.
+  // The gateway rejects requests without x-opencode-session (HTTP 400 MissingSessionID), so the
+  // template fills the required session header.
+  "opencode-go": { format: "openai", base_url: "https://opencode.ai/zen/go/v1", model: "glm-5.3-flash", thinking_type: "", reasoning_effort: "max", max_tokens_field: "", session_header_key: "x-opencode-session" },
 };
 
 export function isCloudEconomyPreset(id: string): boolean {

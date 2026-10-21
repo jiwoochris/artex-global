@@ -397,14 +397,16 @@ func (s *Server) saveLLMConfig(cfg agent.Config) error {
 	streaming := true // Existing databases and new profiles default to streaming.
 	var maxTokens int
 	var maxTokensField string
-	var sessionHeaderKey string
+	sessionHeaderKey := cfg.SessionHeaderKey
 	var retry db.RetryOverride
 	if profs, _ := s.m.pg.ListProfiles(); profs != nil {
 		for _, p := range profs {
 			if p.Name == "default" {
 				id, priority, poolExclude, streaming = p.ID, p.Priority, p.PoolExclude, p.Streaming
 				maxTokens, maxTokensField = p.MaxTokens, p.MaxTokensField
-				sessionHeaderKey = p.SessionHeaderKey
+				if sessionHeaderKey == "" {
+					sessionHeaderKey = p.SessionHeaderKey
+				}
 				retry = p.Retry
 				if cfg.KeepAlive == "" {
 					cfg.KeepAlive = p.KeepAlive
@@ -1471,6 +1473,7 @@ func (s *Server) testLLM(w http.ResponseWriter, r *http.Request) {
 	// Use the configured session header during testing, with a fresh random session ID from TestConnection.
 	// Endpoints such as opencode zen require x-opencode-session and otherwise return 400,
 	// so omitting the header would make successful conversations fail connection tests.
+	providerSessionHeaderKey := cfg.SessionHeaderKey
 	cfg.SessionHeaderKey = req.SessionHeaderKey
 	// API-key precedence: submitted form, specified profile's stored key, then global configuration.
 	// Stored keys never return to the browser; testing an existing profile may require reading its key from DB.
@@ -1493,6 +1496,10 @@ func (s *Server) testLLM(w http.ResponseWriter, r *http.Request) {
 				cfg.MaxTokens = p.MaxTokens
 			}
 		}
+	}
+	// Request and saved-profile headers take precedence over provider defaults.
+	if cfg.SessionHeaderKey == "" {
+		cfg.SessionHeaderKey = providerSessionHeaderKey
 	}
 	if cfg.APIKey == "" {
 		s.cfgMu.Lock()
