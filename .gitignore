@@ -44,6 +44,7 @@ Thumbs.db
 
 # JWT 签名密钥（运行时生成，存项目根，绝不提交）
 /jwt.key
+/chatgpt-plan-auth.json
 
 # Docker 部署生成的本地环境（含密码/密钥，不提交）
 .env
@@ -78,6 +79,7 @@ secrets.env
 /artex.exe
 # 로컬 설정에 쓴 비밀(예: PostgreSQL 비밀번호). 절대 커밋하지 않는다.
 /.secrets/
+/secrets/
 # SWC_NATIVE_BINDING_CACHE 를 프로젝트 하위로 돌릴 때 생기는 네이티브 바인딩 캐시
 /.swc-cache/
 # artex.exe 를 포그라운드로 띄울 때 리다이렉트한 런타임 로그

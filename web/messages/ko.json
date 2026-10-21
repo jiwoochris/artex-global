@@ -3233,6 +3233,27 @@
     }
   },
   "llmPage": {
+    "chatgpt": {
+      "title": "ChatGPT 플랜",
+      "description": "API 키 없이 지원되는 ChatGPT 플랜을 ARTEX에서 사용합니다. 로그인은 이 컴퓨터에서 열립니다.",
+      "connected": "ChatGPT 플랜 사용 중",
+      "disconnected": "연결 안 됨",
+      "connectedAs": "{email}(으)로 연결됨",
+      "connect": "ChatGPT로 계속",
+      "disconnect": "연결 해제",
+      "manageUsage": "사용량 관리",
+      "welcomeTitle": "ChatGPT 플랜을 사용하고 있습니다",
+      "welcomeDescription": "ARTEX의 지원되는 AI 요청은 이제 ChatGPT 플랜 또는 크레딧 잔액을 사용합니다. ChatGPT 설정에서 사용량을 확인하고 한도를 조정할 수 있습니다.",
+      "gotIt": "확인",
+      "toast": {
+        "finishInWindow": "열린 창에서 로그인을 완료하세요",
+        "connected": "ChatGPT가 연결되었습니다",
+        "connectFailed": "ChatGPT 로그인을 시작하지 못했습니다: {msg}",
+        "disconnected": "ChatGPT 연결이 해제되었습니다",
+        "disconnectedWarning": "로컬 연결은 해제되었지만 원격 취소를 확인하지 못했습니다",
+        "disconnectFailed": "ChatGPT 연결을 해제하지 못했습니다: {msg}"
+      }
+    },
     "page": {
       "subtitle": "모든 에이전트가 공유하는 형식 / 모델 / 속도 제한 설정입니다. 카드를 클릭하면 편집하고, 별표는 현재 활성 설정입니다.",
       "poolConfig": "순환 설정",
@@ -3262,6 +3283,10 @@
       "deleteAria": "설정 삭제"
     },
     "health": {
+      "noAccount": {
+        "label": "ChatGPT 계정 없음",
+        "hint": "이 페이지 상단에서 ChatGPT를 연결하세요"
+      },
       "noKey": {
         "label": "Key 미설정",
         "hint": "API Key가 비어 있어 호출할 수 없습니다"
@@ -3376,7 +3401,8 @@
       "maxTokensFieldHint": {
         "openai": "상한을 어느 키로 보낼지입니다. max_tokens가 기본이고 대부분의 호환 게이트웨이는 이것만 인식합니다. 반면 OpenAI 공식 추론 모델(o 계열 / GPT-5)은 max_completion_tokens만 인식하고, max_tokens를 받으면 바로 unsupported_parameter 오류를 냅니다.",
         "anthropic": "openai 형식에서만 선택할 수 있습니다. Anthropic의 필드 이름은 max_tokens로 고정입니다.",
-        "openai-responses": "openai 형식에서만 선택할 수 있습니다. Responses API의 필드 이름은 max_output_tokens로 고정입니다."
+        "openai-responses": "openai 형식에서만 선택할 수 있습니다. Responses API의 필드 이름은 max_output_tokens로 고정입니다.",
+        "chatgpt-plan": "ChatGPT 플랜 액세스는 출력 토큰 제한을 받지 않으므로 ARTEX가 자동으로 생략합니다."
       },
       "thinkingType": {
         "label": "사고 스위치 · thinking.type",

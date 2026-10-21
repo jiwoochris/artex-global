@@ -20,6 +20,7 @@ import type {
   BatchCategoryItem,
   BatchControlItem,
   ChatAttachment,
+  ChatGPTPlanStatus,
   CommandRecord,
   Company,
   CompanyScopeMutation,
@@ -973,6 +974,9 @@ export const api = {
       session_header_key,
     }),
   llmProfiles: () => get<{ profiles: LLMProfile[] }>("/llm/profiles").then((r) => arr(r.profiles)),
+  chatGPTPlanStatus: () => get<ChatGPTPlanStatus>("/chatgpt-plan/status"),
+  connectChatGPTPlan: () => post<{ authorization_url: string }>("/chatgpt-plan/connect", {}),
+  disconnectChatGPTPlan: () => del<{ ok: boolean; warning?: string }>("/chatgpt-plan"),
   saveLLMProfile: (p: {
     id?: number; // omit/0 = create; set = update that profile
     name: string;

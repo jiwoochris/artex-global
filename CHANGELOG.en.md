@@ -8,6 +8,10 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 
 ## [Unreleased]
 
+### Added
+
+- **Added Sign in with ChatGPT as an LLM provider.** Eligible local users can authorize ARTEX to use their ChatGPT plan without an API key, select account-visible models, and disconnect from System → LLM. The implementation follows OpenAI's open-source OAuth/OIDC profile with PKCE, validates signed ID tokens and the plan-usage scope, refreshes rotating tokens, stores credentials atomically with owner-only permissions, and adapts Responses API requests to the plan-backed streaming contract.
+
 ### Localization (i18n)
 
 - **Added Spanish documentation.** Translated `README.es.md` from the English README into natural Spanish and added a Spanish link to the language navigation of all five READMEs (English, Korean, Chinese, Spanish, Japanese). Code, commands, payloads, URLs and identifiers are preserved; only descriptive text is translated.

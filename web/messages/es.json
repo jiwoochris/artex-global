@@ -3233,6 +3233,27 @@
     }
   },
   "llmPage": {
+    "chatgpt": {
+      "title": "Plan de ChatGPT",
+      "description": "Usa un plan de ChatGPT compatible en ARTEX sin clave API. El inicio de sesión se abre en este equipo.",
+      "connected": "Usando el plan de ChatGPT",
+      "disconnected": "No conectado",
+      "connectedAs": "Conectado como {email}",
+      "connect": "Continuar con ChatGPT",
+      "disconnect": "Desconectar",
+      "manageUsage": "Gestionar uso",
+      "welcomeTitle": "Estás usando tu plan de ChatGPT",
+      "welcomeDescription": "Las solicitudes de IA compatibles en ARTEX ahora usan tu plan de ChatGPT o saldo de créditos. Puedes revisar el uso y ajustar límites en la configuración de ChatGPT.",
+      "gotIt": "Entendido",
+      "toast": {
+        "finishInWindow": "Termina el inicio de sesión en la ventana abierta",
+        "connected": "ChatGPT conectado",
+        "connectFailed": "No se pudo iniciar la conexión con ChatGPT: {msg}",
+        "disconnected": "ChatGPT desconectado",
+        "disconnectedWarning": "Desconectado localmente; no se pudo confirmar la revocación remota",
+        "disconnectFailed": "No se pudo desconectar ChatGPT: {msg}"
+      }
+    },
     "page": {
       "subtitle": "Configuración de formato / modelo / límite de velocidad compartida por todos los agentes. Haga clic en una tarjeta para editarla; la estrella indica el perfil activo.",
       "poolConfig": "Configuración de rotación",
@@ -3262,6 +3283,10 @@
       "deleteAria": "Eliminar perfil"
     },
     "health": {
+      "noAccount": {
+        "label": "Sin cuenta ChatGPT",
+        "hint": "Conecta ChatGPT en la parte superior de esta página"
+      },
       "noKey": {
         "label": "Sin key",
         "hint": "La API Key está vacía, no se pueden hacer llamadas"
@@ -3376,7 +3401,8 @@
       "maxTokensFieldHint": {
         "openai": "Con qué key enviar el límite. max_tokens es el valor por defecto y la mayoría de los gateways compatibles solo reconocen este. En cambio, los modelos de razonamiento oficiales de OpenAI (serie o / GPT-5) solo reconocen max_completion_tokens y, en cuanto reciben max_tokens, lanzan un error unsupported_parameter.",
         "anthropic": "Solo se puede seleccionar en el formato openai. El nombre de campo de Anthropic está fijado a max_tokens.",
-        "openai-responses": "Solo se puede seleccionar en el formato openai. El nombre de campo de la Responses API está fijado a max_output_tokens."
+        "openai-responses": "Solo se puede seleccionar en el formato openai. El nombre de campo de la Responses API está fijado a max_output_tokens.",
+        "chatgpt-plan": "El acceso mediante el plan de ChatGPT no acepta un límite de tokens de salida; ARTEX lo omite automáticamente."
       },
       "thinkingType": {
         "label": "Interruptor de razonamiento · thinking.type",
