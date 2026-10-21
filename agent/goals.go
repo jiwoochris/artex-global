@@ -98,6 +98,12 @@ func DecomposeGoalsWithProvider(ctx context.Context, prov llm.Provider, dataDir,
 		tools = append(tools, tsx.addTaskScope())
 		sys += locale.Text(locale.FromContext(ctx), goalsScopeTail)
 	}
+	// These tools are constructed directly instead of going through ToolResolve, so
+	// without this pass their invocations never reach the usage ledger (set_goals and
+	// set_constraints were both missing from tool_usage). RunInfo carries the task and
+	// exploration the goals belong to; agentKey is "goals" so the rows are filterable
+	// the same way planner/worker rows are.
+	tools = MeterTools(tools, "goals", RunInfo{TaskID: taskID, ExplorationID: explorationID(ts)})
 	userMsg := locale.Text(locale.FromContext(ctx), "Task objective:\n") + goalText
 	if d := strings.TrimSpace(desc); d != "" {
 		userMsg += locale.Text(locale.FromContext(ctx), "\n\nTask description (background that may include target scope, flag count, or engagement instructions; do not invent unmentioned details):\n") + d
