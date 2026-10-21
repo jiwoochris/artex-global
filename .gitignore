@@ -35,6 +35,16 @@ Thumbs.db
 
 # Binary with embedded frontend
 /artex
+/artex.exe
+/artex.exe.old
+/artex.log
+/artex.err.log
+# Local rollback copies of the built binary; never commit
+/artex.exe.bak
+/artex.exe.prev
+/artex.exe.new
+# Local database backups; never commit
+/.backup/
 # Self-update staging, backup, failed binary and marker
 /artex.new
 /artex.new.sha256
@@ -49,6 +59,11 @@ Thumbs.db
 
 # Local Docker environment with passwords/keys; never commit
 .env
+
+# Local run artifacts (admin credential, session token, logs); never commit
+.admin_pw.tmp
+.admin_token.tmp
+*.log
 
 # Scheduler test event logs
 *-events.csv
