@@ -93,3 +93,7 @@ Thumbs.db
 
 # Operator-entered credential notes; never commit
 /*账号密码*.txt
+
+# start.bat auxiliary watchdog state
+/.aux-watchdog.pid
+/.start-watchdog.ps1
