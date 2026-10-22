@@ -84,3 +84,12 @@ Thumbs.db
 
 # Local agent-adapter session artifacts
 /adapters/agent/.session-token
+
+# start.bat supervisor runtime state; never commit
+/.supervisor.running
+/.stop-requested
+/.start-spawn.log
+/start-supervisor.ps1
+
+# Operator-entered credential notes; never commit
+/*账号密码*.txt
