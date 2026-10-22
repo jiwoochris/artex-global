@@ -1,4 +1,4 @@
-# backend
+﻿# backend
 /data/
 *.db
 *.db-wal
@@ -43,6 +43,8 @@ Thumbs.db
 /artex.exe.bak
 /artex.exe.prev
 /artex.exe.new
+# Timestamped rollback copies of the built binary; never commit
+/artex.exe.bak-*
 # Local database backups; never commit
 /.backup/
 # Self-update staging, backup, failed binary and marker

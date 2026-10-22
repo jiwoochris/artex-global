@@ -1,4 +1,4 @@
-package server
+﻿package server
 
 import (
 	"context"
@@ -1483,6 +1483,16 @@ func (s *Server) testLLM(w http.ResponseWriter, r *http.Request) {
 	// API-key precedence: submitted form, specified profile's stored key, then global configuration.
 	// Stored keys never return to the browser; testing an existing profile may require reading its key from DB.
 	// Likewise, fall back to the stored custom session-header name when omitted by the form.
+	//
+	// A connection test must exercise the SAME endpoint, protocol and model the
+	// profile actually runs with. Previously this branch only inherited the key
+	// and a few tuning fields, so a profile whose format was not "anthropic"
+	// fell through to agent.ConfigFrom's default provider: the request went to
+	// the wrong host (api.anthropic.com / api.openai.com instead of the
+	// profile's own base_url), and the reported model was the provider default
+	// rather than the profile's. The fields below are therefore inherited
+	// individually: an explicitly submitted form value always wins, and each
+	// missing field falls back to the stored profile.
 	if req.ProfileID != nil {
 		if p, err := s.m.pg.ProfileByID(*req.ProfileID); err == nil && p != nil {
 			if cfg.APIKey == "" && (cfg.Provider() != "ollama" || p.Format == "ollama") {
@@ -1499,6 +1509,33 @@ func (s *Server) testLLM(w http.ResponseWriter, r *http.Request) {
 			}
 			if req.MaxTokens == 0 {
 				cfg.MaxTokens = p.MaxTokens
+			}
+			// The wire protocol, endpoint, model and proxy decide where the
+			// request actually goes. Rebuild the config from the profile when
+			// the form left them blank, and keep the form's explicit values
+			// otherwise (the UI always sends provider/model/base_url).
+			if req.Provider == "" && req.Model == "" && req.BaseURL == "" && req.Proxy == "" {
+				if pc, ok := s.loadProfileConfig(*req.ProfileID); ok {
+					pc.APIKey = cfg.APIKey
+					pc.SessionHeaderKey = cfg.SessionHeaderKey
+					pc.KeepAlive = cfg.KeepAlive
+					pc.ContextWindowK = cfg.ContextWindowK
+					pc.MaxTokens = cfg.MaxTokens
+					cfg = pc
+				}
+			} else {
+				if req.Provider == "" {
+					cfg.Format = llm.Format(p.Format)
+				}
+				if req.Model == "" {
+					cfg.Model = p.Model
+				}
+				if req.BaseURL == "" {
+					cfg.BaseURL = p.BaseURL
+				}
+				if req.Proxy == "" {
+					cfg.Proxy = p.Proxy
+				}
 			}
 		}
 	}
@@ -1880,6 +1917,26 @@ func (s *Server) getTask(w http.ResponseWriter, r *http.Request) {
 	dto := taskDTO(t, s.resolvedTaskStatus(t))
 	archiveBlockers, _ := s.m.PG().TaskArchiveBlockers()
 	applyTaskArchiveBlocker(&dto, archiveBlockers)
+	// The detail view renders the same progress fields as the task list
+	// (goal counts, running intents, finding buckets, token totals), so it has
+	// to carry the same aggregates — otherwise every progress field reads zero
+	// on the task page while the list shows the real numbers.
+	if metric, found, err := s.m.PG().TaskMetricsForExploration(t.ExpID); err == nil && found {
+		dto.Tokens = tokenTotalDTO(metric.Tokens)
+		dto.LastActivity = metric.LastActivity
+		if live := s.engine.LastActivity(t.ID); live > dto.LastActivity {
+			dto.LastActivity = live
+		}
+		dto.GoalsTotal = metric.Goals.Total
+		dto.GoalsMet = metric.Goals.Met
+		dto.InFlight = metric.RunningIntents
+		dto.Findings = FindingSeverityDTO{
+			Critical: metric.Findings.Critical,
+			High:     metric.Findings.High,
+			Medium:   metric.Findings.Medium,
+			Low:      metric.Findings.Low,
+		}
+	}
 	writeJSON(w, 200, dto)
 }
 
