@@ -260,7 +260,7 @@ function ProfileSheet({
   const t = useTranslations("llmPage");
   const isNew = !profile;
   const [name, setName] = React.useState("");
-  const [format, setFormat] = React.useState<"anthropic" | "openai" | "openai-responses">("anthropic");
+  const [format, setFormat] = React.useState<"anthropic" | "openai" | "openai-responses" | "orcarouter">("anthropic");
   const [model, setModel] = React.useState("");
   const [baseUrl, setBaseUrl] = React.useState("");
   const [proxy, setProxy] = React.useState("");
@@ -283,6 +283,16 @@ function ProfileSheet({
   const [models, setModels] = React.useState<string[]>([]);
   const [loadingModels, setLoadingModels] = React.useState(false);
   const [modelsOpen, setModelsOpen] = React.useState(false);
+  // OrcaRouter: live, capability-filtered catalog plus the two auth choices.
+  const [orcaModels, setOrcaModels] = React.useState<string[]>([]);
+  const [orcaDegraded, setOrcaDegraded] = React.useState(false);
+  const [orcaLoading, setOrcaLoading] = React.useState(false);
+  const [orcaError, setOrcaError] = React.useState("");
+  const [orcaBusy, setOrcaBusy] = React.useState(false);
+  const [orcaHint, setOrcaHint] = React.useState("");
+  const orcaGen = React.useRef(0);
+  const orcaAttempt = React.useRef("");
+  const orcaPoll = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 思考开关 / 上限字段名 / 思考强度三组选项的标签走 i18n，故在组件内按当前语言构造。
   const THINKING_TYPES: { value: string; label: string }[] = [
@@ -308,7 +318,11 @@ function ProfileSheet({
   React.useEffect(() => {
     if (!open) return;
     setName(profile?.name ?? "");
-    setFormat(profile?.format === "openai" || profile?.format === "openai-responses" ? profile.format : "anthropic");
+    setFormat(
+      profile?.format === "openai" || profile?.format === "openai-responses" || profile?.format === "orcarouter"
+        ? profile.format
+        : "anthropic",
+    );
     setModel(profile?.model ?? "");
     setBaseUrl(profile?.base_url ?? "");
     setProxy(profile?.proxy ?? "");
@@ -328,9 +342,164 @@ function ProfileSheet({
     setKeyHint(profile?.api_key_hint ?? "");
     setModels([]);
     setModelsOpen(false);
+    orcaGen.current++;
+    if (orcaPoll.current) {
+      clearInterval(orcaPoll.current);
+      orcaPoll.current = null;
+    }
+    orcaAttempt.current = "";
+    setOrcaModels([]);
+    setOrcaDegraded(false);
+    setOrcaLoading(false);
+    setOrcaBusy(false);
+    setOrcaHint("");
+    setOrcaError("");
   }, [open, profile]);
 
   const profileId = profile ? Number(profile.id) : undefined;
+
+  // ── OrcaRouter: two auth choices and a capability-filtered catalog ──
+  // The login generation invalidates every in-flight response, so a late URL
+  // or success from an abandoned attempt can never land under a newer one.
+  function stopOrcaPolling() {
+    if (orcaPoll.current) {
+      clearInterval(orcaPoll.current);
+      orcaPoll.current = null;
+    }
+  }
+
+  function cancelOrca(clearHint = true) {
+    orcaGen.current++;
+    stopOrcaPolling();
+    const id = orcaAttempt.current;
+    orcaAttempt.current = "";
+    setOrcaBusy(false);
+    if (clearHint) setOrcaHint("");
+    if (id) void api.orcaLoginCancel(id).catch(() => undefined);
+  }
+
+  async function loadOrcaModels() {
+    const gen = ++orcaGen.current;
+    setOrcaLoading(true);
+    setOrcaError("");
+    try {
+      const r = await api.fetchLLMModels("orcarouter", baseUrl, apiKey, proxy, profileId, "chat");
+      if (gen !== orcaGen.current) return;
+      if (!r.ok) {
+        setOrcaModels([]);
+        setOrcaError(r.error ?? t("profile.orca.loadFailed"));
+        return;
+      }
+      const def = r.default_model || "orcarouter/auto";
+      const list = [...(r.models ?? [])];
+      if (!list.includes(def)) list.unshift(def);
+      setOrcaModels(list);
+      setOrcaDegraded(Boolean(r.degraded));
+      // Never keep a model that is not in the compatible set.
+      if (!model || !list.includes(model)) {
+        if (model) setOrcaHint(t("profile.orca.modelInvalid"));
+        setModel(def);
+      }
+    } catch (e) {
+      if (gen === orcaGen.current) {
+        setOrcaModels([]);
+        setOrcaError((e as Error).message);
+      }
+    } finally {
+      if (gen === orcaGen.current) setOrcaLoading(false);
+    }
+  }
+
+  async function connectOrca() {
+    if (orcaBusy) return;
+    const gen = ++orcaGen.current;
+    setOrcaBusy(true);
+    setOrcaError("");
+    setOrcaHint(t("profile.orca.waiting"));
+    try {
+      const r = await api.orcaLoginStart(profileId);
+      if (gen !== orcaGen.current) return;
+      if (!r.ok || !r.id || !r.authorize_url) {
+        setOrcaBusy(false);
+        setOrcaError(r.error ?? t("profile.orca.startFailed"));
+        return;
+      }
+      orcaAttempt.current = r.id;
+      // Open the consent screen in a new tab; the loopback listener in the
+      // backend receives the redirect.
+      window.open(r.authorize_url, "_blank", "noopener,noreferrer");
+      stopOrcaPolling();
+      orcaPoll.current = setInterval(() => {
+        void (async () => {
+          try {
+            const s = await api.orcaLoginStatus(r.id as string);
+            if (gen !== orcaGen.current) return;
+            if (!s.ok) return;
+            if (s.state === "success") {
+              stopOrcaPolling();
+              setOrcaBusy(false);
+              setOrcaHint(t("profile.orca.success"));
+              toast.success(t("profile.orca.success"));
+              onSaved(String(s.profile_id ?? profileId ?? ""));
+            } else if (s.state === "error" || s.state === "canceled") {
+              stopOrcaPolling();
+              setOrcaBusy(false);
+              setOrcaError(s.error || t("profile.orca.failed"));
+            }
+          } catch {
+            // Transient poll failure: keep polling until the attempt ends.
+          }
+        })();
+      }, 1500);
+    } catch (e) {
+      if (gen === orcaGen.current) {
+        setOrcaBusy(false);
+        setOrcaError((e as Error).message);
+      }
+    }
+  }
+
+  // pagehide must clear UI state synchronously: the generation guard inside
+  // cancelOrca() would otherwise skip the cleanup and leave a bfcache-restored
+  // page permanently busy. The server cancel is sent with keepalive.
+  React.useEffect(() => {
+    const clearPoll = () => {
+      if (orcaPoll.current) {
+        clearInterval(orcaPoll.current);
+        orcaPoll.current = null;
+      }
+    };
+    const onPageHide = () => {
+      orcaGen.current++;
+      clearPoll();
+      const id = orcaAttempt.current;
+      orcaAttempt.current = "";
+      setOrcaBusy(false);
+      setOrcaHint("");
+      if (id && typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+        navigator.sendBeacon(`/api/orcarouter/login/${id}/cancel`);
+      }
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      // Real unmount: stop server work without writing component state.
+      orcaGen.current++;
+      clearPoll();
+      const id = orcaAttempt.current;
+      orcaAttempt.current = "";
+      if (id) void api.orcaLoginCancel(id).catch(() => undefined);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Opening the sheet on an OrcaRouter profile (or switching the provider to it)
+  // loads the live, capability-filtered catalog for the chat entry point.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the catalog reload is keyed to the sheet opening or the provider switching; depending on the loader would refetch on every catalog state update.
+  React.useEffect(() => {
+    if (open && format === "orcarouter") void loadOrcaModels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, format]);
 
   async function loadModels() {
     if (loadingModels) return;
@@ -456,7 +625,18 @@ function ProfileSheet({
             </div>
             <div className="grid gap-2">
               <Label>{t("profile.format.label")}</Label>
-              <Select value={format} onValueChange={(v) => setFormat(v as "anthropic" | "openai" | "openai-responses")}>
+              <Select
+                value={format}
+                onValueChange={(v) => {
+                  const next = v as "anthropic" | "openai" | "openai-responses" | "orcarouter";
+                  if (format === "orcarouter" && next !== "orcarouter") cancelOrca();
+                  setFormat(next);
+                  if (next === "orcarouter") {
+                    if (!baseUrl.trim()) setBaseUrl("https://api.orcarouter.ai/v1");
+                    if (!model.trim()) setModel("orcarouter/auto");
+                  }
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={t("profile.format.placeholder")} />
                 </SelectTrigger>
@@ -464,6 +644,7 @@ function ProfileSheet({
                   <SelectItem value="anthropic">Anthropic</SelectItem>
                   <SelectItem value="openai">OpenAI (Chat Completions)</SelectItem>
                   <SelectItem value="openai-responses">OpenAI (Responses API)</SelectItem>
+                  <SelectItem value="orcarouter">OrcaRouter Cyber Inference</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -471,49 +652,113 @@ function ProfileSheet({
 
           <div className="grid gap-2">
             <Label htmlFor="p-model">{t("profile.model.label")}</Label>
-            <div className="flex gap-2">
-              <Input
-                id="p-model"
-                className="font-mono"
-                placeholder="claude-opus-4-8"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-              />
-              {/* modal: 这个 Popover 的内容被 portal 到 <body>，在 Sheet 的滚动锁之外，
-                  不加 modal 时列表能渲染却滚不动。modal 让它自己持有最上层滚动锁。 */}
-              <Popover open={modelsOpen} onOpenChange={setModelsOpen} modal>
-                <PopoverTrigger asChild>
+            {format === "orcarouter" ? (
+              <div className="grid gap-2">
+                <div className="flex gap-2">
+                  <Select value={model} onValueChange={setModel} disabled={orcaLoading || orcaModels.length === 0}>
+                    <SelectTrigger id="p-model" className="font-mono" data-testid="orca-model-trigger">
+                      <SelectValue placeholder={t("profile.orca.modelPlaceholder")} />
+                    </SelectTrigger>
+                    <SelectContent
+                      position="popper"
+                      align="end"
+                      className="max-h-72 border border-border"
+                      data-testid="orca-model-content"
+                    >
+                      {orcaModels.map((m) => (
+                        <SelectItem key={m} value={m} className="font-mono text-xs">
+                          {m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
                     className="shrink-0"
-                    disabled={loadingModels}
-                    onClick={loadModels}
-                    title={t("profile.model.loadTitle")}
+                    disabled={orcaLoading}
+                    onClick={() => void loadOrcaModels()}
+                    title={t("profile.orca.refresh")}
+                    data-testid="orca-model-refresh"
                   >
-                    {loadingModels ? <Loader2Icon className="animate-spin" /> : <RefreshCwIcon />}
+                    {orcaLoading ? <Loader2Icon className="animate-spin" /> : <RefreshCwIcon />}
                   </Button>
-                </PopoverTrigger>
-                {models.length > 0 && (
-                  <PopoverContent className="max-h-72 w-72 gap-0 overflow-y-auto overscroll-contain p-1" align="end">
-                    {models.map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        className="w-full shrink-0 rounded-md px-2 py-1.5 text-left font-mono text-xs hover:bg-accent hover:text-accent-foreground"
-                        onClick={() => {
-                          setModel(m);
-                          setModelsOpen(false);
-                        }}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  {orcaDegraded ? t("profile.orca.degraded") : t("profile.orca.catalogHint", { n: orcaModels.length })}
+                </p>
+                <p className="text-muted-foreground text-xs" data-testid="orca-links">
+                  {t.rich("profile.orca.links", {
+                    provider: (c) => (
+                      <a
+                        className="underline underline-offset-2"
+                        href="https://www.orcarouter.ai/cyber"
+                        target="_blank"
+                        rel="noreferrer"
                       >
-                        {m}
-                      </button>
-                    ))}
-                  </PopoverContent>
-                )}
-              </Popover>
-            </div>
+                        {c}
+                      </a>
+                    ),
+                    catalog: (c) => (
+                      <a
+                        className="underline underline-offset-2"
+                        href="https://www.orcarouter.ai/models?tier=cyber"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {c}
+                      </a>
+                    ),
+                  })}
+                </p>
+                {orcaError && <p className="text-destructive text-xs">{orcaError}</p>}
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  id="p-model"
+                  className="font-mono"
+                  placeholder="claude-opus-4-8"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                />
+                {/* modal: 这个 Popover 的内容被 portal 到 <body>，在 Sheet 的滚动锁之外，
+                    不加 modal 时列表能渲染却滚不动。modal 让它自己持有最上层滚动锁。 */}
+                <Popover open={modelsOpen} onOpenChange={setModelsOpen} modal>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                      disabled={loadingModels}
+                      onClick={loadModels}
+                      title={t("profile.model.loadTitle")}
+                    >
+                      {loadingModels ? <Loader2Icon className="animate-spin" /> : <RefreshCwIcon />}
+                    </Button>
+                  </PopoverTrigger>
+                  {models.length > 0 && (
+                    <PopoverContent className="max-h-72 w-72 gap-0 overflow-y-auto overscroll-contain p-1" align="end">
+                      {models.map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          className="w-full shrink-0 rounded-md px-2 py-1.5 text-left font-mono text-xs hover:bg-accent hover:text-accent-foreground"
+                          onClick={() => {
+                            setModel(m);
+                            setModelsOpen(false);
+                          }}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                    </PopoverContent>
+                  )}
+                </Popover>
+              </div>
+            )}
           </div>
 
           <div className="grid gap-2">
@@ -554,15 +799,54 @@ function ProfileSheet({
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="p-api-key">API Key</Label>
+            <Label htmlFor="p-api-key">{format === "orcarouter" ? "API Key (OrcaRouter)" : "API Key"}</Label>
             <Input
               id="p-api-key"
               type="password"
-              placeholder={keyHint ? t("profile.apiKey.placeholderSet", { hint: keyHint }) : "sk-…"}
+              placeholder={
+                keyHint
+                  ? t("profile.apiKey.placeholderSet", { hint: keyHint })
+                  : format === "orcarouter"
+                    ? "sk-orca-…"
+                    : "sk-…"
+              }
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
             />
+            {format === "orcarouter" && <p className="text-muted-foreground text-xs">{t("profile.orca.apiKeyHint")}</p>}
           </div>
+
+          {format === "orcarouter" && (
+            <div className="grid gap-3 rounded-lg border border-dashed p-3" data-testid="orca-auth-panel">
+              <div className="grid gap-1">
+                <p className="text-sm font-medium">{t("profile.orca.title")}</p>
+                <p className="text-muted-foreground text-xs">{t("profile.orca.desc")}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void connectOrca()}
+                  disabled={orcaBusy}
+                  data-testid="orca-connect"
+                >
+                  {orcaBusy ? <Loader2Icon className="animate-spin" /> : <PlugZapIcon aria-hidden="true" />}
+                  {t("profile.orca.connect")}
+                </Button>
+                {orcaBusy && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => cancelOrca()}>
+                    {t("profile.orca.cancel")}
+                  </Button>
+                )}
+              </div>
+              {orcaHint && (
+                <p className="text-muted-foreground text-xs" data-testid="orca-hint">
+                  {orcaHint}
+                </p>
+              )}
+              {orcaError && <p className="text-destructive text-xs">{orcaError}</p>}
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="grid gap-2">

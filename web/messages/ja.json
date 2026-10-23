@@ -3376,7 +3376,8 @@
       "maxTokensFieldHint": {
         "openai": "上限をどのキーで送るかを指定します。max_tokens がデフォルトで、ほとんどの互換ゲートウェイはこれだけを認識します。一方、OpenAI 公式の推論モデル (o シリーズ / GPT-5) は max_completion_tokens のみを認識し、max_tokens を受け取るとただちに unsupported_parameter エラーを返します。",
         "anthropic": "openai 形式でのみ選択できます。Anthropic のフィールド名は max_tokens で固定です。",
-        "openai-responses": "openai 形式でのみ選択できます。Responses API のフィールド名は max_output_tokens で固定です。"
+        "openai-responses": "openai 形式でのみ選択できます。Responses API のフィールド名は max_output_tokens で固定です。",
+        "orcarouter": "openai 形式でのみ選択できます。OrcaRouter は OpenAI Chat Completions 形式のため、上限は max_tokens で送信されます。"
       },
       "thinkingType": {
         "label": "思考スイッチ · thinking.type",
@@ -3413,6 +3414,24 @@
         "savedActive": "保存しました。有効な設定は即座に適用され、再起動は不要です",
         "saved": "保存しました",
         "saveFailed": "保存に失敗しました: {msg}"
+      },
+      "orca": {
+        "title": "OrcaRouter に接続",
+        "desc": "OrcaRouter Cyber Inference は、許可されたレッドチーム／ブルーチーム作業向けの専用推論 provider です。上に既存の API キーを貼り付けるか、ご自身の OrcaRouter アカウントでこのアプリを承認できます。クライアントシークレットも事前登録済みリダイレクト URI も不要です。どちらの方法でも同じ永続キーが発行され、本アプリの他の LLM シークレットと同じ場所に保存されます。",
+        "apiKeyHint": "sk-orca-… キーを使用します。他の LLM プロファイルと同じ場所に保存され、全体が再表示されることはありません。",
+        "connect": "OrcaRouter に接続",
+        "cancel": "キャンセル",
+        "waiting": "ブラウザでの承認を待っています…",
+        "success": "接続しました。発行されたキーはこのプロファイルに保存されました。",
+        "failed": "承認に失敗しました。",
+        "startFailed": "承認を開始できませんでした。",
+        "loadFailed": "モデル一覧を読み込めませんでした。",
+        "modelPlaceholder": "モデルを読み込んで選択",
+        "refresh": "モデル一覧を更新",
+        "catalogHint": "この入口で利用できるモデルは {n} 件です。",
+        "degraded": "ライブ一覧を利用できないため、検証済みの最小一覧を表示しています。更新で再試行できます。",
+        "modelInvalid": "以前のモデルはこの provider と互換性がないため、既定値に戻しました。",
+        "links": "既定: orcarouter/auto · セキュリティチーム: OrcaCyber Ultra / OrcaCyber Zero（<provider>provider ページ</provider> · <catalog>cyber モデル一覧</catalog>） · フォールバック: orcarouter/fusion"
       }
     },
     "retryLayer": {

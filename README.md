@@ -139,6 +139,8 @@ Upstream provides several methods: an install script (`./install.sh`), precompil
 
 **LLM:** `export ANTHROPIC_API_KEY=sk-...` (or `OPENAI_API_KEY`), or enter it on the UI's "LLM settings" page. Optional environment variables: `ARTEX_LLM_PROVIDER` / `ARTEX_LLM_MODEL` / `ARTEX_LLM_BASE_URL` / `ARTEX_LLM_PROXY`. To use a domestic or open model, point `ARTEX_LLM_BASE_URL` at an OpenAI-compatible endpoint.
 
+**OrcaRouter Cyber Inference:** in LLM settings, choose the **OrcaRouter Cyber Inference** provider and either paste an `sk-orca-…` API key or use **Connect with OrcaRouter** (OAuth 2.0 + PKCE with a loopback redirect — no client secret and no pre-registered redirect URI). Both paths issue the same durable key and store it with the other LLM profiles. The provider defaults to `orcarouter/auto`; security teams cleared for cyber-tier access can select **OrcaCyber Ultra** (`orcacyber-ultra-1.0`) or **OrcaCyber Zero** (`orcacyber-zero-1.5`), with `orcarouter/fusion` as the general fallback. The model picker is a capability-filtered view of the live `GET https://api.orcarouter.ai/v1/models` catalog. Environment: `ORCAROUTER_API_KEY`; optional `ORCA_AUTH_BASE_URL` / `ORCA_API_BASE_URL` (or the shared `ORCA_BASE_URL`) for self-hosted deployments. See [docs/orcarouter-en.md](docs/orcarouter-en.md).
+
 **Output language:** this edition forces user-facing output into the selected language (English by default) via a small, code-fixed directive appended to each role's system prompt (it does not translate the reasoning body). Switch languages in Settings, or adapt that directive in `agent/prompt.go` (`langDirective`).
 
 **Concurrency:** the number of worker agents spawned per task is adjustable under "System settings" (default 3).

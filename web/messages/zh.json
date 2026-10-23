@@ -3376,7 +3376,8 @@
       "maxTokensFieldHint": {
         "openai": "上限发哪个键。max_tokens 是默认，绝大多数兼容网关只认它；OpenAI 官方推理模型（o 系列 / GPT-5）反过来只认 max_completion_tokens，收到 max_tokens 会直接报 unsupported_parameter。",
         "anthropic": "仅 openai 格式可选。Anthropic 的字段名固定为 max_tokens。",
-        "openai-responses": "仅 openai 格式可选。Responses API 的字段名固定为 max_output_tokens。"
+        "openai-responses": "仅 openai 格式可选。Responses API 的字段名固定为 max_output_tokens。",
+        "orcarouter": "仅 openai 格式可选。OrcaRouter 使用 OpenAI Chat Completions 格式，因此上限以 max_tokens 发送。"
       },
       "thinkingType": {
         "label": "思考开关 · thinking.type",
@@ -3413,6 +3414,24 @@
         "savedActive": "已保存，激活配置即时生效，无需重启",
         "saved": "已保存",
         "saveFailed": "保存失败：{msg}"
+      },
+      "orca": {
+        "title": "连接 OrcaRouter",
+        "desc": "OrcaRouter Cyber Inference 是面向已授权红队/蓝队工作的专用推理 provider。可在上方粘贴现有 API Key，或使用你自己的 OrcaRouter 账户授权本应用：无需客户端密钥，也无需预注册回调地址。两种方式都会获得同一个持久密钥，并保存在本应用现有的 LLM 密钥存储中。",
+        "apiKeyHint": "使用 sk-orca-… 密钥。密钥与其他 LLM 配置保存在同一位置，且不会再次完整显示。",
+        "connect": "连接 OrcaRouter",
+        "cancel": "取消",
+        "waiting": "正在等待浏览器中的授权…",
+        "success": "已连接。签发的密钥已保存到此配置。",
+        "failed": "授权失败。",
+        "startFailed": "无法启动授权。",
+        "loadFailed": "无法加载模型列表。",
+        "modelPlaceholder": "加载模型后选择",
+        "refresh": "刷新模型列表",
+        "catalogHint": "此入口可用模型 {n} 个。",
+        "degraded": "实时列表不可用，正在显示已验证的最小列表。刷新可重试。",
+        "modelInvalid": "原模型与该 provider 不兼容，已重置为默认模型。",
+        "links": "默认：orcarouter/auto · 安全团队：OrcaCyber Ultra / OrcaCyber Zero（<provider>provider 页面</provider> · <catalog>cyber 模型目录</catalog>） · 兜底：orcarouter/fusion"
       }
     },
     "retryLayer": {

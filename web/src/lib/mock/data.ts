@@ -3143,6 +3143,30 @@ export const llmProfiles: LLMProfile[] = [
   },
 ];
 
+// Demo-only OrcaRouter chat catalog (mock mode). Mirrors the live
+// GET https://api.orcarouter.ai/v1/models result after the chat capability
+// filter, with the documented default pinned first. Real installations read the
+// live, key-scoped catalog instead.
+export const orcaModels: string[] = [
+  "orcarouter/auto",
+  "orcarouter/fusion",
+  "orcarouter/pod",
+  "orcacyber-ultra-1.0",
+  "orcacyber-zero-1.5",
+  "anthropic/claude-opus-4.8",
+  "anthropic/claude-sonnet-4.6",
+  "anthropic/claude-fable-5.1",
+  "openai/gpt-5.5",
+  "openai/gpt-5.5-pro",
+  "google/gemini-3.5-flash",
+  "deepseek/deepseek-v4-pro",
+  "deepseek/deepseek-v4.1-flash",
+  "deepseek/deepseek-v4-flash",
+  "qwen/qwen3-max",
+  "qwen/qwen3-vl-235b-a22b-instruct",
+  "google/gemini-2.5-pro",
+];
+
 export const llmConfig = {
   configured: true,
   provider: "anthropic",

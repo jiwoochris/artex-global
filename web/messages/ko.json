@@ -3376,7 +3376,8 @@
       "maxTokensFieldHint": {
         "openai": "상한을 어느 키로 보낼지입니다. max_tokens가 기본이고 대부분의 호환 게이트웨이는 이것만 인식합니다. 반면 OpenAI 공식 추론 모델(o 계열 / GPT-5)은 max_completion_tokens만 인식하고, max_tokens를 받으면 바로 unsupported_parameter 오류를 냅니다.",
         "anthropic": "openai 형식에서만 선택할 수 있습니다. Anthropic의 필드 이름은 max_tokens로 고정입니다.",
-        "openai-responses": "openai 형식에서만 선택할 수 있습니다. Responses API의 필드 이름은 max_output_tokens로 고정입니다."
+        "openai-responses": "openai 형식에서만 선택할 수 있습니다. Responses API의 필드 이름은 max_output_tokens로 고정입니다.",
+        "orcarouter": "openai 형식에서만 선택할 수 있습니다. OrcaRouter는 OpenAI Chat Completions 형식이므로 상한을 max_tokens로 보냅니다."
       },
       "thinkingType": {
         "label": "사고 스위치 · thinking.type",
@@ -3413,6 +3414,24 @@
         "savedActive": "저장했습니다. 활성 설정은 즉시 적용되며 재시작이 필요 없습니다",
         "saved": "저장했습니다",
         "saveFailed": "저장 실패: {msg}"
+      },
+      "orca": {
+        "title": "OrcaRouter로 연결",
+        "desc": "OrcaRouter Cyber Inference는 권한이 부여된 레드팀·블루팀 작업을 위한 전용 추론 provider입니다. 위에 기존 API 키를 붙여넣거나, 본인의 OrcaRouter 계정으로 이 앱을 승인할 수 있습니다. 클라이언트 시크릿도, 사전 등록된 리디렉션 URI도 필요하지 않습니다. 두 경로 모두 동일한 지속 키를 발급하며, 이 앱의 다른 LLM 비밀값과 같은 저장소에 보관됩니다.",
+        "apiKeyHint": "sk-orca-… 키를 사용합니다. 키는 다른 LLM 프로필과 같은 저장소에 보관되며 전체가 다시 표시되지 않습니다.",
+        "connect": "OrcaRouter로 연결",
+        "cancel": "취소",
+        "waiting": "브라우저에서 승인을 기다리는 중…",
+        "success": "연결되었습니다. 발급된 키는 이 프로필에 저장됩니다.",
+        "failed": "승인에 실패했습니다.",
+        "startFailed": "승인을 시작할 수 없습니다.",
+        "loadFailed": "모델 목록을 불러오지 못했습니다.",
+        "modelPlaceholder": "모델을 불러와 선택",
+        "refresh": "모델 목록 새로고침",
+        "catalogHint": "이 진입점에서 사용할 수 있는 모델 {n}개.",
+        "degraded": "실시간 목록을 사용할 수 없어 검증된 최소 목록을 표시합니다. 새로고침으로 다시 시도하세요.",
+        "modelInvalid": "이전 모델은 이 provider와 호환되지 않아 기본값으로 재설정했습니다.",
+        "links": "기본: orcarouter/auto · 보안 팀: OrcaCyber Ultra / OrcaCyber Zero (<provider>provider 페이지</provider> · <catalog>cyber 모델 목록</catalog>) · 대체: orcarouter/fusion"
       }
     },
     "retryLayer": {

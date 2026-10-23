@@ -83,3 +83,6 @@ secrets.env
 # artex.exe 를 포그라운드로 띄울 때 리다이렉트한 런타임 로그
 /artex.out.log
 /artex.err.log
+
+# generated UI evidence (produced by scripts/capture_orca_evidence.py)
+orca-evidence/

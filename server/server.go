@@ -27,6 +27,7 @@ import (
 	"github.com/Autumn-27/artex/llmpool"
 	"github.com/Autumn-27/artex/llmrec"
 	"github.com/Autumn-27/artex/notify"
+	"github.com/Autumn-27/artex/orcarouter"
 	"github.com/Autumn-27/artex/report"
 	"github.com/Autumn-27/artex/traffic"
 	"github.com/Autumn-27/norma/llm"
@@ -141,6 +142,11 @@ type Server struct {
 	llmCfg    agent.Config // current LLM config (key not exposed)
 	llmOn     bool
 	llmProf   string // active LLM profile name (for llmrec tagging)
+
+	// orcaMu guards the lazy OrcaRouter OAuth login manager. Its attempts hold
+	// short-lived verifiers in memory only; issued keys go to llm_profiles.
+	orcaMu    sync.Mutex
+	orcaLogin *orcarouter.LoginManager
 
 	// chatBusy guards the per-task main-agent run: the chat handler launches the
 	// agent on the server's background ctx (not the request ctx) and returns
@@ -1014,6 +1020,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/llm/pool", s.pgLLMPoolStatus)
 	mux.HandleFunc("POST /api/llm/pool/reset", s.pgLLMPoolReset)
 	mux.HandleFunc("POST /api/llm/models", s.pgListModels)
+	mux.HandleFunc("POST /api/orcarouter/login", s.orcaLoginStart)
+	mux.HandleFunc("GET /api/orcarouter/login/{id}", s.orcaLoginStatus)
+	mux.HandleFunc("POST /api/orcarouter/login/{id}/cancel", s.orcaLoginCancel)
+	mux.HandleFunc("GET /api/orcarouter/endpoints", s.orcaEndpoints)
 
 	// 拦截规则管理
 	mux.HandleFunc("GET /api/intercept/rules", s.interceptListRules)

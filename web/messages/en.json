@@ -3376,7 +3376,8 @@
       "maxTokensFieldHint": {
         "openai": "Which key to send the cap under. max_tokens is the default and most compatible gateways recognize only this. OpenAI's official reasoning models (the o-series / GPT-5), on the other hand, recognize only max_completion_tokens and throw an unsupported_parameter error the moment they receive max_tokens.",
         "anthropic": "Selectable only in the openai format. Anthropic's field name is fixed to max_tokens.",
-        "openai-responses": "Selectable only in the openai format. The Responses API's field name is fixed to max_output_tokens."
+        "openai-responses": "Selectable only in the openai format. The Responses API's field name is fixed to max_output_tokens.",
+        "orcarouter": "Selectable only in the openai format. OrcaRouter speaks the OpenAI Chat Completions wire format, so the cap is sent as max_tokens."
       },
       "thinkingType": {
         "label": "Thinking switch · thinking.type",
@@ -3413,6 +3414,24 @@
         "savedActive": "Saved. The active profile applies immediately, no restart needed",
         "saved": "Saved",
         "saveFailed": "Save failed: {msg}"
+      },
+      "orca": {
+        "title": "Connect with OrcaRouter",
+        "desc": "OrcaRouter Cyber Inference is a named inference provider for authorized red-team and blue-team work. Paste an existing API key above, or authorize this app with your own OrcaRouter account: no client secret and no pre-registered redirect URI. Both paths issue the same durable key, stored with this app's other LLM secrets.",
+        "apiKeyHint": "Use an sk-orca-… key. It is stored with your other LLM profiles and is never shown again in full.",
+        "connect": "Connect with OrcaRouter",
+        "cancel": "Cancel",
+        "waiting": "Waiting for authorization in your browser…",
+        "success": "Connected. The issued key is stored in this profile.",
+        "failed": "Authorization failed.",
+        "startFailed": "Could not start authorization.",
+        "loadFailed": "Could not load the model catalog.",
+        "modelPlaceholder": "Load models to choose",
+        "refresh": "Refresh the model catalog",
+        "catalogHint": "{n} models available for this entry point.",
+        "degraded": "Live catalog unavailable — showing the verified cold-start list. Refresh to retry.",
+        "modelInvalid": "The previous model is not compatible with this provider and was reset to the default.",
+        "links": "Default: orcarouter/auto · Security teams: OrcaCyber Ultra / OrcaCyber Zero (<provider>provider page</provider> · <catalog>cyber model catalog</catalog>) · Fallback: orcarouter/fusion"
       }
     },
     "retryLayer": {

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/Autumn-27/artex/llmrec"
+	"github.com/Autumn-27/artex/orcarouter"
 	"github.com/Autumn-27/norma/agentcore"
 	"github.com/Autumn-27/norma/compaction"
 	"github.com/Autumn-27/norma/llm"
@@ -30,10 +31,14 @@ import (
 
 // Config describes the LLM backend resolved from the environment.
 type Config struct {
-	Format  llm.Format
-	BaseURL string
-	APIKey  string
-	Model   string
+	Format llm.Format
+	// ProviderID is the user-facing provider identity ("anthropic", "openai",
+	// "openai-responses", "orcarouter"). It is preserved across the DB round
+	// trip so a profile saved as OrcaRouter is not reloaded as plain OpenAI.
+	ProviderID string
+	BaseURL    string
+	APIKey     string
+	Model      string
 	// Proxy routes all LLM requests through the given proxy URL (http/https/socks5,
 	// optionally with user:pass@ credentials). Empty means direct — it does NOT
 	// fall back to the standard *_PROXY environment variables.
@@ -146,6 +151,7 @@ func FromEnv() (Config, bool) {
 	prov := os.Getenv("ARTEX_LLM_PROVIDER")
 	anthKey := os.Getenv("ANTHROPIC_API_KEY")
 	oaiKey := os.Getenv("OPENAI_API_KEY")
+	orcaKey := os.Getenv("ORCAROUTER_API_KEY")
 
 	if prov == "" {
 		switch {
@@ -153,6 +159,8 @@ func FromEnv() (Config, bool) {
 			prov = "anthropic"
 		case oaiKey != "":
 			prov = "openai"
+		case orcaKey != "":
+			prov = "orcarouter"
 		default:
 			return Config{}, false
 		}
@@ -165,12 +173,24 @@ func FromEnv() (Config, bool) {
 		// 默认流式;ARTEX_LLM_STREAM=false/0/off 显式关闭走非流式。
 		Stream: !isFalsy(os.Getenv("ARTEX_LLM_STREAM")),
 	}
+	c.ProviderID = prov
 	switch prov {
 	case "openai":
 		c.Format = llm.FormatOpenAI
 		c.APIKey = oaiKey
 		if c.Model == "" {
 			c.Model = "gpt-4o"
+		}
+	case "orcarouter":
+		// OrcaRouter speaks the OpenAI wire format. Its inference origin is
+		// independent from the account/authorization origin.
+		c.Format = llm.FormatOpenAI
+		c.APIKey = orcaKey
+		if c.BaseURL == "" {
+			c.BaseURL = orcarouter.DefaultAPIBase
+		}
+		if c.Model == "" {
+			c.Model = orcarouter.DefaultModel
 		}
 	case "openai-responses":
 		c.Format = llm.FormatOpenAIResponses
@@ -197,13 +217,24 @@ func FromEnv() (Config, bool) {
 // endpoint path itself), so a full endpoint URL is tolerated.
 func ConfigFrom(provider, model, baseURL, apiKey, proxy string) Config {
 	c := Config{
-		Model:   strings.TrimSpace(model),
-		BaseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		APIKey:  strings.TrimSpace(apiKey),
-		Proxy:   strings.TrimSpace(proxy),
-		Stream:  true, // 默认流式;调用方按 profile 覆盖
+		ProviderID: strings.TrimSpace(provider),
+		Model:      strings.TrimSpace(model),
+		BaseURL:    strings.TrimRight(strings.TrimSpace(baseURL), "/"),
+		APIKey:     strings.TrimSpace(apiKey),
+		Proxy:      strings.TrimSpace(proxy),
+		Stream:     true, // 默认流式;调用方按 profile 覆盖
 	}
 	switch strings.TrimSpace(provider) {
+	case "orcarouter":
+		// OpenAI-compatible relay: same adapter, dedicated origin and default.
+		c.Format = llm.FormatOpenAI
+		c.BaseURL = strings.TrimRight(strings.TrimSuffix(c.BaseURL, "/chat/completions"), "/")
+		if c.BaseURL == "" {
+			c.BaseURL = orcarouter.DefaultAPIBase
+		}
+		if c.Model == "" {
+			c.Model = orcarouter.DefaultModel
+		}
 	case "openai":
 		c.Format = llm.FormatOpenAI
 		// provider appends "/chat/completions"; tolerate a full endpoint URL.
@@ -239,8 +270,13 @@ func isFalsy(s string) bool {
 	return false
 }
 
-// Provider returns the short provider name ("anthropic"/"openai").
+// Provider returns the short provider name ("anthropic"/"openai"/
+// "openai-responses"/"orcarouter").
 func (c Config) Provider() string {
+	switch c.ProviderID {
+	case "anthropic", "openai", "openai-responses", "orcarouter":
+		return c.ProviderID
+	}
 	switch c.Format {
 	case llm.FormatOpenAI:
 		return "openai"
@@ -281,6 +317,23 @@ func (c Config) NewProvider() (llm.Provider, error) {
 		lc.RateLimit = &llm.RateLimit{PerSecond: c.RatePerSecond, PerMinute: c.RatePerMinute}
 	}
 	return llm.NewProvider(lc)
+}
+
+// NewHTTPClient builds the outbound client for non-inference calls (model
+// catalog discovery) so they follow the same proxy policy as inference. The
+// standard *_PROXY environment is intentionally not consulted, matching
+// quotaAwareHTTPClient.
+func (c Config) NewHTTPClient() *http.Client {
+	timeout := 20 * time.Second
+	p := strings.TrimSpace(c.Proxy)
+	if p == "" {
+		return &http.Client{Timeout: timeout}
+	}
+	u, err := url.Parse(p)
+	if err != nil {
+		return &http.Client{Timeout: timeout}
+	}
+	return &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(u)}, Timeout: timeout}
 }
 
 // IsQuotaExhaustedMessage deliberately recognizes only explicit balance,

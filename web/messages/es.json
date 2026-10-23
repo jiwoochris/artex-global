@@ -3376,7 +3376,8 @@
       "maxTokensFieldHint": {
         "openai": "Con qué key enviar el límite. max_tokens es el valor por defecto y la mayoría de los gateways compatibles solo reconocen este. En cambio, los modelos de razonamiento oficiales de OpenAI (serie o / GPT-5) solo reconocen max_completion_tokens y, en cuanto reciben max_tokens, lanzan un error unsupported_parameter.",
         "anthropic": "Solo se puede seleccionar en el formato openai. El nombre de campo de Anthropic está fijado a max_tokens.",
-        "openai-responses": "Solo se puede seleccionar en el formato openai. El nombre de campo de la Responses API está fijado a max_output_tokens."
+        "openai-responses": "Solo se puede seleccionar en el formato openai. El nombre de campo de la Responses API está fijado a max_output_tokens.",
+        "orcarouter": "Solo se puede seleccionar en el formato openai. OrcaRouter usa el formato OpenAI Chat Completions, por lo que el límite se envía como max_tokens."
       },
       "thinkingType": {
         "label": "Interruptor de razonamiento · thinking.type",
@@ -3413,6 +3414,24 @@
         "savedActive": "Guardado. El perfil activo se aplica de inmediato, sin necesidad de reiniciar",
         "saved": "Guardado",
         "saveFailed": "Error al guardar: {msg}"
+      },
+      "orca": {
+        "title": "Conectar con OrcaRouter",
+        "desc": "OrcaRouter Cyber Inference es un proveedor de inferencia específico para trabajo autorizado de red team y blue team. Pega una clave API existente arriba o autoriza esta aplicación con tu propia cuenta de OrcaRouter: sin secreto de cliente y sin URI de redirección preregistrada. Ambas vías emiten la misma clave duradera, guardada junto a los demás secretos LLM de la aplicación.",
+        "apiKeyHint": "Usa una clave sk-orca-…. Se guarda con tus otros perfiles LLM y nunca se vuelve a mostrar completa.",
+        "connect": "Conectar con OrcaRouter",
+        "cancel": "Cancelar",
+        "waiting": "Esperando la autorización en tu navegador…",
+        "success": "Conectado. La clave emitida se guardó en este perfil.",
+        "failed": "La autorización falló.",
+        "startFailed": "No se pudo iniciar la autorización.",
+        "loadFailed": "No se pudo cargar el catálogo de modelos.",
+        "modelPlaceholder": "Carga modelos para elegir",
+        "refresh": "Actualizar el catálogo de modelos",
+        "catalogHint": "{n} modelos disponibles para este punto de entrada.",
+        "degraded": "Catálogo en vivo no disponible: se muestra la lista mínima verificada. Actualiza para reintentar.",
+        "modelInvalid": "El modelo anterior no es compatible con este proveedor y se restableció al predeterminado.",
+        "links": "Predeterminado: orcarouter/auto · Equipos de seguridad: OrcaCyber Ultra / OrcaCyber Zero (<provider>página del proveedor</provider> · <catalog>catálogo cyber</catalog>) · Alternativa: orcarouter/fusion"
       }
     },
     "retryLayer": {

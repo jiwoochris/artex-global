@@ -1003,14 +1003,44 @@ export const api = {
   // 全局重试策略（五层各自的次数+间隔）。全 0 = 全部走内置默认。
   llmRetryPolicy: () => get<LLMRetryPolicy>("/llm/retry-policy"),
   saveLLMRetryPolicy: (p: LLMRetryPolicy) => post<LLMRetryPolicy>("/llm/retry-policy", p),
-  fetchLLMModels: (provider: string, base_url: string, api_key: string, proxy = "", profile_id?: number) =>
-    post<{ ok: boolean; error?: string; models?: string[] }>("/llm/models", {
+  fetchLLMModels: (
+    provider: string,
+    base_url: string,
+    api_key: string,
+    proxy = "",
+    profile_id?: number,
+    capability = "chat",
+    input_modality = "",
+  ) =>
+    post<{
+      ok: boolean;
+      error?: string;
+      models?: string[];
+      degraded?: boolean;
+      source?: string;
+      default_model?: string;
+    }>("/llm/models", {
       provider,
       base_url,
       api_key,
       proxy,
       profile_id,
+      capability,
+      input_modality,
     }),
+
+  // OrcaRouter connect (OAuth 2.0 + PKCE, loopback redirect). The issued key is
+  // stored server-side; the browser only ever receives the authorize URL and
+  // the attempt status.
+  orcaEndpoints: () =>
+    get<{ ok: boolean; auth_base?: string; api_base?: string; default_model?: string }>("/orcarouter/endpoints"),
+  orcaLoginStart: (profile_id?: number) =>
+    post<{ ok: boolean; id?: string; state?: string; authorize_url?: string; error?: string }>("/orcarouter/login", {
+      profile_id: profile_id ?? 0,
+    }),
+  orcaLoginStatus: (id: string) =>
+    get<{ ok: boolean; id?: string; state?: string; error?: string; profile_id?: number }>(`/orcarouter/login/${id}`),
+  orcaLoginCancel: (id: string) => post<{ ok: boolean }>(`/orcarouter/login/${id}/cancel`, {}),
 
   // ---- agents ----
   agents: () => get<{ agents: Agent[] }>("/agents").then((r) => arr(r.agents)),

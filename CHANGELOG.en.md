@@ -13,6 +13,10 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 - **Added Spanish documentation.** Translated `README.es.md` from the English README into natural Spanish and added a Spanish link to the language navigation of all five READMEs (English, Korean, Chinese, Spanish, Japanese). Code, commands, payloads, URLs and identifiers are preserved; only descriptive text is translated.
 - **Added Japanese (ja) across the whole localization stack.** Japanese joins the app's supported languages and can be selected in Settings. UI messages (`web/messages/ja.json`), the date locale (`ja-JP`), the agent output language, and the settings and server message catalogs (`config/msg_i18n.go`, `server/errmsg_catalog.go`) are translated into Japanese, while the agents' internal reasoning prompts stay in their original language as for every other locale. For docs, `README.ja.md` was added and the language navigation and supported-language notes across all five READMEs were updated to include Japanese.
 
+### Added
+
+- **OrcaRouter Cyber Inference provider.** Adds a first-class named provider for [OrcaRouter](https://www.orcarouter.ai) (`https://api.orcarouter.ai/v1`) with two authentication choices: an existing `sk-orca-…` API key stored in the profile secret store, or **Connect with OrcaRouter** using OAuth 2.0 + PKCE (S256, loopback redirect, no client secret, no pre-registered redirect URI). The model picker is a capability-filtered view of the live `/v1/models` catalog with a verified cold-start fallback, and defaults to `orcarouter/auto` (cyber-tier **OrcaCyber Ultra** / **OrcaCyber Zero** for verified security teams, `orcarouter/fusion` as the general fallback). See [docs/orcarouter-en.md](docs/orcarouter-en.md).
+
 ### Fixed
 
 - Distinguish task report loading failures from empty reports and offer a retry button. Late responses from a previous task cannot replace the current task report.

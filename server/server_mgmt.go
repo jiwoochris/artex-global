@@ -25,6 +25,7 @@ import (
 
 	"github.com/Autumn-27/artex/agent"
 	"github.com/Autumn-27/artex/db"
+	"github.com/Autumn-27/artex/orcarouter"
 	"github.com/Autumn-27/norma/llm"
 	"github.com/Autumn-27/norma/skill"
 )
@@ -2048,11 +2049,13 @@ func (s *Server) pgLLMPoolReset(w http.ResponseWriter, r *http.Request) {
 // the OpenAI path, it falls back to the OpenAI endpoint at the stripped root.
 func (s *Server) pgListModels(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Provider  string `json:"provider"` // "openai" | "anthropic"
-		BaseURL   string `json:"base_url"`
-		APIKey    string `json:"api_key"`
-		Proxy     string `json:"proxy"`
-		ProfileID *int64 `json:"profile_id"` // fallback: use stored key from this profile
+		Provider      string `json:"provider"` // "openai" | "anthropic" | "orcarouter"
+		BaseURL       string `json:"base_url"`
+		APIKey        string `json:"api_key"`
+		Proxy         string `json:"proxy"`
+		ProfileID     *int64 `json:"profile_id"`     // fallback: use stored key from this profile
+		Capability    string `json:"capability"`     // chat (default) | embedding | image | video | rerank
+		InputModality string `json:"input_modality"` // optional: image | audio | video
 	}
 	if err := decode(r, &req); err != nil {
 		writeErr(w, 400, err.Error())
@@ -2072,6 +2075,14 @@ func (s *Server) pgListModels(w http.ResponseWriter, r *http.Request) {
 
 	baseURL := strings.TrimRight(strings.TrimSpace(req.BaseURL), "/")
 	provider := strings.TrimSpace(req.Provider)
+
+	// OrcaRouter has its own catalog contract: /v1/models carries capability
+	// metadata, and the picker must be filtered by the capability of the entry
+	// point that opened it. Degraded mode returns the verified cold-start seed.
+	if provider == "orcarouter" {
+		s.listOrcaRouterModels(w, r, baseURL, apiKey, req.Proxy, req.Capability, req.InputModality)
+		return
+	}
 
 	// Candidate endpoints to try in order. Some Anthropic-compatible providers
 	// (e.g. DeepSeek) implement /v1/messages under an /anthropic path but expose
@@ -2179,6 +2190,53 @@ func (s *Server) pgListModels(w http.ResponseWriter, r *http.Request) {
 		lastErr = errMgmtNoModelList
 	}
 	writeJSON(w, 200, map[string]any{"ok": false, "error": lastErr})
+}
+
+// listOrcaRouterModels builds the capability-filtered model list for the
+// OrcaRouter provider. The backend holds the API key and returns only model
+// IDs/metadata to the browser; the key never reaches the model picker.
+func (s *Server) listOrcaRouterModels(w http.ResponseWriter, r *http.Request, baseURL, apiKey, proxy, capability, modality string) {
+	if baseURL == "" {
+		baseURL = orcarouter.DefaultAPIBase
+	}
+	transport := &http.Transport{}
+	if p := strings.TrimSpace(proxy); p != "" {
+		if pu, err := url.Parse(p); err == nil {
+			transport.Proxy = http.ProxyURL(pu)
+		}
+	}
+	client := &http.Client{Transport: transport, Timeout: 20 * time.Second}
+
+	models, err := orcarouter.FetchCatalog(r.Context(), client, baseURL, apiKey)
+	if err == nil {
+		writeJSON(w, 200, map[string]any{
+			"ok":            true,
+			"models":        modelIDs(orcarouter.Filter(models, capability, modality)),
+			"degraded":      false,
+			"source":        "live",
+			"default_model": orcarouter.DefaultModel,
+		})
+		return
+	}
+	// Live discovery failed: keep the picker usable with the small verified
+	// cold-start set, clearly marked as degraded. The seed is never merged
+	// into a successful live result.
+	writeJSON(w, 200, map[string]any{
+		"ok":            true,
+		"models":        modelIDs(orcarouter.Filter(orcarouter.Seed(), capability, modality)),
+		"degraded":      true,
+		"source":        "seed",
+		"default_model": orcarouter.DefaultModel,
+		"error":         err.Error(),
+	})
+}
+
+func modelIDs(models []orcarouter.Model) []string {
+	out := make([]string, 0, len(models))
+	for _, m := range models {
+		out = append(out, m.ID)
+	}
+	return out
 }
 
 // --- prompt template helpers (Go text/template + catalog 白名单) ---

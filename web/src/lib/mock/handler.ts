@@ -2318,6 +2318,41 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
     return { ...D.llmPool, chain: D.llmPool.chain.map((c) => ({ ...c, state: "ok", fails: 0, cooldown_secs: 0 })) };
   if (seg[0] === "llm" && seg[1] === "profiles" && seg.length === 3 && m === "DELETE")
     return { deleted: Number(seg[2]) };
+  if (path === "/llm/models") {
+    // Demo catalog for the OrcaRouter provider. Shaped like the real
+    // GET https://api.orcarouter.ai/v1/models response after capability
+    // filtering; mock mode is demo-only (NEXT_PUBLIC_MOCK=1).
+    if (String(b.provider) === "orcarouter")
+      return {
+        ok: true,
+        models: D.orcaModels,
+        degraded: false,
+        source: "live",
+        default_model: "orcarouter/auto",
+      };
+    return { ok: true, models: ["claude-opus-4-8", "gpt-5.5", "deepseek-v4-flash"] };
+  }
+
+  // ── OrcaRouter connect (demo) ──
+  if (path === "/orcarouter/endpoints")
+    return {
+      ok: true,
+      auth_base: "https://www.orcarouter.ai",
+      api_base: "https://api.orcarouter.ai/v1",
+      default_model: "orcarouter/auto",
+      provider: "OrcaRouter Cyber Inference",
+    };
+  if (path === "/orcarouter/login" && m === "POST")
+    return {
+      ok: true,
+      id: "mock-login-attempt",
+      state: "pending",
+      authorize_url:
+        "https://www.orcarouter.ai/auth?callback_url=http%3A%2F%2F127.0.0.1%3A43117%2Fcb&code_challenge=mock&code_challenge_method=S256&state=mock&app_name=ARTEX&scope=api",
+    };
+  if (seg[0] === "orcarouter" && seg[1] === "login" && seg.length === 3 && m === "GET")
+    return { ok: true, id: seg[2], state: "pending" };
+  if (seg[0] === "orcarouter" && seg[1] === "login" && seg.length === 4 && seg[3] === "cancel") return { ok: true };
 
   // ── agents ──
   if (path === "/agents" && m === "GET") return { agents: D.agents };
