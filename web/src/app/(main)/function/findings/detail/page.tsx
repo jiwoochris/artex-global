@@ -24,6 +24,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getDateLocale } from "@/i18n/datetime";
 import { api } from "@/lib/api";
+import { useBuiltinLabels } from "@/lib/builtin-i18n";
 import type { Finding, FindingStatus, Severity } from "@/lib/types";
 
 import { FindingLineageView } from "./lineage";
@@ -56,6 +57,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 }
 
 function FindingDetailInner() {
+  const builtinLabels = useBuiltinLabels();
   const searchParams = useSearchParams();
   const id = searchParams.get("id") ?? "";
   const contextTaskId = searchParams.get("context_task") ?? "";
@@ -212,7 +214,7 @@ function FindingDetailInner() {
                     </Alert>
                   ) : null}
                   {finding.report ? (
-                    <Markdown text={finding.report} />
+                    <Markdown text={builtinLabels.reportHeadings(finding.report)} />
                   ) : (
                     <p className="text-sm text-muted-foreground">{t("table.reportEmpty")}</p>
                   )}

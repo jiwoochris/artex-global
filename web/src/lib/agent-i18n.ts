@@ -21,6 +21,16 @@ function isSystemSeeded(agent: { key: string; builtin?: boolean }): boolean {
   return !!agent.builtin || SYSTEM_SEEDED_AGENT_KEYS.has(agent.key);
 }
 
+// reporter 는 시스템이 심지만 UI 에서 고칠 수 있는 에이전트라(server/orchestration.go 의
+// seedReporterAgent), DB 값이 시드 원문 그대로일 때만 번역한다. 사용자가 고친 값은 그대로 보여 준다.
+const EDITABLE_SEEDS: Record<string, { name: string; description: string }> = {
+  reporter: {
+    name: "보고서 작성",
+    description:
+      "취약점 상세 보고서 작성: 취약점을 발견하면 자동으로 트리거되어, 증거와 실행 과정을 조회한 뒤 Markdown 보고서를 작성해 해당 취약점에 기록합니다.",
+  },
+};
+
 // useAgentLabels 는 기본 에이전트의 이름·설명·프롬프트 변수 라벨을 현재 언어로
 // 돌려주는 헬퍼 묶음이다. 모든 표시 지점에서 이 헬퍼를 거쳐 라벨을 얻는다.
 export function useAgentLabels() {
@@ -31,14 +41,16 @@ export function useAgentLabels() {
   return useMemo(() => {
     // name 은 기본 에이전트면 번역 이름을, 아니면 DB 이름(agent.name)을 돌려준다.
     const name = (agent: { key: string; name: string; builtin?: boolean }): string => {
-      if (isSystemSeeded(agent) && t.has(`${agent.key}.name`)) return t(`${agent.key}.name`);
+      const translatable = isSystemSeeded(agent) || EDITABLE_SEEDS[agent.key]?.name === agent.name;
+      if (translatable && t.has(`${agent.key}.name`)) return t(`${agent.key}.name`);
       return agent.name;
     };
 
     // description 은 기본 에이전트면 번역 설명을, 아니면 DB 설명(없으면 빈 문자열)을
     // 돌려준다. 빈 설명 폴백 문구는 호출 쪽에서 기존대로 붙인다.
     const description = (agent: { key: string; description?: string; builtin?: boolean }): string => {
-      if (isSystemSeeded(agent) && t.has(`${agent.key}.description`)) return t(`${agent.key}.description`);
+      const translatable = isSystemSeeded(agent) || EDITABLE_SEEDS[agent.key]?.description === agent.description;
+      if (translatable && t.has(`${agent.key}.description`)) return t(`${agent.key}.description`);
       return agent.description ?? "";
     };
 

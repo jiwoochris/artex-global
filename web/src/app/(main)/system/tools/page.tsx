@@ -18,7 +18,9 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useAgentLabels } from "@/lib/agent-i18n";
 import { api } from "@/lib/api";
+import { useBuiltinLabels } from "@/lib/builtin-i18n";
 import type { Agent, Tool } from "@/lib/types";
 
 // Traffic tools are host tools gated by the global 流量捕获 switch: bindable, but
@@ -141,6 +143,7 @@ function ToolEditor({
   onClose: () => void;
 }) {
   const t = useTranslations("toolsPage");
+  const agentLabels = useAgentLabels();
   // traffic tools can't be bound/enabled until the global 流量捕获 switch is on.
   const trafficGated = TRAFFIC_TOOL_KEYS.has(tool.key) && !captureOn;
   const [description, setDescription] = React.useState(tool.description);
@@ -202,7 +205,7 @@ function ToolEditor({
                     disabled={trafficGated}
                     onCheckedChange={() => toggleAgent(ag.key)}
                   />
-                  {ag.name}
+                  {agentLabels.name(ag)}
                   <span className="text-muted-foreground font-mono text-xs">{ag.key}</span>
                 </label>
               ))}
@@ -293,6 +296,7 @@ function ToolEditor({
 // ToolGridCard is one clickable tile in the catalog grid.
 function ToolGridCard({ tool, onClick }: { tool: Tool; onClick: () => void }) {
   const t = useTranslations("toolsPage");
+  const builtinLabels = useBuiltinLabels();
   return (
     <button
       type="button"
@@ -328,7 +332,9 @@ function ToolGridCard({ tool, onClick }: { tool: Tool; onClick: () => void }) {
           {t("callsBadge", { count: tool.calls ?? 0 })}
         </Badge>
       </div>
-      <p className="text-muted-foreground line-clamp-1 h-4 text-xs">{tool.description || t("noDescription")}</p>
+      <p className="text-muted-foreground line-clamp-1 h-4 text-xs">
+        {builtinLabels.toolDescription(tool) || t("noDescription")}
+      </p>
       <div className="mt-auto flex flex-wrap gap-1 pt-1">
         {tool.agents.length === 0 && <span className="text-muted-foreground text-[10px]">{t("noBoundAgents")}</span>}
         {tool.agents.map((a) => (
@@ -343,6 +349,7 @@ function ToolGridCard({ tool, onClick }: { tool: Tool; onClick: () => void }) {
 
 export default function ToolsPage() {
   const t = useTranslations("toolsPage");
+  const builtinLabels = useBuiltinLabels();
   const [tools, setTools] = React.useState<Tool[]>([]);
   const [agents, setAgents] = React.useState<Agent[]>([]);
   const [captureOn, setCaptureOn] = React.useState(false);
@@ -381,10 +388,11 @@ export default function ToolsPage() {
       return (
         t.key.toLowerCase().includes(q) ||
         t.description.toLowerCase().includes(q) ||
+        builtinLabels.toolDescription(t).toLowerCase().includes(q) ||
         t.agents.some((a) => a.toLowerCase().includes(q))
       );
     },
-    [query],
+    [query, builtinLabels],
   );
   const systemTools = tools.filter((t) => t.system && matchTool(t));
   const customTools = tools.filter((t) => !t.system && matchTool(t));
@@ -537,6 +545,7 @@ function CustomToolDialog({
   onSaved: () => void;
 }) {
   const t = useTranslations("toolsPage");
+  const agentLabels = useAgentLabels();
   const isNew = edit === "new";
   const tool = edit && edit !== "new" ? edit : null;
   const [key, setKey] = React.useState("");
@@ -892,7 +901,7 @@ function CustomToolDialog({
               {agents.map((a) => (
                 <label key={a.key} className="flex items-center gap-2 text-sm">
                   <Checkbox checked={bound.includes(a.key)} onCheckedChange={() => toggleAgent(a.key)} />
-                  {a.name}
+                  {agentLabels.name(a)}
                   <span className="text-muted-foreground font-mono text-xs">{a.key}</span>
                 </label>
               ))}

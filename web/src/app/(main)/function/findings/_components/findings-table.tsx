@@ -38,6 +38,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getDateLocale } from "@/i18n/datetime";
+import { useBuiltinLabels } from "@/lib/builtin-i18n";
 import type { ActiveFindingRetest, Finding, FindingStatus, Severity } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -133,6 +134,7 @@ export function FindingsTable({
   selectAllLabel,
 }: FindingsTableProps) {
   const t = useTranslations("findings");
+  const builtinLabels = useBuiltinLabels();
   const tStatus = useTranslations("status");
   const resolvedSelectAllLabel = selectAllLabel ?? t("selectAllPage");
   const selectableIds = items.map((finding) => finding.finding_id).filter((id): id is string => Boolean(id));
@@ -432,7 +434,7 @@ export function FindingsTable({
                               // whitespace-pre-wrap 让代码块也换行——否则长代码行/长 URL
                               // 会撑宽 colSpan 单元格,把整张表挤出横向滚动条。
                               <div className="min-w-0 break-words rounded-md border bg-background px-3 py-2 [&_pre]:whitespace-pre-wrap">
-                                <Markdown text={rep.text} />
+                                <Markdown text={builtinLabels.reportHeadings(rep.text)} />
                               </div>
                             );
                           })()}

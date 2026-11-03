@@ -10,6 +10,7 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 
 ### Localization (i18n)
 
+- **Built-in block rules, asset rule notes, and tool descriptions now follow the display language.** A value is translated only while it still matches its DB seed text, so user edits stay as written, and the text sent to the model is unchanged.
 - **Added Spanish documentation.** Translated `README.es.md` from the English README into natural Spanish and added a Spanish link to the language navigation of all five READMEs (English, Korean, Chinese, Spanish, Japanese). Code, commands, payloads, URLs and identifiers are preserved; only descriptive text is translated.
 - **Added Japanese (ja) across the whole localization stack.** Japanese joins the app's supported languages and can be selected in Settings. UI messages (`web/messages/ja.json`), the date locale (`ja-JP`), the agent output language, and the settings and server message catalogs (`config/msg_i18n.go`, `server/errmsg_catalog.go`) are translated into Japanese, while the agents' internal reasoning prompts stay in their original language as for every other locale. For docs, `README.ja.md` was added and the language navigation and supported-language notes across all five READMEs were updated to include Japanese.
 

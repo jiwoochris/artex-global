@@ -810,8 +810,8 @@ function ChatView({
             {t("custom")}
           </Badge>
         )}
-        {agent?.description && (
-          <span className="text-muted-foreground min-w-0 truncate text-xs">{agent.description}</span>
+        {agent && convLabels.description(agent) && (
+          <span className="text-muted-foreground min-w-0 truncate text-xs">{convLabels.description(agent)}</span>
         )}
         {running && <LiveBadge />}
         <SideQuestionButton side={side} />
