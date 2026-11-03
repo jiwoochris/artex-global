@@ -223,7 +223,7 @@ func (s *Server) seedPythonInterpreter() {
 	}
 	if p := detectPython(); p != "" {
 		_ = s.m.pg.SetSetting(settingPythonInterp, p)
-		log.Printf(logT("[custom-tool] python 인터프리터 자동 감지: %s"), p)
+		log.Printf("[custom-tool] auto-detected python interpreter: %s", p)
 	}
 }
 
