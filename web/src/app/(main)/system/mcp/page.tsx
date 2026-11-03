@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useAgentLabels } from "@/lib/agent-i18n";
 import { api } from "@/lib/api";
 import type { Agent, MCPServer, MCPTool } from "@/lib/types";
 
@@ -41,6 +42,7 @@ const emptyForm: FormState = {
 
 export default function MCPPage() {
   const t = useTranslations("mcpPage");
+  const agentLabels = useAgentLabels();
   const [servers, setServers] = React.useState<MCPServer[]>([]);
   const [agents, setAgents] = React.useState<Agent[]>([]);
   const [visibility, setVisibility] = React.useState<Record<number, string[]>>({});
@@ -407,9 +409,9 @@ export default function MCPPage() {
                     <label key={a.key} className="flex items-center gap-2 text-sm">
                       <Checkbox
                         checked={(visibility[s.id] ?? []).includes(a.id)}
-                        onCheckedChange={() => toggleVisibility(s.id, a.id, a.name)}
+                        onCheckedChange={() => toggleVisibility(s.id, a.id, agentLabels.name(a))}
                       />
-                      {a.name}
+                      {agentLabels.name(a)}
                     </label>
                   ))}
                 </div>
