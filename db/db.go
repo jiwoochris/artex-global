@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx database/sql driver ("pgx")
 	"github.com/yukiteruamano/artex-global/config"
@@ -100,6 +101,15 @@ type DB struct{ *sql.DB }
 
 // ensureDatabase connects to the postgres system database and creates the target
 // database if it does not exist. dsn must be a postgres:// URL.
+// createDatabaseSQL renders the CREATE DATABASE statement for name. PostgreSQL does not
+// accept a parameter in place of an identifier, so the name has to be quoted: doubling any
+// embedded double quote is the only escaping PostgreSQL allows there. Concatenating the raw
+// value instead would let a DSN whose database path contains a quote run arbitrary SQL on
+// the maintenance connection.
+func createDatabaseSQL(name string) string {
+	return `CREATE DATABASE ` + pgx.Identifier{name}.Sanitize()
+}
+
 func ensureDatabase(dsn string) error {
 	u, err := url.Parse(dsn)
 	if err != nil {
@@ -123,7 +133,7 @@ func ensureDatabase(dsn string) error {
 	var exists bool
 	_ = admin.QueryRow(`SELECT true FROM pg_database WHERE datname=$1`, dbName).Scan(&exists)
 	if !exists {
-		if _, err := admin.Exec(`CREATE DATABASE "` + dbName + `"`); err != nil {
+		if _, err := admin.Exec(createDatabaseSQL(dbName)); err != nil {
 			return fmt.Errorf("create database %q: %w", dbName, err)
 		}
 	}
