@@ -38,7 +38,7 @@ func TestInterceptApprovalFilters(t *testing.T) {
 						ruleID = rule.ID
 					}
 					if source == "model" {
-						reason = "[模型] fixture"
+						reason = "[模型] fixture" // the "[模型]" audit marker is a stable sentinel, so it keeps its Han characters.
 					}
 					id, err := d.CreateDecidedIntercept(ruleID, 0, task, "test", "Bash", []byte(`{"command":"fixture"}`), status, reason)
 					if err != nil {

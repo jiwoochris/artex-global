@@ -9,14 +9,14 @@ import (
 // fix: the task-context header (description + goal) is rendered ONCE per task, no
 // matter how many same-task fires are merged.
 
-const longGoal = "拿到题目 f2-05 的受保护 flag 并通过 submit_flag 提交；本题密文已高度收敛，flag 只能由二进制内嵌数据派生……" // 代表那段几千字的继承事实
+const longGoal = "Retrieve the protected flag of challenge f2-05 and submit it via submit_flag; the ciphertext of this challenge has converged heavily, so the flag can only be derived from data embedded in the binary..." // stands in for those thousands of characters of inherited facts
 
 func sameTaskFires(n int) []triggeredRun {
 	items := make([]triggeredRun, n)
 	for i := range items {
 		items[i] = triggeredRun{
-			agentKey: "tec_benchmark", taskID: 72, taskDesc: "f2-05 逆向", taskGoal: longGoal,
-			message: "【本次由工具调用触发】\n工具: submit_flag\n入参: {...}\n返回: {correct:false}", mergeable: true,
+			agentKey: "tec_benchmark", taskID: 72, taskDesc: "f2-05 reverse engineering", taskGoal: longGoal,
+			message: "[This run was triggered by a tool call]\nTool: submit_flag\nInput: {...}\nResult: {correct:false}", mergeable: true,
 		}
 	}
 	return items
@@ -27,7 +27,7 @@ func TestMergeAllRunsWritesTaskGoalOnce(t *testing.T) {
 	if got := strings.Count(out.message, longGoal); got != 1 {
 		t.Fatalf("same-task goal should appear exactly once in a merged-all run, got %d", got)
 	}
-	if strings.Count(out.message, "── 触发 ") < 1 || !strings.Contains(out.message, "触发 39") {
+	if strings.Count(out.message, "── Trigger ") < 1 || !strings.Contains(out.message, "Trigger 39") {
 		t.Fatalf("all 39 event bodies should be present: %q", out.message)
 	}
 	// A merged run embeds its header inline, so finalTriggerMessage must not re-add it.
@@ -52,10 +52,10 @@ func TestMergeAllRunsGroupsInterleavedTasks(t *testing.T) {
 	if got := strings.Count(out.message, "GOAL_B"); got != 1 {
 		t.Fatalf("task #2 goal should appear once despite interleaving, got %d", got)
 	}
-	if !strings.Contains(out.message, "共 2 个任务") {
+	if !strings.Contains(out.message, "2 tasks in total") {
 		t.Fatalf("header should report 2 tasks: %q", out.message)
 	}
-	if got := strings.Count(out.message, "── 触发 "); got != 4 {
+	if got := strings.Count(out.message, "── Trigger "); got != 4 {
 		t.Fatalf("all 4 event bodies should be present, got %d", got)
 	}
 }
@@ -73,7 +73,7 @@ func TestFinalTriggerMessageSingleFirePrependsHeaderOnce(t *testing.T) {
 	if got := strings.Count(msg, longGoal); got != 1 {
 		t.Fatalf("single fire should carry the task goal exactly once, got %d", got)
 	}
-	if !strings.HasPrefix(msg, "【任务 #72") {
+	if !strings.HasPrefix(msg, "[Task #72") {
 		t.Fatalf("single fire should be prefixed with the task-context header: %q", msg)
 	}
 }
@@ -83,34 +83,35 @@ func TestTaskContextHeaderEmptyForIntervalFire(t *testing.T) {
 		t.Fatalf("interval/none trigger (no task) must produce no header, got %q", h)
 	}
 	// An interval fire's message must pass through untouched.
-	item := triggeredRun{message: "定时触发正文"}
-	if finalTriggerMessage(item) != "定时触发正文" {
+	item := triggeredRun{message: "interval trigger body"}
+	if finalTriggerMessage(item) != "interval trigger body" {
 		t.Fatalf("interval fire message must pass through unchanged")
 	}
 }
 
 func TestTaskContextHeaderTruncatesLongGoal(t *testing.T) {
+	// 很 is a 3-byte rune, so the truncated header proves the bound counts characters.
 	huge := strings.Repeat("很", 5000)
 	h := taskContextHeader(72, "d", huge)
-	if len([]rune(h)) > 800 { // 200 desc + 500 goal + 截断标记/装饰，远小于 5000
+	if len([]rune(h)) > 800 { // 200 desc + 500 goal + truncation markers/decoration, far below 5000
 		t.Fatalf("header should be bounded even for a huge goal, got %d runes", len([]rune(h)))
 	}
 }
 
-// TestTriggerSynthesisChineseFramingPreserved 는 P3 트리거 메시지 합성부가 만드는 중국어
-// 프레이밍을 보존 대상(에이전트 두뇌 입력)으로 명시 고정한다(F10/F19 경계 판정). 이 문구들은
-// finalTriggerMessage → runTriggeredRun → ca.Chat 의 user 메시지로 들어가는 에이전트 입력이자
-// 전사에 노출되는 이중 용도라, BRIEF 경계 #1(두뇌는 번역하지 않는다 — 벤치마크 동작 보존)에
-// 따라 번역하면 안 된다. 위 머지/헤더 동작 테스트가 `【任务 #`·`── 触发 `·`共 N 个任务` 를
-// 이미 핀하지만, 작업 컨텍스트 헤더의 목표 프레이밍과 by-task 머지 안내는 아직 미핀이라
-// 여기서 보강한다(우발 한국어화 역회귀 가드 · conversations.go 보존 주석과 짝).
+// TestTriggerSynthesisChineseFramingPreserved pins the Chinese framing the P3 trigger synthesis produces as
+// a preservation target (agent brain input) — the F10/F19 boundary call. These strings are agent input
+// that finalTriggerMessage → runTriggeredRun → ca.Chat pass as the user message and are dual-purpose
+// (also exposed in the transcript), so under BRIEF boundary #1 (the brain is not localized — TSecBench
+// benchmark behavior preservation) they must not be translated. Merge/header tests above pin
+// `[Task #`·`── Trigger `·`N tasks in total`, but the task-context goal framing and by-task merge notice
+// were unpinned, so this reinforces them (reverse-regression guard, paired with conversations.go).
 func TestTriggerSynthesisChineseFramingPreserved(t *testing.T) {
-	// 작업 컨텍스트 헤더의 목표 프레이밍(（目标：…）) 보존 — 입력에 CJK 를 안 넣어 프레이밍만 검증.
-	if h := taskContextHeader(7, "d", "g"); !strings.Contains(h, "（目标：") {
-		t.Fatalf("작업 컨텍스트 헤더의 목표 프레이밍이 바뀌었습니다(두뇌 입력 번역 금지): %q", h)
+	// The task-context header's goal framing ((goal: …)) is preserved — the input has no CJK, so only framing is checked.
+	if h := taskContextHeader(7, "d", "g"); !strings.Contains(h, "(goal: ") {
+		t.Fatalf("the task-context header goal framing changed (brain input must not be localized): %q", h)
 	}
-	// by-task 머지 안내 프레이밍 보존.
-	if out := mergeTriggeredRuns(sameTaskFires(3)); !strings.Contains(out.message, "【本会话合并了") {
-		t.Fatalf("by-task 머지 안내 프레이밍이 바뀌었습니다(두뇌 입력 번역 금지): %q", out.message)
+	// The by-task merge notice framing is preserved.
+	if out := mergeTriggeredRuns(sameTaskFires(3)); !strings.Contains(out.message, "[This conversation merged") {
+		t.Fatalf("the by-task merge notice framing changed (brain input must not be localized): %q", out.message)
 	}
 }

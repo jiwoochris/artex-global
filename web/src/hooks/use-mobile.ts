@@ -1,8 +1,8 @@
 import * as React from "react";
 
 const MOBILE_BREAKPOINT = 768;
-// 사이드바가 펼쳐진 채 본문 폭이 좁아지면 표·카드가 겹친다(768~1279px 구간).
-// 이 너비 미만에서는 사이드바를 아이콘 모드로 자동 접어 본문 폭을 확보한다.
+// With the sidebar expanded, a narrower body width makes tables and cards overlap (the 768~1279px range).
+// Below this width the sidebar auto-collapses to icon mode to free up body width.
 export const TABLET_BREAKPOINT = 1280;
 
 function useBreakpoint(breakpoint: number) {
@@ -23,8 +23,8 @@ export function useIsMobile() {
   return !!useBreakpoint(MOBILE_BREAKPOINT);
 }
 
-// 태블릿 폭(768~1279px) 여부. 초기 렌더(측정 전)에는 undefined 를 그대로 돌려줘,
-// 호출부가 "아직 모름"과 "false"를 구분할 수 있게 한다.
+// Whether the width is tablet (768~1279px). On the initial render (before measuring) it returns undefined as-is,
+// so callers can tell "not known yet" apart from "false".
 export function useIsTablet() {
   return useBreakpoint(TABLET_BREAKPOINT);
 }

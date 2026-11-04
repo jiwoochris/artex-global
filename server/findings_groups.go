@@ -14,9 +14,10 @@ import (
 
 const maxFindingFollowUpRunes = 4000
 
-// auditFindingFollowUpSummary 는 사용자가 취약점을 심화 익스플로잇하려고 후속 의도를
-// 제출할 때 활동 타임라인에 남는 요약 문구다("{요약} #{의도ID}" 형태로 표시된다).
-const auditFindingFollowUpSummary = "사용자가 제출한 취약점 심화 익스플로잇 의도"
+// auditFindingFollowUpSummary is the summary left on the activity timeline when a user
+// submits a follow-up intent to exploit a finding further; it is displayed as
+// "{summary} #{intentID}".
+const auditFindingFollowUpSummary = "User submitted an intent to exploit the vulnerability further"
 
 func findingPaginationParam(raw string, fallback, upperBound int) int {
 	value := atoiDefault(raw, fallback)
@@ -30,13 +31,15 @@ func findingPaginationParam(raw string, fallback, upperBound int) int {
 }
 
 // findingFilterFromQuery builds the shared findings filter from a request's
-// query string. 列表 / 分组 / 资产树 / 导出走同一份解析,新增筛选项只改这里。
+// query string. The list / groups / asset tree / export views share this one parser,
+// so adding a filter field only changes here.
 func findingFilterFromQuery(q url.Values) db.FindingFilter {
 	return db.FindingFilter{
 		Severity:  normFilter(q.Get("severity")),
 		Status:    normFilter(q.Get("status")),
 		VulnClass: normFilter(q.Get("vulnclass")),
-		// task_id(独立于会切到「按任务节点」分支的 task 参数):全局表按任务筛选。
+		// task_id (independent of the task parameter, which switches to the per-task-node
+		// branch): filter the global table by task.
 		TaskID:     normFilter(q.Get("task_id")),
 		Query:      q.Get("q"),
 		Sort:       q.Get("sort"),
@@ -44,7 +47,7 @@ func findingFilterFromQuery(q url.Values) db.FindingFilter {
 	}
 }
 
-// findingAssetTree serves the「按资产」view's left-hand tree: every asset that
+// findingAssetTree serves the by-asset view's left-hand tree: every asset that
 // carries at least one matching finding, plus the ancestors needed to place it.
 func (s *Server) findingAssetTree(w http.ResponseWriter, r *http.Request) {
 	tree, err := s.m.pg.BuildFindingAssetTree(findingFilterFromQuery(r.URL.Query()))
@@ -106,7 +109,7 @@ func (s *Server) deepenFinding(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			writeErr(w, http.StatusRequestEntityTooLarge, "요청 본문이 너무 큽니다")
+			writeErr(w, http.StatusRequestEntityTooLarge, "The request body is too large")
 		} else {
 			writeErr(w, http.StatusBadRequest, "bad json: "+err.Error())
 		}

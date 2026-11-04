@@ -76,9 +76,9 @@ func (c *ChatAgent) SetGuard(g *guard.Guard) { c.guard = g }
 
 // chatWorkDirSpec returns a working-directory notice appended to every chat
 // agent's system prompt. Mirrors artifactSpec but without pentest-specific
-// wording ("payload", "抓响应体") that would be odd in a general assistant.
+// wording ("payload", "captured response body") that would be odd in a general assistant.
 func chatWorkDirSpec(workDir string) string {
-	return "\n\n**文件输出规约**：需要写文件时，一律写到工作目录 " + workDir + "（这是默认 CWD，相对路径即落在这里，也可用该绝对路径）——不要写 /tmp 或其他绝对路径。"
+	return "\n\n**File output spec**: when you need to write a file, always write it inside the working directory " + workDir + " (this is the default CWD, relative paths land here, and the absolute path also works) — do not write to /tmp or other absolute paths."
 }
 
 // chatSystem renders the DB-managed prompt body for agentKey. Custom agents have
@@ -132,11 +132,12 @@ func (c *ChatAgent) Chat(ctx context.Context, agentKey, sessionID, message strin
 		DeferredTools:   def.Deferred,
 		UnlockSet:       def.Unlock,
 		PermissionMode:  permission.ModeBypass,
-		EnableWebFetch:  true, // 走记录代理留痕；载入代理 CA 验证 MITM 重签的 HTTPS 证书
+		EnableWebFetch:  true, // go through the recording proxy for the audit trail; the proxy CA verifies MITM-re-signed HTTPS certs
 		WebFetchProxy:   c.proxyAddr,
 		WebFetchCACert:  c.proxyCACert,
-		// 联网搜索(可选)。ddgs 无需 key；brave-free 需 BraveKey；tavily 需 TavilyKey。
-		// WebSearchProxy 是独立出口代理(http/https/socks5)，与记录流量的 MITM 代理无关；空则直连。
+		// Web search (optional). ddgs needs no key; brave-free needs BraveKey; tavily needs TavilyKey.
+		// WebSearchProxy is a separate egress proxy (http/https/socks5), unrelated to the MITM proxy
+		// that records traffic; empty = direct.
 		EnableWebSearch:       ws.Enabled,
 		WebSearchBackend:      ws.Backend,
 		BraveSearchAPIKey:     ws.BraveKey,
@@ -145,20 +146,21 @@ func (c *ChatAgent) Chat(ctx context.Context, agentKey, sessionID, message strin
 		DeepSeekSearchAPIKey:  ws.DeepSeekAPIKey,
 		DeepSeekSearchModel:   ws.DeepSeekModel,
 		WebSearchProxy:        ws.Proxy,
-		BashEnv:               proxyEnv(c.proxyAddr, c.proxyCACert), // Bash 子命令默认走代理+信任 CA
+		BashEnv:               proxyEnv(c.proxyAddr, c.proxyCACert), // Bash subcommands go through the proxy and trust the CA by default
 		WorkingDir:            sessionWorkDir,
 		MaxTurns:              maxTurns,
 		MaxDuration:           maxDuration,
 		Compaction:            compactionConfig(c.window),
 		Todos:                 actool.NewTodoStore(),
 		// large tool output spills to cmd-output/ under the session dir.
-		// 截断上限用 SDK 默认(tool.Capture 的 30000 字符)。
+		// The truncation cap uses the SDK default (tool.Capture's 30000 characters).
 		ToolOutputDir: filepath.Join(sessionWorkDir, "cmd-output"),
-		// 命中预算(步数)→ SDK 跑收尾:输出一句总结。Prompt 与收尾轮数按本 agent key 后台可编辑
-		// (自定义 agent 各自一份;留空/0 用通用默认:10 轮)。
+		// Hitting the budget (steps) → the SDK settles: output a one-sentence summary. The prompt and
+		// the wrap-up turn count are editable per agent key in the admin UI (each custom agent has its
+		// own; empty/0 uses the generic default of 10 turns).
 		Settlement:   wrapupSettlement(agentKey, nil),
-		NonStreaming: c.nonStreaming(), // 该 profile 选非流式时走 Provider.Complete
-		MaxTokens:    c.maxTokens(),    // 0 = 不发上限,由服务端默认值决定
+		NonStreaming: c.nonStreaming(), // when this profile selects non-streaming, go through Provider.Complete
+		MaxTokens:    c.maxTokens(),    // 0 = send no cap; the endpoint default decides
 	}
 	if c.guard != nil {
 		opts.Hooks = c.guard.Hooks()
@@ -167,7 +169,8 @@ func (c *ChatAgent) Chat(ctx context.Context, agentKey, sessionID, message strin
 		opts.Transcript = c.tx
 		opts.SessionID = sessionID
 	}
-	// 实验功能:开启后由 noa 接管上下文压缩(归档集中在 <workDir>/noa/<SessionID> 下,持久)。
+	// Experimental feature: when enabled, noa takes over context compaction (archives are kept under
+	// <workDir>/noa/<SessionID> and persist).
 	enableNoa(&opts, c.noaEnabledFn, c.workDir, "chat-"+sessionID, noaWarn("chat-"+sessionID))
 	ctx = attachSideCapture(ctx, &opts)
 	s := agentcore.NewSession(opts)

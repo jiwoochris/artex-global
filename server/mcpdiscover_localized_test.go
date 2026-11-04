@@ -7,38 +7,39 @@ import (
 	"github.com/Autumn-27/artex/db"
 )
 
-// mcpdiscover.go 의 connectMCP 이 돌려주는 전송 설정 검증 오류 문구를 한국어로 유지하는
-// 회귀 방어 테스트다. 네 오류 경로(stdio 명령 누락·http URL 누락·sse URL 누락·알 수 없는
-// 전송 방식)는 전부 실제로 서버에 접속(dial)하기 전에 반환되므로, DB·네트워크 없이
-// connectMCP 을 직접 호출해 반환 문구까지 검증한다. 한국어 판정은 F3a 가 만든
-// assertKoreanError(한글 포함·중국어 한자 0)를 재사용한다. 전송 방식 enum(stdio/http/sse)과
-// URL 은 와이어 식별자라 ASCII 로 남으며 한자 판정에 걸리지 않는다. 누군가 이 문구를
-// 중국어로 되돌리면 상수 핀 고정과 실제 경로가 함께 실패한다.
+// Regression defense test that keeps the transport config validation error messages
+// returned by connectMCP in mcpdiscover.go as their exact English source text. All four error paths (missing
+// stdio command, missing http URL, missing sse URL, unknown transport) return before
+// the server is actually dialed, so connectMCP is called directly with no DB or
+// network and the returned message is verified too (assertEnglishMessage). The transport
+// enum (stdio/http/sse) and URL are wire identifiers, so they stay ASCII. Reverting these
+// messages to another language fails both the constant pin and the real path.
 func TestConnectMCPErrorsLocalized(t *testing.T) {
-	// 상수 핀 고정
-	for _, c := range []struct{ label, msg string }{
-		{"stdio_no_command", errMCPStdioNoCommand},
-		{"http_no_url", errMCPHTTPNoURL},
-		{"sse_no_url", errMCPSSENoURL},
-		{"unknown_transport", errMCPUnknownTransportFmt},
+	// Constant pin
+	for _, c := range []struct{ label, msg, wantEnglish string }{
+		{"stdio_no_command", errMCPStdioNoCommand, "The stdio transport has no command"},
+		{"http_no_url", errMCPHTTPNoURL, "The http transport has no URL"},
+		{"sse_no_url", errMCPSSENoURL, "The sse transport has no URL"},
+		{"unknown_transport", errMCPUnknownTransportFmt, "Unknown transport: %q"},
 	} {
-		assertKoreanError(t, c.label, c.msg)
+		assertEnglishMessage(t, c.label, c.msg, c.wantEnglish)
 	}
 
-	// 실제 경로: 네 거부 분기는 모두 dial 전에 반환한다.
+	// Real paths: all four rejection branches return before dial.
 	for _, c := range []struct {
-		label string
-		srv   *db.MCPServer
+		label       string
+		srv         *db.MCPServer
+		wantEnglish string
 	}{
-		{"stdio_missing_command", &db.MCPServer{Transport: "stdio", Command: ""}},
-		{"http_missing_url", &db.MCPServer{Transport: "http", URL: ""}},
-		{"sse_missing_url", &db.MCPServer{Transport: "sse", URL: ""}},
-		{"unknown_transport_path", &db.MCPServer{Transport: "websocket"}},
+		{"stdio_missing_command", &db.MCPServer{Transport: "stdio", Command: ""}, "The stdio transport has no command"},
+		{"http_missing_url", &db.MCPServer{Transport: "http", URL: ""}, "The http transport has no URL"},
+		{"sse_missing_url", &db.MCPServer{Transport: "sse", URL: ""}, "The sse transport has no URL"},
+		{"unknown_transport_path", &db.MCPServer{Transport: "websocket"}, `Unknown transport: "websocket"`},
 	} {
 		_, err := connectMCP(context.Background(), c.srv)
 		if err == nil {
-			t.Fatalf("%s: 오류가 없습니다(검증을 통과함)", c.label)
+			t.Fatalf("%s: no error (validation passed)", c.label)
 		}
-		assertKoreanError(t, c.label, err.Error())
+		assertEnglishMessage(t, c.label, err.Error(), c.wantEnglish)
 	}
 }

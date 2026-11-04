@@ -29,23 +29,23 @@ import (
 type Task struct {
 	ID           string `json:"id"`
 	ExpID        int64  `json:"exploration_id"`
-	Name         string `json:"name"` // 可选任务名称;空=未命名
+	Name         string `json:"name"` // optional task name; empty = unnamed
 	CategoryID   *int64 `json:"category_id,omitempty"`
 	CategoryName string `json:"category_name,omitempty"`
 	PinnedAt     int64  `json:"pinned_at,omitempty"`
 	Description  string `json:"description"`
 	Goal         string `json:"goal"`
 	CreatedAt    int64  `json:"created_at"`
-	CompletedAt  int64  `json:"completed_at,omitempty"` // 进入终态的 unix 秒;0=未完成
+	CompletedAt  int64  `json:"completed_at,omitempty"` // unix seconds when it reached a terminal state; 0 = not finished
 	Paused       bool   `json:"paused"`
-	Queued       bool   `json:"queued"` // 因并发上限被挂起、等待空位自动启动;true=尚未开跑
+	Queued       bool   `json:"queued"` // held by the concurrency cap and starts automatically once a slot frees up; true = not started yet
 	// QueuedAt is an internal Unix-nanosecond ordering key. It is deliberately
 	// finer than CreatedAt so several tasks enqueued in the same second retain
 	// their real FIFO order.
 	QueuedAt           int64   `json:"queued_at,omitempty"`
 	QueueMode          string  `json:"queue_mode,omitempty"`
-	ParentRef          string  `json:"parent_ref,omitempty"`     // 父任务 id(编排 spawn 记录)
-	LLMProfileID       *int64  `json:"llm_profile_id,omitempty"` // 指定运行本任务 planner/worker 的 LLM 配置;nil=用全局激活配置
+	ParentRef          string  `json:"parent_ref,omitempty"`     // parent task id (orchestration spawn record)
+	LLMProfileID       *int64  `json:"llm_profile_id,omitempty"` // LLM profile that runs this task's planner/worker; nil = the globally active profile
 	LLMProfileIDs      []int64 `json:"llm_profile_ids,omitempty"`
 	ActiveLLMProfileID *int64  `json:"active_llm_profile_id,omitempty"`
 	LLMChainRevision   int64   `json:"-"`
@@ -53,11 +53,11 @@ type Task struct {
 	LLMFailoverReason  string  `json:"llm_failover_reason,omitempty"`
 	SourceTaskIDs      []int64 `json:"source_task_ids,omitempty"`
 	CompanyIDs         []int64 `json:"company_ids,omitempty"`
-	Status             string  `json:"status"` // persisted lifecycle status (done/failed/timeout 为终态；空/其它则由运行态推导)
-	// 任务级超时(见 docs/任务级超时与收尾设计.md)。DeadlineAt/FirstRunAt 为 unix 秒,0=未设/未运行。
+	Status             string  `json:"status"` // persisted lifecycle status (done/failed/timeout are terminal; empty or other is derived from the live state)
+	// Task-level timeout. DeadlineAt/FirstRunAt are unix seconds, 0 = unset/not running.
 	TimeoutSeconds       int                    `json:"timeout_seconds"`
-	PlanHeartbeatSeconds int                    `json:"plan_heartbeat_seconds"` // planner 心跳触发间隔(秒)
-	CoverageEnabled      bool                   `json:"coverage_enabled"`       // 资产覆盖度功能开关(创建时定,默认开)
+	PlanHeartbeatSeconds int                    `json:"plan_heartbeat_seconds"` // planner heartbeat trigger interval (seconds)
+	CoverageEnabled      bool                   `json:"coverage_enabled"`       // asset coverage feature switch (fixed at creation, on by default)
 	FirstRunAt           int64                  `json:"first_run_at,omitempty"`
 	DeadlineAt           int64                  `json:"deadline_at,omitempty"`
 	Store                *pgdb.ExplorationStore `json:"-"`
@@ -231,10 +231,11 @@ type Manager struct {
 	mu          sync.RWMutex
 	tasks       map[string]*Task
 	active      string
-	trafficOn   bool // 流量捕获开关（默认关；settings.traffic_capture）
-	llmRecOn    bool // LLM 录制开关（默认关；settings.llm_record）
-	// 联网搜索开关与来源（默认关；settings.web_search_*）。brave-free 需要 braveKey；tavily 需要 tavilyKey。
-	// webSearchProxy 是独立出口代理(http/https/socks5)，与记录流量的 MITM 代理无关。
+	trafficOn   bool // traffic capture switch (off by default; settings.traffic_capture)
+	llmRecOn    bool // LLM recording switch (off by default; settings.llm_record)
+	// Web search switch and backend (off by default; settings.web_search_*). brave-free needs
+	// braveKey, tavily needs tavilyKey. webSearchProxy is a separate egress proxy
+	// (http/https/socks5), unrelated to the MITM proxy that records traffic.
 	webSearchOn      bool
 	webSearchBackend string
 	braveKey         string
@@ -262,22 +263,26 @@ const (
 	settingGlobalProxy = "global_proxy"
 	settingWorkers     = "workers"
 	settingLLMRecord   = "llm_record"
-	// LLM 轮询(故障转移)。默认关闭——开启后走「全局激活配置」的 agent 在当前配置
-	// 不可用(余额不足/key 失效/限流/服务异常)时自动切到下一个配置。
-	// settingLLMPoolBindFallback 仅在轮询开启时有意义:默认关闭,即 agent/任务显式
-	// 绑定了某个配置就只用它、失败即失败;开启后绑定的配置失败也会回落到轮询链。
+	// LLM polling (failover). Off by default -- when on, an agent running on the globally
+	// active profile switches to the next profile as soon as the current one is unusable
+	// (no balance / dead key / rate limit / service error). settingLLMPoolBindFallback only
+	// matters while polling is on: off by default, so an agent/task explicitly bound to a
+	// profile uses only that one and fails with it; when on, a failed bound profile also
+	// falls back to the polling chain.
 	settingLLMPoolOn           = "llm_pool_enabled"
 	settingLLMPoolBindFallback = "llm_pool_bind_fallback"
-	// 任务并发上限:开关 + 上限数。默认关闭;开启后默认上限 5(见 defaultConcurrencyLimit)。
+	// Task concurrency cap: switch + limit. Off by default; when on, the default limit is 5 (see defaultConcurrencyLimit).
 	settingConcurrencyOn    = "task_concurrency_enabled"
 	settingConcurrencyLimit = "task_concurrency_limit"
-	// 实验功能:noa 模型驱动上下文压缩(norma v0.4.0)。默认关闭——开启后平台接入的四类
-	// agent(planner/worker/主 agent/对话)由 noa 接管上下文压缩,取代内置 compaction。
-	// 每 run 读一次,切换只影响之后启动的 run。
+	// Experimental: model-driven context compaction via noa (norma v0.4.0). Off by default --
+	// when on, noa takes over context compaction for all four agent kinds the platform runs
+	// (planner/worker/main agent/chat) instead of the built-in compaction. Read once per run,
+	// so switching only affects runs started afterwards.
 	settingNoaCompaction = "noa_compaction"
-	// settingOutputLanguage 는 사용자 대면 출력 언어("en"/"ko"/"zh"/"es")의 런타임 값이다.
-	// 비어 있으면 config.Language()(ARTEX_LANG·설정 파일·기본값 한국어)로 떨어진다. 에이전트
-	// 출력 언어(langDirective)와 백엔드 메시지 카탈로그가 모두 이 값을 따른다.
+	// settingOutputLanguage is the runtime value of the user-facing output language
+	// ("en"/"es"). When empty it falls back to config.Language() (ARTEX_LANG > config file >
+	// en). Both the agent output language (langDirective) and the backend message catalogue
+	// follow this value.
 	settingOutputLanguage = "output_language"
 	// defaultWebSearchBackend is used when web search is on but no backend was picked.
 	defaultWebSearchBackend = "ddgs"
@@ -332,12 +337,12 @@ func (m *Manager) Workers() int {
 	return n
 }
 
-// errWorkersPositive 는 워크 에이전트 수 설정(settingWorkers)이 1 미만일 때 SetWorkers 가
-// 돌려주는 사용자 노출 오류다. 유일 호출처인 설정 PUT 핸들러(server.go:3512)가
-// writeErr(400, err.Error()) 로 그대로 응답하며, 에이전트 도구(actool) 로 되먹이는 경로는
-// 없으므로 사용자 전용으로 보고 한국어로 유지한다. 용어는 UI 설정 화면(ko.json
-// settings.workers "워크 에이전트 수")과 맞춘다.
-const errWorkersPositive = "워크 에이전트 수는 1 이상이어야 합니다"
+// errWorkersPositive is the user-facing error SetWorkers returns when the work-agent
+// count setting (settingWorkers) is below 1. Its only caller, the settings PUT handler,
+// responds with it verbatim through writeErr(400, err.Error()), and no agent tool (actool)
+// path feeds it back, so it is user-only. The wording matches the UI settings screen
+// (settings.workers "work agents").
+const errWorkersPositive = "the work agent count must be at least 1"
 
 // SetWorkers persists the concurrent work-agent count. Values <=0 are rejected.
 func (m *Manager) SetWorkers(n int) error {
@@ -362,14 +367,14 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 	if abs, err := filepath.Abs(dir); err == nil {
 		dir = abs
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
 	dsn, source, err := pgdb.DSN()
 	if err != nil {
 		return nil, err
 	}
-	log.Printf(logT("[pg] 데이터베이스 설정 출처: %s"), source)
+	log.Printf(logT("[pg] database config source: %s"), source)
 	pg, err := pgdb.Open(dsn)
 	if err != nil {
 		return nil, err
@@ -392,11 +397,11 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 		} else {
 			err = tr.RecoverHostDeleteStages(func(_ int64, taskID int64) (bool, error) {
 				if taskID <= 0 {
-					// 기동 중 트래픽 복구 콜백의 내부 정합 오류다. NewManager 가
-					// fmt.Errorf("recover traffic delete staging: %w", err) 로 감싸 기동 실패로
-					// 전파할 뿐 writeErr·actool 어느 경로에도 닿지 않는 운영자 기동 로그라,
-					// F3b(사용자 노출 writeErr) 범위가 아니어서 원문을 보존한다(Z2 계열).
-					return false, errors.New("归档流量暂存日志缺少任务 ID")
+					// Internal consistency error in the traffic-recovery callback during startup.
+					// NewManager only wraps it as fmt.Errorf("recover traffic delete staging: %w", err)
+					// and fails the boot; it never reaches writeErr or actool, so it stays an operator
+					// startup log outside the user-facing message scope.
+					return false, errors.New("archived traffic staging log is missing the task ID")
 				}
 				task, taskErr := pg.GetTask(taskID)
 				if taskErr != nil {
@@ -425,7 +430,7 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 	// Asset auto-completion engine (§5): HTTP probes routed through the recording
 	// proxy (via m.ProxyAddr, which honors the traffic-capture toggle).
 	m.trafficOn = pg.GetBool(settingTrafficCapture, false)
-	// LLM 录制开关（默认关）。录制器每次调用时读取此标志。
+	// LLM recording switch (off by default). The recorder reads this flag on every call.
 	m.llmRecOn = pg.GetBool(settingLLMRecord, false)
 	// Load persisted web-search config (default: off, ddgs).
 	m.webSearchOn = pg.GetBool(settingWebSearchOn, false)
@@ -451,7 +456,7 @@ func NewManager(dir, proxyAddr string) (*Manager, error) {
 	}
 	if m.traffic != nil {
 		if err := m.traffic.SetUpstreamProxy(m.globalProxy); err != nil {
-			log.Printf("[proxy] 全局代理 %q 无效，已忽略: %v", m.globalProxy, err)
+			log.Printf("[proxy] global proxy %q is invalid, ignored: %v", m.globalProxy, err)
 		}
 	}
 	m.enrich = enrich.New(m.assets, m.ProxyAddr, 4)
@@ -487,7 +492,7 @@ func (m *Manager) SetTrafficEnabled(on bool) error {
 }
 
 // LLMRecordEnabled reports whether LLM request/response recording is on
-// (默认关；settings.llm_record). The recorder consults this per call, so the
+// (off by default; settings.llm_record). The recorder consults this per call, so the
 // toggle takes effect immediately without rebuilding agents.
 func (m *Manager) LLMRecordEnabled() bool {
 	m.mu.RLock()
@@ -508,7 +513,7 @@ func (m *Manager) SetLLMRecordEnabled(on bool) error {
 }
 
 // NoaCompactionEnabled reports whether the experimental noa context-compression
-// mechanism is on (默认关；settings.noa_compaction). Read per agent run via the
+// mechanism is on (off by default; settings.noa_compaction). Read per agent run via the
 // injected resolver, so a toggle takes effect on the next run without rebuild.
 func (m *Manager) NoaCompactionEnabled() bool {
 	return m.pg.GetBool(settingNoaCompaction, false)
@@ -520,7 +525,7 @@ func (m *Manager) SetNoaCompaction(on bool) error {
 	return m.pg.SetBool(settingNoaCompaction, on)
 }
 
-// LLMPoolEnabled reports whether LLM failover ("轮询") is on (默认关；
+// LLMPoolEnabled reports whether LLM failover ("polling") is on (off by default;
 // settings.llm_pool_enabled). Read when the provider chain is built (applyLLM),
 // so a change requires a rebuild — putSettings does that.
 func (m *Manager) LLMPoolEnabled() bool {
@@ -535,8 +540,8 @@ func (m *Manager) LLMPoolEnabled() bool {
 func (m *Manager) SetLLMPoolEnabled(on bool) error { return m.pg.SetBool(settingLLMPoolOn, on) }
 
 // LLMPoolBindFallback reports whether an agent/task that is BOUND to a specific
-// profile still falls back to the chain when that profile fails (默认关：绑定即
-// 独占，失败即失败). Only meaningful while LLMPoolEnabled.
+// profile still falls back to the chain when that profile fails (off by default: a binding
+// is exclusive, a failure stays a failure). Only meaningful while LLMPoolEnabled.
 func (m *Manager) LLMPoolBindFallback() bool {
 	if m.pg == nil {
 		return false
@@ -586,7 +591,7 @@ func (m *Manager) WebSearchOpts() agent.WebSearchOpts {
 // profile can actually drive server-side search — DeepSeek exposes it only on
 // the Anthropic-format endpoint — is deliberately NOT validated here: the UI
 // states the requirement and the user decides. A profile that can't serve it
-// simply fails at search time (or at the settings page's 测试 button), which is
+// simply fails at search time (or at the settings page's test button), which is
 // the same feedback every other backend gives for a bad key.
 func (m *Manager) deepSeekSearchCreds() (baseURL, apiKey, model string) {
 	p, err := m.pg.ActiveProfile()
@@ -655,7 +660,7 @@ const browserMCPName = "browser"
 func (m *Manager) syncBrowserMCPProxy() {
 	servers, err := m.pg.ListMCP()
 	if err != nil {
-		log.Printf("[mcp] browser 代理同步: 读取 MCP 列表失败: %v", err)
+		log.Printf("[mcp] browser proxy sync: failed to read the MCP list: %v", err)
 		return
 	}
 	var srv *pgdb.MCPServer
@@ -684,13 +689,13 @@ func (m *Manager) syncBrowserMCPProxy() {
 	srv.Args = encodeJSON(args)
 	srv.Env = encodeJSON(env)
 	if _, err := m.pg.SaveMCP(srv); err != nil {
-		log.Printf("[mcp] browser 代理同步失败: %v", err)
+		log.Printf("[mcp] browser proxy sync failed: %v", err)
 		return
 	}
 	if proxy != "" {
-		log.Printf(logT("[mcp] browser MCP 캡처 프록시 연결: %s (CA %s)"), proxy, cert)
+		log.Printf(logT("[mcp] browser MCP capture proxy connected: %s (CA %s)"), proxy, cert)
 	} else {
-		log.Print(logT("[mcp] browser MCP 캡처 프록시 설정 제거"))
+		log.Print(logT("[mcp] browser MCP capture proxy setting removed"))
 	}
 }
 
@@ -892,7 +897,7 @@ func (m *Manager) UpdateTaskMetadata(taskID string, patch pgdb.TaskPatch) (*Task
 }
 
 // CreateTask creates a task + its exploration and makes it active.
-// timeoutSeconds is the task-level wall-clock budget (0 = 不限时).
+// timeoutSeconds is the task-level wall-clock budget (0 = no limit).
 func (m *Manager) CreateTask(description, goal string, llmProfileID *int64, timeoutSeconds, planHeartbeatSeconds int) (*Task, error) {
 	var ids []int64
 	if llmProfileID != nil {
@@ -1061,7 +1066,7 @@ func (m *Manager) DeleteCompanyWithAssets(id int64, deleteAssets bool) (int64, e
 
 // ReplaceTaskLLMProfiles resets a task's ordered provider chain and mirrors the
 // committed state onto the live task handle. Terminal tasks are editable too —
-// their 主 Agent 对话 keeps running on the chain after the task finishes.
+// their main Agent conversation keeps running on the chain after the task finishes.
 func (m *Manager) ReplaceTaskLLMProfiles(id string, profileIDs []int64, activeProfileID int64) (int64, error) {
 	n, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
@@ -1079,10 +1084,10 @@ func (m *Manager) ReplaceTaskLLMProfiles(id string, profileIDs []int64, activePr
 		task.setLLMState(pt.LLMProfileID, pt.ActiveLLMProfileID, pt.LLMProfileIDs, pt.LLMChainRevision, pt.LLMFailoverState, pt.LLMFailoverReason)
 	}
 	m.mu.Unlock()
-	// 终态任务不重开额度阻塞意图:任务已经没有 worker 在跑,重开只会把它们从
-	// blocked 挪到 open——那里既没人执行,也不再满足「重跑意图」的可重跑条件,
-	// 反而变成死状态。终态任务想接着跑,走重跑意图/新增目标,那条路会把任务重新
-	// admit 回运行态。
+	// Terminal tasks do not reopen quota-blocked intents: no worker is running any more, so
+	// reopening would only move them from blocked to open -- where nothing executes them and
+	// the "rerun intent" precondition no longer holds, leaving a dead state. To continue a
+	// terminal task, use rerun intent / add goal, which admits the task back to running.
 	if pgdb.IsTerminal(pt.Status) {
 		return 0, nil
 	}
@@ -1356,7 +1361,7 @@ func (m *Manager) TaskStatus(id string) string {
 }
 
 // StampTaskFirstRun stamps first_run_at + deadline_at on the first real run (idempotent
-// in DB) and mirrors deadline_at on the live handle. Returns the deadline unix (0 = 不限).
+// in DB) and mirrors deadline_at on the live handle. Returns the deadline unix (0 = no limit).
 func (m *Manager) StampTaskFirstRun(id string) (int64, error) {
 	m.taskStateMu.Lock()
 	defer m.taskStateMu.Unlock()
@@ -1743,8 +1748,9 @@ func (m *Manager) List() []*Task {
 	for _, t := range m.tasks {
 		out = append(out, t)
 	}
-	// 置顶任务优先，组内按置顶时间倒序；普通任务按 id 倒序。m.tasks 是 map，
-	// 每次轮询都必须重排，id 则为同刻创建任务提供稳定且唯一的兜底顺序。
+	// Pinned tasks first, within that group by pin time descending; ordinary tasks by id
+	// descending. m.tasks is a map, so every poll must re-sort, and the id gives tasks
+	// created in the same instant a stable and unique tie-breaker.
 	sort.Slice(out, func(i, j int) bool {
 		iState := out[i].lifecycleSnapshot()
 		jState := out[j].lifecycleSnapshot()
@@ -1794,8 +1800,8 @@ func (t *Task) NotifyFinding(intentID int64, summary string) {
 
 // NotifyGoal records that one OR MORE goals were added in a single set_goals call —
 // by the human via the main agent — then wakes the planner, so the next round spells
-// out "人新增了 N 个目标：…" instead of the planner having to spot new open goals in
-// the overview. One call → one trigger event (set_goals 的一次批量算一条，不逐条刷屏).
+// out "the human added N goals: ..." instead of the planner having to spot new open goals in
+// the overview. One call -> one trigger event (a batched set_goals counts once, no per-item spam).
 // The event survives an early-returning terminal round (drain happens after the gate),
 // so a set_goals that revives a done task still surfaces it once the task is running.
 func (t *Task) NotifyGoal(texts []string) {
@@ -1810,7 +1816,7 @@ func (t *Task) NotifyGoal(texts []string) {
 
 // NotifyHint records that one OR MORE hints were added in a single add_hint call —
 // by the human via the main agent, or by cross-task orchestration — then wakes the
-// planner, so the next round is told "人新增了 N 条战略提示：…" and looks at them
+// planner, so the next round is told "the human added N hints: ..." and looks at them
 // directly instead of having to spot the new hint folded into the graph overview.
 // One call → one trigger event (a batched add_hint counts as one, not one per hint).
 func (t *Task) NotifyHint(texts []string) {
@@ -1823,7 +1829,7 @@ func (t *Task) NotifyHint(texts []string) {
 	t.Notify()
 }
 
-// NotifyGoalDeleted records that the human deleted a goal (via 总览的目标管理), then
+// NotifyGoalDeleted records that the human deleted a goal (via the overview goal management), then
 // wakes the planner so the next round spells out which goal was removed. The event
 // survives an early-returning terminal round (drain happens after the gate).
 func (t *Task) NotifyGoalDeleted(text string) {
@@ -1837,7 +1843,7 @@ func (t *Task) NotifyGoalDeleted(text string) {
 	t.Notify()
 }
 
-// NotifyGoalEdited records that the human edited a goal (via 总览的目标管理), then wakes
+// NotifyGoalEdited records that the human edited a goal (via the overview goal management), then wakes
 // the planner so the next round spells out the old→new change. The event survives an
 // early-returning terminal round (drain happens after the gate).
 func (t *Task) NotifyGoalEdited(oldText, newText string) {
@@ -1851,7 +1857,7 @@ func (t *Task) NotifyGoalEdited(oldText, newText string) {
 	t.Notify()
 }
 
-// NotifyCancelled records that the human deleted intentID (reason = 删除原因), then
+// NotifyCancelled records that the human deleted intentID (reason = the deletion reason), then
 // wakes the planner so the next round spells out which intent was removed and why.
 // summary is the intent's text captured before deletion — needed for hard delete,
 // where the node is gone by the time the planner reads the trigger. Applies to both

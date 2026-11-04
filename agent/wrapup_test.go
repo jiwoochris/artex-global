@@ -6,24 +6,25 @@ import (
 	"unicode"
 )
 
-// A2: wrap-up / settlement 프롬프트 한국어화.
+// A2: language of the wrap-up / settlement prompts.
 //
-// 이 상수들은 run 또는 task 가 단계/시간 예산에 걸려 종료될 때 settlement 단계에서
-// 주입되어, 사용자에게 그대로 노출되는 최종 요약을 직접 지시한다. 따라서 (1) 한국어로
-// 작성되어야 하고, (2) 중국어(CJK 한자) 잔재가 없어야 하며, (3) 도구 이름과
-// "한 문장 순수 텍스트" 같은 지시 의미가 보존되어야 한다.
+// These constants are injected by the settlement phase when a run or task is terminated
+// because it hits the step/time budget, and they directly dictate the final summary
+// shown to the user as-is. They must therefore (1) be the English source text — each one
+// pinned by its opening sentence — (2) carry no stale Korean or Chinese translation, and
+// (3) preserve instruction meanings such as "one plain-text sentence" along with the tool names.
 //
-// DB 시드는 wrapup_prompt / task_timeout_wrapup_prompt 를 빈 문자열로 두고(db/db.go 의
-// builtin 에이전트 INSERT 는 이 컬럼을 채우지 않는다), 비어 있으면 이 상수로 떨어진다.
-// 즉 이 상수들이 wrap-up 문구의 유일한 원천이다.
-func TestWrapupPromptsLocalizedToKorean(t *testing.T) {
-	all := map[string]string{
-		"settleWrapUpPrompt":        settleWrapUpPrompt,
-		"plannerWrapUpDefault":      plannerWrapUpDefault,
-		"mainAgentWrapUpDefault":    mainAgentWrapUpDefault,
-		"genericWrapUpDefault":      genericWrapUpDefault,
-		"workerTaskTimeoutDefault":  workerTaskTimeoutDefault,
-		"plannerTaskTimeoutDefault": plannerTaskTimeoutDefault,
+// The DB seed leaves wrapup_prompt / task_timeout_wrapup_prompt as empty strings (db/db.go's
+// builtin agent INSERT does not fill these columns); when they are empty it falls back to these constants.
+// In other words, these constants are the only source of the wrap-up text.
+func TestWrapupPromptsAreEnglish(t *testing.T) {
+	all := map[string]struct{ prompt, opensWith string }{
+		"settleWrapUpPrompt":        {settleWrapUpPrompt, "This run is about to end because its budget is exhausted."},
+		"plannerWrapUpDefault":      {plannerWrapUpDefault, "This planning round's step budget is about to run out."},
+		"mainAgentWrapUpDefault":    {mainAgentWrapUpDefault, "The step budget is about to run out and this interaction is ending."},
+		"genericWrapUpDefault":      {genericWrapUpDefault, "This will end soon because the budget is exhausted."},
+		"workerTaskTimeoutDefault":  {workerTaskTimeoutDefault, "**The whole task has reached its time limit and will end soon**"},
+		"plannerTaskTimeoutDefault": {plannerTaskTimeoutDefault, "**The whole task has reached its time limit and will end soon**"},
 	}
 
 	hasScript := func(s string, table *unicode.RangeTable) bool {
@@ -35,68 +36,68 @@ func TestWrapupPromptsLocalizedToKorean(t *testing.T) {
 		return false
 	}
 
-	for name, p := range all {
-		if !hasScript(p, unicode.Hangul) {
-			t.Errorf("%s: 한글이 전혀 없어 한국어화되지 않았다", name)
+	for name, c := range all {
+		if !strings.HasPrefix(c.prompt, c.opensWith) {
+			t.Errorf("%s: the prompt no longer opens with %q: %q", name, c.opensWith, c.prompt)
 		}
-		// 도구 이름은 ASCII, 한글은 Hangul 블록이라 번역이 끝났다면 CJK 한자가 하나도 없어야 한다.
-		if hasScript(p, unicode.Han) {
-			t.Errorf("%s: CJK 한자 잔재가 남아 번역이 미완이다: %q", name, p)
+		// Tool names are ASCII, so any Hangul or Han character left in the prompt is a stale translation.
+		if hasScript(c.prompt, unicode.Hangul) || hasScript(c.prompt, unicode.Han) {
+			t.Errorf("%s: a Korean or Chinese translation leaked back in: %q", name, c.prompt)
 		}
 	}
 
-	// 도구 이름은 식별자이므로 번역하지 않고 그대로 보존되어야 한다.
-	// worker 계열(per-run·task-timeout)은 record_fact 로 결론을, report_finding 으로
-	// 취약점을 쓰고, 마지막에 한 문장 순수 텍스트로 요약하라는 지시를 유지한다.
+	// Tool names are identifiers, so they must be preserved as-is and not translated.
+	// The worker family (per-run / task-timeout) writes conclusions with record_fact and vulnerabilities with
+	// report_finding, and keeps the instruction to summarize in one plain-text sentence at the end.
 	mustContain := func(name, p string, subs ...string) {
 		for _, s := range subs {
 			if !strings.Contains(p, s) {
-				t.Errorf("%s: 지시 의미 %q 가 보존되어야 하는데 없다", name, s)
+				t.Errorf("%s: the instruction meaning %q must be preserved but is missing", name, s)
 			}
 		}
 	}
 	mustContain("settleWrapUpPrompt", settleWrapUpPrompt,
-		"insert_assets", "record_fact", "report_finding", "한 문장", "순수 텍스트")
+		"insert_assets", "record_fact", "report_finding", "one plain-text sentence", "plain-text")
 	mustContain("workerTaskTimeoutDefault", workerTaskTimeoutDefault,
-		"insert_assets", "record_fact", "report_finding", "한 문장", "순수 텍스트")
-	mustContain("genericWrapUpDefault", genericWrapUpDefault, "한 문장", "순수 텍스트")
-	mustContain("mainAgentWrapUpDefault", mainAgentWrapUpDefault, "한 문장", "순수 텍스트")
-	// planner 는 요약 문장을 내지 않고(판정만 하고 종료) 의도·목표·할일 도구를 유지한다.
+		"insert_assets", "record_fact", "report_finding", "one plain-text sentence", "plain-text")
+	mustContain("genericWrapUpDefault", genericWrapUpDefault, "one plain-text sentence", "plain-text")
+	mustContain("mainAgentWrapUpDefault", mainAgentWrapUpDefault, "one plain-text sentence", "plain-text")
+	// The planner emits no summary sentence (it only judges and ends) and keeps the intent/goal/todo tools.
 	mustContain("plannerWrapUpDefault", plannerWrapUpDefault, "add_intent", "prove_goal", "TodoWrite")
 	mustContain("plannerTaskTimeoutDefault", plannerTaskTimeoutDefault, "prove_goal")
 }
 
-// per-run 과 task-timeout 은 의미가 달라야 한다(특히 planner): per-run 은 "이번 라운드만
-// 끝난다"이고 task-timeout 은 "작업 전체가 끝난다"이다. 상수 매핑이 바뀌어 섞이면 안 된다.
+// per-run and task-timeout must mean different things (especially for the planner): per-run says "only this round
+// ends", while task-timeout says "the whole task ends". The constant mapping must not change or get mixed up.
 func TestWrapupDefaultsRouting(t *testing.T) {
 	if WrapupDefault("worker") != settleWrapUpPrompt {
-		t.Error("worker per-run 기본값이 settleWrapUpPrompt 가 아니다")
+		t.Error("worker per-run default is not settleWrapUpPrompt")
 	}
 	if WrapupDefault("planner") != plannerWrapUpDefault {
-		t.Error("planner per-run 기본값이 plannerWrapUpDefault 가 아니다")
+		t.Error("planner per-run default is not plannerWrapUpDefault")
 	}
 	if WrapupDefault("mainagent") != mainAgentWrapUpDefault {
-		t.Error("mainagent per-run 기본값이 mainAgentWrapUpDefault 가 아니다")
+		t.Error("mainagent per-run default is not mainAgentWrapUpDefault")
 	}
-	// 미등록 키(커스텀 에이전트)는 generic 으로 떨어진다.
+	// Unregistered keys (custom agents) fall back to generic.
 	if WrapupDefault("unknown-agent") != genericWrapUpDefault {
-		t.Error("미등록 키가 genericWrapUpDefault 로 떨어지지 않는다")
+		t.Error("unregistered key does not fall back to genericWrapUpDefault")
 	}
-	// task-timeout 은 worker/planner 에만 있고, 그 외는 빈 문자열(호출부가 per-run 으로 회귀).
+	// task-timeout exists only for worker/planner; anything else gets an empty string (the caller falls back to per-run).
 	if TaskTimeoutWrapupDefault("worker") != workerTaskTimeoutDefault {
-		t.Error("worker task-timeout 기본값이 workerTaskTimeoutDefault 가 아니다")
+		t.Error("worker task-timeout default is not workerTaskTimeoutDefault")
 	}
 	if TaskTimeoutWrapupDefault("planner") != plannerTaskTimeoutDefault {
-		t.Error("planner task-timeout 기본값이 plannerTaskTimeoutDefault 가 아니다")
+		t.Error("planner task-timeout default is not plannerTaskTimeoutDefault")
 	}
 	if TaskTimeoutWrapupDefault("mainagent") != "" {
-		t.Error("mainagent 은 task-timeout 문구가 없어야 한다(빈 문자열)")
+		t.Error("mainagent must have no task-timeout wording (empty string)")
 	}
-	// per-run 과 task-timeout 문구가 동일하면 의미 구분이 사라진 것이다.
+	// Identical per-run and task-timeout wording would erase the distinction.
 	if workerTaskTimeoutDefault == settleWrapUpPrompt {
-		t.Error("worker 의 per-run 과 task-timeout 문구가 동일하다")
+		t.Error("worker per-run and task-timeout wording are identical")
 	}
 	if plannerTaskTimeoutDefault == plannerWrapUpDefault {
-		t.Error("planner 의 per-run 과 task-timeout 문구가 동일하다")
+		t.Error("planner per-run and task-timeout wording are identical")
 	}
 }

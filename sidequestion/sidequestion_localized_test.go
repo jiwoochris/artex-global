@@ -3,47 +3,55 @@ package sidequestion
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"unicode"
 )
 
-// assertKorean fails if msg is empty, carries a CJK Han ideograph (= leftover
-// untranslated Chinese), or has no Hangul at all. ASCII field names and the
-// "1–4000"-style ranges are fine; only Han marks an unlocalized string.
-func assertKorean(t *testing.T, label, msg string) {
+// wantEnglish asserts that a user-visible literal is exactly its English source text.
+func wantEnglish(t *testing.T, label, got, want string) {
 	t.Helper()
-	if msg == "" {
-		t.Fatalf("%s: 빈 메시지", label)
-	}
-	hangul := false
-	for _, r := range msg {
-		if unicode.Is(unicode.Han, r) {
-			t.Fatalf("%s: 중국어 한자가 남아 있습니다: %q", label, msg)
-		}
-		if unicode.Is(unicode.Hangul, r) {
-			hangul = true
-		}
-	}
-	if !hangul {
-		t.Fatalf("%s: 한글이 없습니다: %q", label, msg)
+	if got != want {
+		t.Errorf("%s: want %q, got %q", label, want, got)
 	}
 }
 
+// hasUnsupportedScript reports leftover Han (Chinese) or Hangul (Korean) characters. Only
+// English and Spanish are supported, so either one means a stale translation came back.
+func hasUnsupportedScript(s string) bool {
+	for _, r := range s {
+		if unicode.Is(unicode.Han, r) || unicode.Is(unicode.Hangul, r) {
+			return true
+		}
+	}
+	return false
+}
+
 // TestSideQuestionOutputsLocalized guards F21: every user-facing side-question
-// (곁질문) error and answer-text literal produced by this package must be Korean.
-// These surface through /api/.../side-questions into the chat 곁질문 panel, so a
-// revert to Chinese here is a user-visible regression and must fail the build.
+// (side question) error and answer-text literal produced by this package must be its exact
+// English source text. These surface through /api/.../side-questions into the chat
+// side-question panel, so any other wording is a user-visible regression and must fail the build.
 func TestSideQuestionOutputsLocalized(t *testing.T) {
-	assertKorean(t, "ErrContextBudget", ErrContextBudget.Error())
-	assertKorean(t, "errSideModelInterrupted", errSideModelInterrupted.Error())
-	assertKorean(t, "errSideNoAnswer", errSideNoAnswer.Error())
-	assertKorean(t, "msgSideToolUnavailable", msgSideToolUnavailable)
-	assertKorean(t, "errSideSummaryCallCap", errSideSummaryCallCap.Error())
-	assertKorean(t, "sideSummaryFailedPrefix", sideSummaryFailedPrefix)
-	assertKorean(t, "errSideSummaryIncomplete", errSideSummaryIncomplete.Error())
-	assertKorean(t, "errSideSummaryOverBudget", errSideSummaryOverBudget.Error())
-	assertKorean(t, "errSideHistoryCursor", errSideHistoryCursor.Error())
-	assertKorean(t, "errSideCompactionStalled", errSideCompactionStalled.Error())
+	wantEnglish(t, "ErrContextBudget", ErrContextBudget.Error(),
+		"The side-question context still exceeds the model budget after compaction. Narrow the question or adjust the model context settings.")
+	wantEnglish(t, "errSideModelInterrupted", errSideModelInterrupted.Error(),
+		"The model response was interrupted. Please ask again.")
+	wantEnglish(t, "errSideNoAnswer", errSideNoAnswer.Error(),
+		"The model returned no answer.")
+	wantEnglish(t, "msgSideToolUnavailable", msgSideToolUnavailable,
+		"Tools cannot be run in a side question. Send the work request in the main conversation.")
+	wantEnglish(t, "errSideSummaryCallCap", errSideSummaryCallCap.Error(),
+		"Side-question context pruning reached its per-request limit. Narrow the question and try again.")
+	wantEnglish(t, "sideSummaryFailedPrefix", sideSummaryFailedPrefix,
+		"The side-question summary failed")
+	wantEnglish(t, "errSideSummaryIncomplete", errSideSummaryIncomplete.Error(),
+		"The side-question summary was not fully generated. Please try again.")
+	wantEnglish(t, "errSideSummaryOverBudget", errSideSummaryOverBudget.Error(),
+		"The side-question summary did not shrink within budget. Please try again.")
+	wantEnglish(t, "errSideHistoryCursor", errSideHistoryCursor.Error(),
+		"The side-question history cursor is invalid.")
+	wantEnglish(t, "errSideCompactionStalled", errSideCompactionStalled.Error(),
+		"Side-question compaction could not shrink the context any further, so the retry was stopped.")
 }
 
 // TestSideQuestionBudgetSentinelPreserved: localizing the message must not break
@@ -51,28 +59,24 @@ func TestSideQuestionOutputsLocalized(t *testing.T) {
 // context_test.go, which relies on it after the recovery path gives up).
 func TestSideQuestionBudgetSentinelPreserved(t *testing.T) {
 	if !errors.Is(fmt.Errorf("prepare: %w", ErrContextBudget), ErrContextBudget) {
-		t.Fatal("ErrContextBudget 센티넬 식별(errors.Is)이 깨졌습니다")
+		t.Fatal("ErrContextBudget sentinel identification (errors.Is) is broken")
 	}
 }
 
-// TestSideQuestionBrainPreserved: the agent-brain prompts (the answering
-// instruction and the summary instruction) must stay in their benchmarked
-// Chinese. BRIEF 현지화 방침은 두뇌 본문을 번역하지 말고 출력 언어만 한국어로
-// 강제하라는 것이라, 이 두 프롬프트가 한국어로 바뀌면 벤치마크 동작이 드리프트한다.
+// TestSideQuestionBrainPreserved: the agent-brain prompts (the answering instruction and the
+// summarizer instruction) are English by decision. They are model input, not UI text, so pinning
+// their opening sentence keeps a silent rewrite — or a revert to another language — from drifting
+// the benchmark unnoticed.
 func TestSideQuestionBrainPreserved(t *testing.T) {
-	for _, c := range []struct{ label, text string }{
-		{"instruction", instruction},
-		{"summaryInstruction", summaryInstruction},
+	for _, c := range []struct{ label, text, opensWith string }{
+		{"instruction", instruction, "This is a standalone side question."},
+		{"summaryInstruction", summaryInstruction, "You only produce a short summary for the standalone side question chat:"},
 	} {
-		han := false
-		for _, r := range c.text {
-			if unicode.Is(unicode.Han, r) {
-				han = true
-				break
-			}
+		if !strings.HasPrefix(c.text, c.opensWith) {
+			t.Errorf("%s: the prompt no longer opens with %q: %q", c.label, c.opensWith, c.text)
 		}
-		if !han {
-			t.Errorf("%s: 두뇌 프롬프트가 더 이상 중국어가 아닙니다(벤치마크 드리프트 위험)", c.label)
+		if hasUnsupportedScript(c.text) {
+			t.Errorf("%s: the prompt is no longer English (Hangul or Han characters remain): %q", c.label, c.text)
 		}
 	}
 }

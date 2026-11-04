@@ -63,7 +63,7 @@ func TestTaskTemplateHTTPCRUD(t *testing.T) {
 		t.Fatalf("patch status=%d body=%v", code, updated)
 	}
 	code, _ = do(http.MethodPatch, fmt.Sprintf("/api/task-templates/%d", id), map[string]any{
-		"goal": strings.Repeat("界", db.MaxTaskTemplateTextRunes+1),
+		"goal": strings.Repeat("a", db.MaxTaskTemplateTextRunes+1),
 	})
 	if code != http.StatusBadRequest {
 		t.Fatalf("overlong patch status=%d, want %d", code, http.StatusBadRequest)
@@ -121,6 +121,7 @@ func TestConversationPatchReturnsPinState(t *testing.T) {
 		t.Fatalf("unexpected conversation patch response: %+v", updated)
 	}
 
+	// 会 is a 3-byte rune, so the over-limit title proves the cap counts characters, not bytes.
 	body, _ = json.Marshal(map[string]any{"title": strings.Repeat("会", maxConversationTitleRunes+1)})
 	req = httptest.NewRequest(http.MethodPatch, fmt.Sprintf("/api/conversations/%d", conversation.ID), bytes.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -140,6 +141,7 @@ func TestConversationPatchReturnsPinState(t *testing.T) {
 	}
 
 	body, _ = json.Marshal(map[string]any{
+		// 会 is a 3-byte rune, so the over-limit title proves the cap counts characters, not bytes.
 		"agent_key": "mainagent", "title": strings.Repeat("会", maxConversationTitleRunes+1),
 	})
 	req = httptest.NewRequest(http.MethodPost, "/api/conversations", bytes.NewReader(body))

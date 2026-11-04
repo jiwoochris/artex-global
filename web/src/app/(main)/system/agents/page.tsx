@@ -74,7 +74,7 @@ function AgentGridCard({ agent, onOpen, onDeleted }: { agent: Agent; onOpen: () 
             </Badge>
           )}
         </div>
-        {/* labels.description 은 string 을 돌려주므로(빈 설명은 "") || 로 폴백 문구를 붙인다. */}
+        {/* labels.description returns a string (empty description is ""), so || appends the fallback text. */}
         <p className="text-muted-foreground line-clamp-2 min-h-8 text-xs">
           {labels.description(agent) || t("noDescription")}
         </p>

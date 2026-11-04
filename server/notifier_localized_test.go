@@ -12,27 +12,37 @@ import (
 
 // TestNotifierDeliveryReasonsLocalized guards F17: every delivery failure/defer
 // reason that notifier.go writes into notification_deliveries.last_error — which
-// notify_api.go echoes back to the "전달 기록" table in delivery-list.tsx — must be
-// Korean (Hangul present, no Chinese Han). Diagnostic log.Printf lines stay in the
-// original language (Z2) and are intentionally not covered here.
+// notify_api.go echoes back to the "delivery log" table in delivery-list.tsx — must be
+// the exact English source message. Diagnostic log.Printf lines stay in the original
+// language (Z2) and are intentionally not covered here.
 func TestNotifierDeliveryReasonsLocalized(t *testing.T) {
-	// Format every constant with ASCII arguments so any leftover Han ideograph is
-	// the constant's own, not injected by the test data.
+	// Every constant is formatted with the same ASCII arguments the runtime uses, and
+	// the expected English template is written out here rather than read back from the
+	// constant, so a reworded or re-localized literal fails.
 	cases := []struct {
-		label string
-		msg   string
+		label       string
+		msg         string
+		wantEnglish string
 	}{
-		{"channelKindUnregistered", fmt.Sprintf(errDeliveryChannelKindUnregistered, "webhook")},
-		{"snapshotUnrenderable", errDeliverySnapshotUnrenderable},
-		{"channelLengthCapped", fmt.Sprintf(errDeliveryChannelLengthCapped, 3)},
-		{"noDeliveredCount", fmt.Sprintf(errDeliveryNoDeliveredCount, 0)},
-		{"retryExhausted", fmt.Sprintf(errDeliveryRetryExhausted, db.MaxNotifyAttempts, errors.New("boom"))},
-		{"snapshotEmpty", fmt.Sprintf(errDeliverySnapshotEmpty, 7)},
-		{"snapshotParse", fmt.Errorf(errDeliverySnapshotParse, 9, errors.New("unexpected end of JSON input")).Error()},
-		{"batchAllUnparseable", fmt.Sprintf(errDeliveryBatchAllUnparseable, 2)},
+		{"channelKindUnregistered", fmt.Sprintf(errDeliveryChannelKindUnregistered, "webhook"),
+			`Unregistered channel type: "webhook"`},
+		{"snapshotUnrenderable", errDeliverySnapshotUnrenderable,
+			"Could not parse the event snapshot, so this vulnerability could not be turned into a message"},
+		{"channelLengthCapped", fmt.Sprintf(errDeliveryChannelLengthCapped, 3),
+			"This message reached the channel length limit, so only the first 3 were sent and the rest are deferred to the next batch"},
+		{"noDeliveredCount", fmt.Sprintf(errDeliveryNoDeliveredCount, 0),
+			"The channel did not report the number of messages sent (delivered=0)"},
+		{"retryExhausted", fmt.Sprintf(errDeliveryRetryExhausted, db.MaxNotifyAttempts, errors.New("boom")),
+			fmt.Sprintf("Still failed after %d retries: boom", db.MaxNotifyAttempts)},
+		{"snapshotEmpty", fmt.Sprintf(errDeliverySnapshotEmpty, 7),
+			"The event snapshot for delivery item #7 is empty"},
+		{"snapshotParse", fmt.Errorf(errDeliverySnapshotParse, 9, errors.New("unexpected end of JSON input")).Error(),
+			"Failed to parse the event snapshot of delivery item #9: unexpected end of JSON input"},
+		{"batchAllUnparseable", fmt.Sprintf(errDeliveryBatchAllUnparseable, 2),
+			"Failed to parse all 2 deliveries in the summary batch"},
 	}
 	for _, c := range cases {
-		assertKoreanError(t, c.label, c.msg)
+		assertEnglishMessage(t, c.label, c.msg, c.wantEnglish)
 	}
 }
 
@@ -42,18 +52,20 @@ func TestNotifierDeliveryReasonsLocalized(t *testing.T) {
 func TestNotifierParseSnapshotErrorsLocalized(t *testing.T) {
 	// Empty snapshot.
 	if _, err := parseSnapshot(&db.NotificationDelivery{ID: 7}); err == nil {
-		t.Fatal("빈 스냅샷이 오류 없이 통과해서는 안 됩니다")
+		t.Fatal("an empty snapshot must not pass without an error")
 	} else {
-		assertKoreanError(t, "parseSnapshot.empty", err.Error())
+		assertEnglishMessage(t, "parseSnapshot.empty", err.Error(), "The event snapshot for delivery item #7 is empty")
 		if !strings.Contains(err.Error(), "7") {
-			t.Fatalf("parseSnapshot.empty: 전달 항목 ID 7 이 메시지에 없습니다: %q", err.Error())
+			t.Fatalf("parseSnapshot.empty: delivery entry ID 7 is not in the message: %q", err.Error())
 		}
 	}
 	// Malformed JSON snapshot.
 	if _, err := parseSnapshot(&db.NotificationDelivery{ID: 9, Snapshot: []byte("{bad")}); err == nil {
-		t.Fatal("깨진 JSON 스냅샷이 오류 없이 통과해서는 안 됩니다")
+		t.Fatal("a broken JSON snapshot must not pass without an error")
 	} else {
-		assertKoreanError(t, "parseSnapshot.malformed", err.Error())
+		// The wrapped json decoder detail varies by Go version, so only the source prefix is pinned.
+		assertEnglishPrefix(t, "parseSnapshot.malformed", err.Error(),
+			"Failed to parse the event snapshot of delivery item #9: ")
 	}
 }
 
@@ -65,8 +77,9 @@ func TestNotifierRenderBatchAllUnparseableLocalized(t *testing.T) {
 	n := &Notifier{}
 	deliveries := []*db.NotificationDelivery{{ID: 1}, {ID: 2}}
 	if _, _, err := n.renderBatch(context.Background(), deliveries, "", 30); err == nil {
-		t.Fatal("모든 스냅샷이 해석 불가일 때 오류가 나와야 합니다")
+		t.Fatal("an error must be returned when every snapshot is unparseable")
 	} else {
-		assertKoreanError(t, "renderBatch.allUnparseable", err.Error())
+		assertEnglishMessage(t, "renderBatch.allUnparseable", err.Error(),
+			"Failed to parse all 2 deliveries in the summary batch")
 	}
 }

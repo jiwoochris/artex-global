@@ -178,7 +178,7 @@ func TestDeepenFindingCreatesAuditedIntentAndRevivesTask(t *testing.T) {
 	s := &Server{m: m, engine: NewEngine(m), ctx: ctx}
 	live, unsubscribe := s.engine.Broadcaster().Subscribe(task.ID)
 	defer unsubscribe()
-	body := bytes.NewBufferString(`{"description":"验证完整利用链并保留可复现证据"}`)
+	body := bytes.NewBufferString(`{"description":"verify the full exploit chain and keep reproducible evidence"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/exploration/findings/1/deepen", body)
 	req.SetPathValue("id", strconv.FormatInt(findingID, 10))
 	rec := httptest.NewRecorder()

@@ -42,31 +42,32 @@ const (
 	setupTokenLen    = 32
 )
 
-// 인증 엔드포인트가 HTTP 응답으로 돌려주는 사용자 노출 문구다. 한국어 UI 에서 로그인·
-// 비밀번호 설정이 실패하면 이 문구가 그대로 토스트로 뜨므로 한국어로 둔다. 자격 증명
-// 오류 문구는 로그인 화면(web messages auth.login.errorCredential)과 표기를 맞췄다.
-// token 은 기술 용어라 원문 그대로 둔다(로그·주석은 BRIEF 방침상 최하위라 손대지 않음).
+// User-facing copy that the auth endpoints return over HTTP. A failed login or
+// password setup surfaces this text verbatim as a toast, and the credential error
+// wording matches the login screen (web messages auth.login.errorCredential).
+// "token" is a technical term and stays as-is.
 const (
-	authErrUnauthorized         = "인증이 필요합니다"
-	authErrTokenInvalid         = "token 이 유효하지 않거나 만료되었습니다"
-	authErrPasswordAlreadySet   = "비밀번호가 이미 설정되어 있습니다"
-	authErrPasswordEmpty        = "비밀번호를 입력해 주세요"
-	authErrPasswordTooShort     = "비밀번호는 최소 8자 이상이어야 합니다"
-	authErrPasswordTooLong      = "비밀번호는 72바이트를 넘을 수 없습니다"
-	authErrNewPasswordEmpty     = "새 비밀번호를 입력해 주세요"
-	authErrPasswordHash         = "비밀번호 암호화에 실패했습니다"
-	authErrSaveFailedPrefix     = "저장에 실패했습니다: "
-	authErrTokenGen             = "token 생성에 실패했습니다"
-	authErrBadRequest           = "요청 형식이 올바르지 않습니다"
-	authErrPasswordNotInit      = "비밀번호가 초기화되지 않았습니다. 먼저 비밀번호를 설정해 주세요"
-	authErrCurrentPasswordWrong = "현재 비밀번호가 올바르지 않습니다"
-	authErrBadCredential        = "사용자 이름 또는 비밀번호가 올바르지 않습니다"
-	authErrSetupTokenInvalid    = "설정 토큰이 올바르지 않습니다. 서버 콘솔 로그의 [auth] 줄에 출력된 설정 토큰을 입력해 주세요"
-	authErrTooManyAttempts      = "실패한 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요"
-	// 비밀번호 관련 읽기가 실패했을 때 돌려주는 공통 문구다. 이 핸들러들은 "읽지 못함"을
-	// "설정되지 않음"으로 취급하면 안 된다: 그렇게 취급하면 데이터베이스 장애 중에 초기화
-	// 입구가 열려, 인증되지 않은 요청이 이미 설정된 관리자 비밀번호를 덮어쓸 수 있다.
-	authErrDataSourceUnavailable = "데이터 소스를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요"
+	authErrUnauthorized         = "Authentication is required"
+	authErrTokenInvalid         = "The token is invalid or has expired"
+	authErrPasswordAlreadySet   = "A password has already been set"
+	authErrPasswordEmpty        = "Enter a password"
+	authErrPasswordTooShort     = "The password must be at least 8 characters"
+	authErrPasswordTooLong      = "The password must not exceed 72 bytes"
+	authErrNewPasswordEmpty     = "Enter a new password"
+	authErrPasswordHash         = "Failed to encrypt the password"
+	authErrSaveFailedPrefix     = "Failed to save: "
+	authErrTokenGen             = "Failed to generate a token"
+	authErrBadRequest           = "The request format is invalid"
+	authErrPasswordNotInit      = "The password has not been initialized. Set a password first"
+	authErrCurrentPasswordWrong = "The current password is incorrect"
+	authErrBadCredential        = "Incorrect username or password"
+	authErrSetupTokenInvalid    = "The setup token is incorrect. Enter the setup token printed on the [auth] line of the server console log"
+	authErrTooManyAttempts      = "Too many failed attempts. Try again later"
+	// Shared message for a failed password read. These handlers must not treat "could
+	// not read" as "not set": that would open the initialisation door during a
+	// database outage, letting an unauthenticated request overwrite an admin
+	// password that is already configured.
+	authErrDataSourceUnavailable = "The data source is temporarily unavailable. Try again shortly"
 )
 
 // loadOrCreateJWTKey reads the 32-byte signing key from keyDir/jwt.key. keyDir is
@@ -84,7 +85,7 @@ func loadOrCreateJWTKey(keyDir, dataDir string) ([]byte, error) {
 			if data, rerr := os.ReadFile(legacy); rerr == nil {
 				if werr := os.WriteFile(path, data, 0o600); werr == nil {
 					_ = os.Remove(legacy)
-					log.Printf(logT("[auth] JWT 키를 %s 에서 %s 로 이전(탐색 가능한 워크스페이스 밖으로 이동)"), legacy, path)
+					log.Printf(logT("[auth] moved JWT key from %s to %s (out of the discoverable workspace)"), legacy, path)
 				}
 			}
 		}
@@ -99,7 +100,7 @@ func loadOrCreateJWTKey(keyDir, dataDir string) ([]byte, error) {
 	if err := os.WriteFile(path, []byte(key), 0600); err != nil {
 		return nil, fmt.Errorf("write jwt key: %w", err)
 	}
-	log.Printf(logT("[auth] 새 JWT 키를 %s 에 기록"), path)
+	log.Printf(logT("[auth] wrote new JWT key to %s"), path)
 	return []byte(key), nil
 }
 
@@ -239,7 +240,7 @@ func (s *Server) bootstrapAuth() {
 	if err != nil {
 		// Unknown whether a password exists: neither initialise from the env var
 		// nor issue a setup token now. authStatus re-reads on every request.
-		log.Printf(logT("[auth] 비밀번호 상태를 읽지 못해 첫 실행 초기화를 건너뜁니다: %v"), err)
+		log.Printf(logT("[auth] could not read the password state; skipping first-run initialisation: %v"), err)
 		return
 	}
 	if hash != "" {
@@ -247,22 +248,22 @@ func (s *Server) bootstrapAuth() {
 	}
 	if pw := os.Getenv(adminPasswordEnv); pw != "" {
 		if utf8.RuneCountInString(pw) < minPasswordLen {
-			log.Printf(logT("[auth] %s 가 %d자 미만이라 무시합니다. 설정 토큰 방식으로 초기화하세요"), adminPasswordEnv, minPasswordLen)
+			log.Printf(logT("[auth] ignoring %s because it is shorter than %d characters; initialise with the setup token instead"), adminPasswordEnv, minPasswordLen)
 		} else if len(pw) > maxPasswordBytes {
-			log.Printf(logT("[auth] %s 가 %d바이트를 넘어 무시합니다. 설정 토큰 방식으로 초기화하세요"), adminPasswordEnv, maxPasswordBytes)
+			log.Printf(logT("[auth] ignoring %s because it exceeds %d bytes; initialise with the setup token instead"), adminPasswordEnv, maxPasswordBytes)
 		} else if h, err := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost); err != nil {
-			log.Printf(logT("[auth] %s 해시 생성 실패: %v"), adminPasswordEnv, err)
+			log.Printf(logT("[auth] failed to hash %s: %v"), adminPasswordEnv, err)
 		} else if inserted, err := s.m.pg.InsertSettingIfAbsent(authPassKey, string(h)); err != nil {
 			// Same first-set-only guarantee as authInit: an upsert here would let a
 			// second instance starting with a different value overwrite the password.
-			log.Printf(logT("[auth] %s 저장 실패: %v"), adminPasswordEnv, err)
+			log.Printf(logT("[auth] failed to store %s: %v"), adminPasswordEnv, err)
 		} else if !inserted {
 			// Another instance set the password between our read and this write.
 			_, _ = s.reloadPassHash()
 			return
 		} else {
 			s.setPassHash(string(h))
-			log.Printf(logT("[auth] 환경 변수 %s 로 관리자 비밀번호를 초기화했습니다(사용자 이름 ARTEX)"), adminPasswordEnv)
+			log.Printf(logT("[auth] initialised the admin password from environment variable %s (username ARTEX)"), adminPasswordEnv)
 			return
 		}
 	}
@@ -280,17 +281,20 @@ func (s *Server) currentSetupToken() string {
 	}
 	if v := strings.TrimSpace(os.Getenv(setupTokenEnv)); v != "" {
 		s.setupToken = v
-		log.Printf(logT("[auth] 관리자 비밀번호가 아직 설정되지 않았습니다. 설정 토큰은 환경 변수 %s 값입니다(로그에 출력하지 않음)"), setupTokenEnv)
+		log.Printf(logT("[auth] the admin password has not been set yet. The setup token is the value of environment variable %s (not printed to the log)"), setupTokenEnv)
 		return s.setupToken
 	}
 	tok, err := randomToken(setupTokenLen)
 	if err != nil {
-		log.Printf(logT("[auth] 설정 토큰 생성 실패: %v"), err)
+		log.Printf(logT("[auth] failed to generate the setup token: %v"), err)
 		return ""
 	}
 	s.setupToken = tok
-	log.Printf(logT("[auth] 관리자 비밀번호가 아직 설정되지 않았습니다. 설정 토큰: %s"), tok)
-	log.Print(logT("[auth] 첫 화면(/setup)의 \"설정 토큰\" 칸에 위 값을 입력하거나 POST /api/auth/init 본문의 setup_token 으로 보내십시오. 이 토큰은 네트워크로 전달되지 않으며 이 콘솔 로그에서만 확인할 수 있습니다"))
+	// Registered with the log sink before it is printed: the console line keeps the
+	// token, while the copies served by /api/logs (ring, SSE, server_logs) are redacted.
+	logSink.addSecret(tok)
+	log.Printf(logT("[auth] the admin password has not been set yet. Setup token: %s"), tok)
+	log.Print(logT("[auth] enter the value above in the \"Setup token\" field on the first screen (/setup), or send it as setup_token in the POST /api/auth/init body. This token is never sent over the network and is only visible in this console log"))
 	return s.setupToken
 }
 
@@ -437,11 +441,15 @@ func (s *Server) WarnIfExposed(addr string) {
 	if h, err := s.cachedPassHash(); err != nil || h != "" {
 		return
 	}
-	log.Printf(logT("[auth] 경고: 관리자 비밀번호가 아직 설정되지 않았는데 서버가 %q 에 바인딩되어 다른 호스트에서도 접속할 수 있습니다. 설정 토큰 없이는 초기화할 수 없지만, 초기 설정을 마칠 때까지 이 포트를 외부 네트워크에 노출하지 마십시오(기본값 127.0.0.1:8787)"), addr)
+	log.Printf(logT("[auth] warning: the admin password has not been set yet and the server is bound to %q, so other hosts can connect. Initialisation still requires the setup token, but do not expose this port to external networks until initial setup is complete (default 127.0.0.1:8787)"), addr)
 }
 
-// extractToken reads the JWT from Authorization: Bearer header,
-// artex_token cookie, or ?token= query param (for SSE connections).
+// extractToken reads the JWT from the Authorization: Bearer header, the
+// artex_token cookie, or — only on the SSE routes — the ?token= query param.
+// The query parameter exists because EventSource cannot set an Authorization
+// header; everywhere else it is refused, because a token in the URL leaks into
+// Referer headers, reverse-proxy logs and browser history. The header is read
+// first on every route, so an explicit bearer token always wins.
 func extractToken(r *http.Request) string {
 	if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
 		return strings.TrimPrefix(h, "Bearer ")
@@ -449,7 +457,18 @@ func extractToken(r *http.Request) string {
 	if c, err := r.Cookie("artex_token"); err == nil && c.Value != "" {
 		return c.Value
 	}
-	return r.URL.Query().Get("token")
+	if isStreamPath(r.URL.Path) {
+		return r.URL.Query().Get("token")
+	}
+	return ""
+}
+
+// isStreamPath reports whether p is one of the Server-Sent Events endpoints
+// (/api/logs/stream, /api/update/stream, /api/exploration/activity/stream,
+// /api/side-questions/{id}/events). They are the only routes that accept the JWT
+// as a query parameter and the only ones exempt from the server write timeout.
+func isStreamPath(p string) bool {
+	return strings.HasSuffix(p, "/stream") || strings.HasSuffix(p, "/events")
 }
 
 // requireAuth wraps h with JWT validation.
@@ -482,9 +501,9 @@ func (s *Server) authStatus(w http.ResponseWriter, r *http.Request) {
 	if pg == nil {
 		return
 	}
-	// 읽기 실패는 initialized:false 가 아니라 503 이어야 한다: 프런트는 initialized:false 를
-	// 보고 사용자를 /setup 으로 보내는데, 데이터베이스 장애를 200 으로 포장하면 사용자를
-	// 기존 비밀번호 덮어쓰기 경로로 밀어넣는 셈이 된다.
+	// A read failure must be a 503, not initialized:false: the frontend sends the user
+	// to /setup on initialized:false, so dressing a database outage up as a 200 would
+	// push the user onto the overwrite path for the existing password.
 	hash, _, err := pg.GetSetting(authPassKey)
 	if err != nil {
 		writeErr(w, 503, authErrDataSourceUnavailable)
@@ -535,7 +554,7 @@ func (s *Server) authInit(w http.ResponseWriter, r *http.Request) {
 	}
 	if !s.checkSetupToken(req.SetupToken) {
 		s.limiter().fail(key)
-		log.Printf(logT("[auth] 초기 설정 거부: 설정 토큰 불일치 (client=%s)"), clientLogID(r))
+		log.Printf(logT("[auth] initial setup rejected: setup token mismatch (client=%s)"), clientLogID(r))
 		writeErr(w, 403, authErrSetupTokenInvalid)
 		return
 	}
@@ -556,9 +575,10 @@ func (s *Server) authInit(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, authErrPasswordHash)
 		return
 	}
-	// upsert 대신 INSERT ... ON CONFLICT DO NOTHING: 위 GetSetting 검사는 빠른 실패
-	// 경로일 뿐이고, "최초 1회만 설정" 의 실제 보장은 기본키 제약에 있다. bcrypt 가 수십
-	// 밀리초를 쓰는 동안 다른 요청이 먼저 설정할 수 있고, 읽기 검사가 장애로 무력해질 수도 있다.
+	// INSERT ... ON CONFLICT DO NOTHING instead of an upsert: the GetSetting check above
+	// is only a fast-fail path, and the actual "set exactly once" guarantee is the
+	// primary key constraint. Another request can win while bcrypt is busy for tens of
+	// milliseconds, and a failing read check would be powerless anyway.
 	inserted, err := pg.InsertSettingIfAbsent(authPassKey, string(hash))
 	if err != nil {
 		writeErr(w, 500, trMsg(authErrSaveFailedPrefix)+err.Error())
@@ -576,7 +596,7 @@ func (s *Server) authInit(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, authErrTokenGen)
 		return
 	}
-	log.Printf(logT("[auth] 관리자 비밀번호를 초기화했습니다 (client=%s)"), clientLogID(r))
+	log.Printf(logT("[auth] admin password initialised (client=%s)"), clientLogID(r))
 	writeJSON(w, 200, map[string]any{"token": tok})
 }
 
@@ -630,7 +650,7 @@ func (s *Server) authChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(req.OldPassword)); err != nil {
 		s.limiter().fail(key)
-		log.Printf(logT("[auth] 비밀번호 변경 거부: 현재 비밀번호 불일치 (client=%s)"), clientLogID(r))
+		log.Printf(logT("[auth] password change rejected: current password mismatch (client=%s)"), clientLogID(r))
 		writeErr(w, 401, authErrCurrentPasswordWrong)
 		return
 	}
@@ -650,7 +670,7 @@ func (s *Server) authChangePassword(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, authErrTokenGen)
 		return
 	}
-	log.Printf(logT("[auth] 관리자 비밀번호를 변경했습니다. 기존 세션은 모두 무효화됩니다 (client=%s)"), clientLogID(r))
+	log.Printf(logT("[auth] admin password changed; all existing sessions are invalidated (client=%s)"), clientLogID(r))
 	writeJSON(w, 200, map[string]any{"ok": true, "token": tok})
 }
 
@@ -687,7 +707,7 @@ func (s *Server) authLogin(w http.ResponseWriter, r *http.Request) {
 	pwErr := bcrypt.CompareHashAndPassword([]byte(hash), []byte(req.Password))
 	if req.Username != "ARTEX" || pwErr != nil {
 		s.limiter().fail(key)
-		log.Printf(logT("[auth] 로그인 실패 (client=%s)"), clientLogID(r))
+		log.Printf(logT("[auth] login failed (client=%s)"), clientLogID(r))
 		writeErr(w, 401, authErrBadCredential)
 		return
 	}

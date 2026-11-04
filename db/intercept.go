@@ -37,7 +37,7 @@ type InterceptPending struct {
 	ToolInput      json.RawMessage `json:"tool_input"`
 	Status         string          `json:"status"`
 	DecisionSource string          `json:"decision_source"`
-	Reason         string          `json:"reason"` // 规则 message 或模型判定理由(前缀 [模型])
+	Reason         string          `json:"reason"` // rule message or model decision reason (prefix [模型])
 	DecidedAt      *time.Time      `json:"decided_at"`
 	CreatedAt      time.Time       `json:"created_at"`
 }

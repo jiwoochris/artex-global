@@ -271,7 +271,7 @@ VALUES($1,$2,0,'quota_exhausted','balance exhausted',$3,$4,$3)`, task.ID, llmPro
 	}
 	warningFound := false
 	for _, warning := range warnings {
-		if strings.Contains(warning, fmt.Sprintf("任务企业 %d 已删除", companyID)) {
+		if strings.Contains(warning, fmt.Sprintf("Task company %d was deleted", companyID)) {
 			warningFound = true
 		}
 	}

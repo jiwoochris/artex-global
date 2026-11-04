@@ -2,36 +2,43 @@ package server
 
 import "github.com/Autumn-27/artex/config"
 
-// 사용자 대면 백엔드 메시지(한국어 원문)를 활성 출력 언어로 치환하는 카탈로그. 이 저장소의
-// writeErr 응답 문구·일부 writeJSON 에러 필드는 한국어 상수·리터럴로 작성되어 있다(F3b/F34).
-// 여기서는 그 한국어 원문을 키로, 영어·중국어·스페인어 번역을 값으로 둔다. 한국어(ko)는
-// 키 자체이므로 저장하지 않고, 조회 실패·ko 일 때는 원문을 그대로 돌려준다.
+// errCatalog holds the Spanish translation of every user-facing backend message.
+// English is the source language of this repository (see errmsg_catalog.go): the
+// writeErr response bodies and some writeJSON error fields are English constants
+// or inline English literals, and the catalog maps that exact English text to its
+// Spanish translation for the es output language.
 //
-// 키는 소스의 한국어 상수/리터럴에서 바이트 그대로 추출해 생성한다(scripts 보조). 손으로
-// 타이핑하지 않으므로 writeErr 에 들어오는 런타임 값과 키가 어긋나 조용히 누락되는 일이 없다.
+// The key is extracted byte for byte from the English source constant/literal, so
+// the runtime value passed into writeErr and the key can never drift apart.
 //
-// 포맷 문자열 상수(%d·%s·%w 등)는 포매팅한 결과가 키와 달라지므로, 호출부에서 fmt.Sprintf/
-// fmt.Errorf 에 넘기기 전에 trMsg(템플릿) 로 템플릿 자체를 먼저 치환한다.
+// trMsg is total: an unknown language, an unwired hook or a message that has no
+// catalog entry returns the English input unchanged. Nothing user-visible is ever
+// lost — a missing translation degrades to the source language.
+//
+// Format-string constants (%d, %s, %w …) must be translated as a template and
+// formatted afterwards — fmt.Errorf(trMsg(errXxxFmt), a, b) — because formatting
+// first changes the message and the lookup would miss. The same rule applies to
+// fragments concatenated with dynamic text: translate only the prefix.
 
-// trMsg 는 한국어 원문 메시지를 활성 출력 언어로 치환한다. 카탈로그에 없거나 활성 언어가
-// 한국어이면 원문을 그대로 돌려준다. config.ActiveLanguage 가 런타임 설정(설정 테이블)을
-// 반영하므로, 사용자가 고른 언어가 즉시 적용된다.
-func trMsg(ko string) string {
-	if m, ok := errCatalog[ko]; ok {
+// trMsg returns the active output language's rendering of an English user-facing
+// message. The active language comes from config.ActiveLanguage, which reflects
+// the runtime setting (settings table), so a switch applies to the next response.
+func trMsg(english string) string {
+	if m, ok := errCatalog[english]; ok {
 		if v, ok2 := m[config.ActiveLanguage()]; ok2 && v != "" {
 			return v
 		}
 	}
-	return ko
+	return english
 }
 
 // logT translates an operator-facing console log template (config.T) so server
 // log.Printf sites can wrap a template without each file importing config.
-func logT(ko string) string { return config.T(ko) }
+func logT(english string) string { return config.T(english) }
 
 // loadOutputLanguage resolves the user-facing output language from the source of
 // truth: the runtime setting (settings table) over config.Language() (ARTEX_LANG >
-// config file > ko). Call it only to (re)fill the cache; it does a DB query and a
+// config file > en). Call it only to (re)fill the cache; it does a DB query and a
 // config file read.
 func (s *Server) loadOutputLanguage() string {
 	if s.m != nil && s.m.pg != nil {
@@ -45,11 +52,16 @@ func (s *Server) loadOutputLanguage() string {
 }
 
 // outputLanguage returns the cached output language, resolving it on first use.
+// An empty cache entry (never stored before the wiring ran) falls back to
+// resolving, and an unset/invalid source resolves to English.
 func (s *Server) outputLanguage() string {
 	if v, ok := s.outputLang.Load().(string); ok && v != "" {
 		return v
 	}
 	v := s.loadOutputLanguage()
+	if v == "" {
+		v = config.DefaultLanguage
+	}
 	s.outputLang.Store(v)
 	return v
 }

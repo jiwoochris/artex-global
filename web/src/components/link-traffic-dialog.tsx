@@ -19,6 +19,7 @@ import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import type { Finding, FindingsPage } from "@/lib/types";
+import { firstNonEmpty } from "@/lib/utils";
 
 export function LinkTrafficDialog({
   trafficIds,
@@ -146,7 +147,7 @@ export function LinkTrafficDialog({
         </div>
         <p className="text-sm">
           {selected
-            ? t("selected", { id: selected.finding_id ?? "", name: selected.name || selected.vulnclass })
+            ? t("selected", { id: selected.finding_id ?? "", name: firstNonEmpty(selected.name, selected.vulnclass) })
             : t("selectPrompt")}
         </p>
         <DialogFooter>

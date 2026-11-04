@@ -64,71 +64,73 @@ func validSkillName(name string) bool {
 // lowercase letters / digits / underscores.
 var reAgentKey = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 
-// F3b: 사용자(관리 콘솔 UI)에게 writeErr/writeJSON 으로 노출되는 응답 문구만 한국어로 모은다.
-// 두뇌 段[A]·에이전트 도구 설명·로그(log.Printf)·코드 주석은 BRIEF 방침대로 원문을 보존하고,
-// 식별자·필드명(key·llm_profile_id·file·SKILL.md·name)·enum·%s/%d·err.Error() 도 원문 그대로 둔다.
+// Response text exposed to the user (admin console UI) through writeErr/writeJSON is
+// collected here so it has one English source form. Identifiers and field names (key,
+// llm_profile_id, file, SKILL.md, name), enums, %s/%d verbs and err.Error() are kept
+// verbatim.
 const (
-	// 모든 관리 핸들러가 거치는 공유 DB 게이트(pg).
-	errMgmtPGUnavailable = "관리 콘솔 데이터 소스(PostgreSQL)에 연결되어 있지 않습니다"
+	// Shared DB gate (pg) that every admin handler goes through.
+	errMgmtPGUnavailable = "Not connected to the admin console data source (PostgreSQL)"
 
-	// 작업 삭제
-	errMgmtTaskIDInvalid = "작업 id 가 유효하지 않습니다"
-	errMgmtTaskDeleting  = "작업을 삭제하는 중입니다"
-	errMgmtTaskHasAgents = "실행 중인 에이전트가 남아 있어 작업 삭제를 취소했습니다"
+	// Task deletion
+	errMgmtTaskIDInvalid = "The task id is invalid"
+	errMgmtTaskDeleting  = "The task is being deleted"
+	errMgmtTaskHasAgents = "Task deletion was cancelled because agents are still running"
 
-	// 에이전트 CRUD
-	errMgmtAgentKeyFormat     = "key 는 소문자로 시작하고, 소문자·숫자·밑줄만 사용할 수 있습니다"
-	errMgmtNameEmpty          = "이름은 비워 둘 수 없습니다"
-	errMgmtAgentKeyExists     = "이미 존재하는 key 입니다"
-	errMgmtBuiltinNoEditMeta  = "내장 에이전트는 이름/설명을 수정할 수 없습니다"
-	errMgmtBuiltinNoDelete    = "내장 에이전트는 삭제할 수 없습니다"
-	errMgmtLLMProfileIDFormat = "llm_profile_id 형식이 올바르지 않습니다"
-	errMgmtLLMProfileInvalid  = "지정한 LLM 설정이 존재하지 않거나 유효하지 않습니다"
-	errMgmtNoBuiltinPrompt    = "이 에이전트에는 내장 기본 프롬프트가 없어 복원할 수 없습니다"
+	// Agent CRUD
+	errMgmtAgentKeyFormat     = "key must start with a lowercase letter and may contain only lowercase letters, digits, and underscores"
+	errMgmtNameEmpty          = "The name cannot be empty"
+	errMgmtAgentKeyExists     = "The key already exists"
+	errMgmtBuiltinNoEditMeta  = "Built-in agents cannot have their name or description modified"
+	errMgmtBuiltinNoDelete    = "Built-in agents cannot be deleted"
+	errMgmtLLMProfileIDFormat = "The llm_profile_id format is invalid"
+	errMgmtLLMProfileInvalid  = "The specified LLM configuration does not exist or is invalid"
+	errMgmtNoBuiltinPrompt    = "This agent has no built-in default prompt, so it cannot be restored"
 
-	// 도구 (뒤에 key 를 이어 붙임)
-	errMgmtToolNotFound   = "도구를 찾을 수 없습니다: "
-	errMgmtNotBuiltinTool = "내장 도구가 아니거나 존재하지 않습니다: "
+	// Tools (the key is appended)
+	errMgmtToolNotFound   = "Tool not found: "
+	errMgmtNotBuiltinTool = "Not a built-in tool, or it does not exist: "
 
 	// MCP
-	errMgmtMCPNotFound      = "MCP 를 찾을 수 없습니다"
-	errMgmtToolDiscoverFail = "도구 발견에 실패했습니다: " // 뒤에 err.Error()
+	errMgmtMCPNotFound      = "MCP not found"
+	errMgmtToolDiscoverFail = "Tool discovery failed: " // followed by err.Error()
 
-	// 스킬 업로드
-	errMgmtSkillNameInvalid = "스킬 이름이 올바르지 않습니다"
-	errMgmtSkillNoFile      = "업로드 파일이 없거나(폼 필드 file) 크기 제한을 초과했습니다"
-	errMgmtSkillNoMDInZip   = "압축 파일 안에서 SKILL.md 를 찾지 못했습니다"
-	errMgmtSkillReadMDFail  = "SKILL.md 를 읽지 못했습니다: " // 뒤에 err.Error()
-	errMgmtSkillNamePre     = "스킬 이름이 올바르지 않습니다(SKILL.md 의 name 필드에서 가져옴): "
-	errMgmtSkillNamePost    = " (64자 이하, 글자로 시작, 소문자·숫자·하이픈 또는 한글 등 비 ASCII 글자만 쓸 수 있고, 공백·점·경로 구분자는 쓸 수 없습니다)"
-	// "이미 존재" 는 web system/skills/page.tsx 가 includes("이미 존재") 로 덮어쓰기 흐름을
-	// 띄우는 교차 스택 센티넬이다. 이 접두어를 바꾸면 프론트 미러도 함께 고쳐야 한다.
-	errMgmtSkillExistsPre    = "이미 존재하는 스킬입니다: "
-	errMgmtSkillExistsPost   = " (덮어쓰려면 확인 후 다시 시도하세요)"
-	errMgmtSkillZipBadPath   = "압축 파일에 잘못된 경로가 들어 있습니다 " // 뒤에 항목 이름 + ": " + 사유
-	errMgmtSkillZipTooMany   = "압축 파일에 파일이 너무 많습니다"
-	errMgmtSkillFileTooLarge = "파일이 너무 큽니다: " // 뒤에 경로
-	errMgmtSkillZipTooLarge  = "압축을 푼 뒤 크기가 너무 큽니다"
-	errMgmtSkillNoMDAfter    = "압축을 푼 뒤 SKILL.md 가 없습니다"
-	errMgmtSkillInstallFail  = "설치에 실패했습니다: " // 뒤에 err.Error()
+	// Skill upload
+	errMgmtSkillNameInvalid = "The skill name is invalid"
+	errMgmtSkillNoFile      = "No file was uploaded (form field file) or it exceeded the size limit"
+	errMgmtSkillNoMDInZip   = "SKILL.md was not found inside the archive"
+	errMgmtSkillReadMDFail  = "Failed to read SKILL.md: " // followed by err.Error()
+	errMgmtSkillNamePre     = "The skill name is invalid (taken from the name field in SKILL.md): "
+	errMgmtSkillNamePost    = " (max 64 characters, must start with a letter, may contain only lowercase letters, digits, hyphens, or non-ASCII letters such as Hangul; spaces, dots, and path separators are not allowed)"
+	// The "already exists" prefix is a cross-stack sentinel: the skills page in the web UI
+	// matches it to offer the overwrite flow. Changing this prefix means changing the front
+	// end match with it.
+	errMgmtSkillExistsPre    = "The skill already exists: "
+	errMgmtSkillExistsPost   = " (To overwrite, confirm and try again)"
+	errMgmtSkillZipBadPath   = "The archive contains an invalid path " // followed by the entry name + ": " + reason
+	errMgmtSkillZipTooMany   = "The archive contains too many files"
+	errMgmtSkillFileTooLarge = "The file is too large: " // followed by the path
+	errMgmtSkillZipTooLarge  = "The uncompressed size is too large"
+	errMgmtSkillNoMDAfter    = "SKILL.md is missing after extraction"
+	errMgmtSkillInstallFail  = "Installation failed: " // followed by err.Error()
 
-	// LLM 설정 삭제
-	errMgmtLLMActiveDelete = "현재 활성화된 LLM 설정은 삭제할 수 없습니다. 먼저 다른 설정을 활성화하세요"
-	errMgmtLLMRefChanged   = "LLM 설정이 작업이나 대화에서 수정되는 중입니다. 다시 시도하세요"
-	errMgmtLLMRefTimeout   = "LLM 설정 참조가 해제되기를 기다리다 시간이 초과되었습니다. 다시 시도하세요"
+	// LLM configuration deletion
+	errMgmtLLMActiveDelete = "The currently active LLM configuration cannot be deleted. Activate a different configuration first"
+	errMgmtLLMRefChanged   = "The LLM configuration is being modified by a task or conversation. Please try again"
+	errMgmtLLMRefTimeout   = "Timed out waiting for the LLM configuration reference to be released. Please try again"
 
-	// LLM 연결 테스트·모델 목록 조회 (pgListModels)
-	errMgmtNoAPIKey      = "API Key 가 제공되지 않았습니다"
-	errMgmtBuildReqFail  = "요청을 만들지 못했습니다: "       // 뒤에 err.Error()
-	errMgmtReqFail       = "요청에 실패했습니다: "          // 뒤에 err.Error()
-	errMgmtAPIReturned   = "API 가 %d 를 반환했습니다: %s" // fmt.Sprintf
-	errMgmtParseRespFail = "응답을 해석하지 못했습니다: "      // 뒤에 err.Error()
-	errMgmtNoModelList   = "모델 목록을 가져오지 못했습니다"
+	// LLM connection test and model listing (pgListModels)
+	errMgmtNoAPIKey      = "No API Key was provided"
+	errMgmtBuildReqFail  = "Failed to build the request: "  // followed by err.Error()
+	errMgmtReqFail       = "The request failed: "           // followed by err.Error()
+	errMgmtAPIReturned   = "The API returned %d: %s"        // fmt.Sprintf
+	errMgmtParseRespFail = "Failed to parse the response: " // followed by err.Error()
+	errMgmtNoModelList   = "Failed to retrieve the model list"
 
-	// 프롬프트 템플릿 편집기 (validateTemplate)
-	errMgmtTmplSyntax  = "템플릿 문법 오류: " // 뒤에 err.Error()
-	errMgmtTmplVarPre  = "변수 {{."
-	errMgmtTmplVarPost = "}} 는 이 에이전트의 허용 목록에 없습니다"
+	// Prompt template editor (validateTemplate)
+	errMgmtTmplSyntax  = "Template syntax error: " // followed by err.Error()
+	errMgmtTmplVarPre  = "Variable {{."
+	errMgmtTmplVarPost = "}} is not in this agent's allowlist"
 )
 
 // pgReady returns the PG handle, or writes 503 and returns nil if unavailable.
@@ -186,7 +188,7 @@ func (s *Server) abortTaskDelete(taskID string) {
 			state := task.lifecycleSnapshot()
 			keepPaused = state.Paused || state.Queued
 			if getErr != nil {
-				log.Printf("[task-delete] task %s 读取持久状态失败，使用内存状态恢复屏障: %v", taskID, getErr)
+				log.Printf("[task-delete] task %s: reading persisted state failed, using the in-memory state as the recovery barrier: %v", taskID, getErr)
 			}
 		} else if getErr == nil {
 			// The request targeted a task that does not exist. Do not retain a
@@ -340,7 +342,7 @@ func (s *Server) pgCreateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	// starter prompt so the editor shows something editable from the start.
 	if err := pg.SeedPromptIfEmpty(a.ID, agent.DefaultAssistantPrompt); err != nil {
-		log.Printf("[agents] seed starter prompt for %s 失败: %v", a.Key, err)
+		log.Printf("[agents] failed to seed the starter prompt for %s: %v", a.Key, err)
 	}
 	writeJSON(w, 200, agentDTO(a))
 }
@@ -388,10 +390,10 @@ func (s *Server) pgDeleteAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := pg.RemoveAgentFromToolBindings(a.Key); err != nil {
-		log.Printf("[agents] 清理 %s 工具绑定失败: %v", a.Key, err)
+		log.Printf("[agents] failed to clean up the tool bindings of %s: %v", a.Key, err)
 	}
 	if err := pg.DeleteTriggersForAgent(a.Key); err != nil {
-		log.Printf("[agents] 清理 %s 触发器失败: %v", a.Key, err)
+		log.Printf("[agents] failed to clean up the triggers of %s: %v", a.Key, err)
 	}
 	writeJSON(w, 200, map[string]any{"deleted": a.Key})
 }
@@ -428,9 +430,11 @@ func (s *Server) pgSaveAgentConfig(w http.ResponseWriter, r *http.Request) {
 		RunSeconds       *int  `json:"run_seconds"`
 		WebSearch        *bool `json:"web_search"`
 		InteractiveShell *bool `json:"interactive_shell"`
-		// llm_profile_id 三态:字段缺省=不动;显式 null=解绑(跟随任务/全局);数字=绑定该 profile。
+		// llm_profile_id has three states: field absent = leave alone; explicit null =
+		// unbind (follow the task / global); a number = bind that profile.
 		LLMProfileID json.RawMessage `json:"llm_profile_id"`
-		// P3 触发后处理策略(三者一起可选,提供任一即整体写入;未提供则不动)。
+		// Trigger post-processing policy: the three fields are optional as a group; providing
+		// any of them writes all of them, providing none leaves them untouched.
 		TriggerRunMode     *string `json:"trigger_run_mode"`
 		TriggerMergeMode   *string `json:"trigger_merge_mode"`
 		TriggerMaxParallel *int    `json:"trigger_max_parallel"`
@@ -440,13 +444,13 @@ func (s *Server) pgSaveAgentConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	profileChanged := false
-	if req.LLMProfileID != nil { // key present (数字 或 null)
+	if req.LLMProfileID != nil { // key present (a number or null)
 		var id *int64
 		if err := json.Unmarshal(req.LLMProfileID, &id); err != nil {
 			writeErr(w, 400, errMgmtLLMProfileIDFormat)
 			return
 		}
-		if id != nil { // 绑定:校验目标 profile 有效
+		if id != nil { // binding: validate that the target profile is usable
 			if _, ok := s.loadProfileConfig(*id); !ok {
 				writeErr(w, 400, errMgmtLLMProfileInvalid)
 				return
@@ -490,8 +494,9 @@ func (s *Server) pgSaveAgentConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// P3 触发策略:三者作为一组写入(SetAgentTriggerBehavior 一次写三列),缺的字段用
-	// 当前存量值回填,避免只传一个把另两个覆盖成默认。
+	// Trigger policy: the three fields are written as one group (SetAgentTriggerBehavior
+	// writes all three columns), and missing fields are backfilled from the current stored
+	// values so passing one does not reset the other two to their defaults.
 	if req.TriggerRunMode != nil || req.TriggerMergeMode != nil || req.TriggerMaxParallel != nil {
 		runMode, mergeMode, maxPar := a.TriggerRunMode, a.TriggerMergeMode, a.TriggerMaxParallel
 		if req.TriggerRunMode != nil {
@@ -550,7 +555,8 @@ func (s *Server) pgGetAgent(w http.ResponseWriter, r *http.Request) {
 	if sk == nil {
 		sk = []string{}
 	}
-	// 可选 LLM 配置列表(id/name/model/是否默认),供前端渲染 "默认模型" 下拉;当前绑定见 agent.llm_profile_id。
+	// Selectable LLM profiles (id/name/model/is_default) for the frontend "default model"
+	// dropdown; the current binding is agent.llm_profile_id.
 	profs, _ := pg.ListProfiles()
 	llmProfiles := make([]map[string]any, 0, len(profs))
 	for _, p := range profs {
@@ -561,13 +567,14 @@ func (s *Server) pgGetAgent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{
 		"agent": agentDTO(a), "prompt": cur, "variables": vars, "versions": vers,
 		"visibility":   map[string]any{"mcp": mcp, "skill": sk},
-		"llm_profiles": llmProfiles, // 可绑定的 LLM 配置候选
+		"llm_profiles": llmProfiles, // candidate LLM profiles that can be bound
 
-		"wrapup_prompt":            a.WrapupPrompt,                  // 已保存的收尾提示词(空=用内置默认)
-		"wrapup_default":           agent.WrapupDefault(a.Key),      // 内置默认(供占位/恢复默认)
-		"wrapup_max_turns":         a.WrapupMaxTurns,                // 已保存的收尾轮数(0=用内置默认)
-		"wrapup_max_turns_default": agent.WrapupTurnsDefault(a.Key), // 内置默认轮数(供 "0=默认N" 提示)
-		// 任务级超时收尾词(仅 worker/planner 有内置默认;task_timeout_supported 供前端决定是否显示该分区)
+		"wrapup_prompt":            a.WrapupPrompt,                  // saved wrap-up prompt (empty = built-in default)
+		"wrapup_default":           agent.WrapupDefault(a.Key),      // built-in default (for placeholder / restore)
+		"wrapup_max_turns":         a.WrapupMaxTurns,                // saved wrap-up turn budget (0 = built-in default)
+		"wrapup_max_turns_default": agent.WrapupTurnsDefault(a.Key), // built-in default turns (for the "0 = default N" hint)
+		// Task-level timeout wrap-up text (only worker/planner have a built-in default;
+		// task_timeout_supported lets the frontend decide whether to show that section)
 		"task_timeout_wrapup_supported":         agent.TaskTimeoutWrapupDefault(a.Key) != "",
 		"task_timeout_wrapup_prompt":            a.TaskTimeoutWrapupPrompt,
 		"task_timeout_wrapup_default":           agent.TaskTimeoutWrapupDefault(a.Key),
@@ -600,7 +607,7 @@ func (s *Server) pgSavePrompt(w http.ResponseWriter, r *http.Request) {
 }
 
 // pgResetPrompt restores an agent's prompt body to the in-code built-in default
-// (段 [A]). Only built-in agents have a code default; custom agents have none.
+// Only built-in agents have a code default; custom agents have none.
 func (s *Server) pgResetPrompt(w http.ResponseWriter, r *http.Request) {
 	pg, a, ok := s.agentByKey(w, r)
 	if !ok {
@@ -689,7 +696,7 @@ func (s *Server) pgSaveTaskTimeoutWrapup(w http.ResponseWriter, r *http.Request)
 		writeErr(w, 400, err.Error())
 		return
 	}
-	turns := a.TaskTimeoutWrapupMaxTurns // 未传则保留原值
+	turns := a.TaskTimeoutWrapupMaxTurns // keep the stored value when the field is absent
 	if body.MaxTurns != nil {
 		turns = *body.MaxTurns
 		if turns < 0 {
@@ -805,7 +812,7 @@ func (s *Server) pgSetAgentVisibility(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
 
-// ---------- tools (内置工具目录) ----------
+// ---------- tools (built-in tool catalog) ----------
 
 func (s *Server) pgListTools(w http.ResponseWriter, r *http.Request) {
 	pg := s.pg(w)
@@ -824,7 +831,7 @@ func (s *Server) pgListTools(w http.ResponseWriter, r *http.Request) {
 	// catalog query, so agent assembly never pays for this aggregate.
 	counts, countErr := pg.ToolUsageCounts()
 	if countErr != nil {
-		log.Printf("[tools] 读取调用统计失败: %v", countErr)
+		log.Printf("[tools] failed to read the call counters: %v", countErr)
 	} else {
 		for _, tool := range ts {
 			tool.Calls = counts[tool.Key]
@@ -871,7 +878,7 @@ func (s *Server) pgUpdateTool(w http.ResponseWriter, r *http.Request) {
 }
 
 // pgResetTool overwrites a tool row with its code-defined defaults (description,
-// schema, agent binding) and re-enables it — the explicit "恢复默认" action, since
+// schema, agent binding) and re-enables it - the explicit "restore defaults" action, since
 // startup seeding is first-insert-only and never overwrites edits.
 func (s *Server) pgResetTool(w http.ResponseWriter, r *http.Request) {
 	pg := s.pg(w)
@@ -950,7 +957,7 @@ func (s *Server) pgSaveMCP(w http.ResponseWriter, r *http.Request) {
 		m.ID = id
 		ctx, cancel := context.WithTimeout(r.Context(), 45*time.Second)
 		if derr := s.discoverAndCacheMCP(ctx, &m); derr != nil {
-			log.Printf("[mcp] %s 添加后工具发现失败: %v", m.Name, derr)
+			log.Printf("[mcp] tool discovery failed after adding %s: %v", m.Name, derr)
 		}
 		cancel()
 	}
@@ -1022,7 +1029,7 @@ func (s *Server) pgMCPTools(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"tools": tools})
 }
 
-// ---------- skills (文件系统) ----------
+// ---------- skills (file system) ----------
 
 type skillFileNode struct {
 	Name          string   `json:"name"`
@@ -1061,7 +1068,7 @@ func (s *Server) fsListSkills(w http.ResponseWriter, r *http.Request) {
 	if s.m.pg != nil {
 		stats, err := s.m.pg.SkillStats()
 		if err != nil {
-			log.Printf("[skills] 读取调用统计失败: %v", err)
+			log.Printf("[skills] failed to read the call counters: %v", err)
 		}
 		for _, st := range stats {
 			statBySkill[st.Skill] = st
@@ -1344,7 +1351,7 @@ func skillNameFromFrontmatter(md []byte) string {
 		}
 		if inFM && strings.HasPrefix(t, "name:") {
 			v := strings.TrimSpace(strings.TrimPrefix(t, "name:"))
-			return strings.Trim(v, `"'`) // name: "中文技能" 也认
+			return strings.Trim(v, `"'`) // also accepts name: "some-skill" in quotes
 		}
 	}
 	return ""
@@ -1374,7 +1381,7 @@ func (s *Server) fsUploadSkill(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err.Error())
 		return
 	}
-	// entries carry UTF-8-decoded names (GBK 包也能读) and exclude archiver junk.
+	// entries carry UTF-8-decoded names (GBK archives decode too) and exclude archiver junk.
 	entriesAll := skillZipEntries(zr)
 	if err := checkSkillZipMethods(entriesAll); err != nil {
 		writeErr(w, 400, err.Error())
@@ -1548,9 +1555,9 @@ func (s *Server) fsDeleteSkill(w http.ResponseWriter, r *http.Request) {
 const skillPathBlocked = `\%#?*:"<>|`
 
 // skillPathRune reports whether r may appear in a client-supplied skill path.
-// It is a blacklist over Unicode rather than an ASCII whitelist so that 中文 (and any
-// other script) file names work, while everything that makes path validation hard is
-// still refused: control/format characters, look-alike whitespace, separators.
+// It is a blacklist over Unicode rather than an ASCII whitelist so file names in any
+// script (including non-Latin ones) work, while everything that makes path validation
+// hard is still refused: control/format characters, look-alike whitespace, separators.
 func skillPathRune(r rune) bool {
 	switch {
 	case r < 0x20, r == 0x7f, r == utf8.RuneError:
@@ -1558,9 +1565,9 @@ func skillPathRune(r rune) bool {
 	case strings.ContainsRune(skillPathBlocked, r):
 		return false
 	case unicode.Is(unicode.Cf, r), unicode.Is(unicode.Co, r), unicode.Is(unicode.Cs, r):
-		return false // zero-width joiners, bidi overrides (RLO 文件名伪装), private use
+		return false // zero-width joiners, bidi overrides (RLO file-name spoofing), private use
 	case r != ' ' && unicode.IsSpace(r):
-		return false // NBSP / 全角空格 之类：看着是空格，其实不是
+		return false // NBSP, ideographic space and the like: they look like a space but are not
 	}
 	return true
 }
@@ -1879,9 +1886,11 @@ func (s *Server) pgSaveProfile(w http.ResponseWriter, r *http.Request) {
 	p := body.LLMProfile
 	p.APIKey = body.APIKey
 	p.Streaming = body.Streaming == nil || *body.Streaming
-	// 输出上限:负数无意义,归零(= 不发送该字段)。字段名开关只有 Chat Completions
-	// 用得上——anthropic 与 openai-responses 各自定死了字段名,存下来只会误导后续读者,
-	// 故非 openai 格式一律清空。未知取值同样清空,避免把 DB CHECK 的报错甩给用户。
+	// Output cap: a negative value is meaningless, so it is zeroed (= the field is not sent).
+	// The field-name switch only applies to Chat Completions - anthropic and
+	// openai-responses fix their own field name, so storing one would only mislead later
+	// readers; any non-openai format clears it. Unknown values are cleared too, so a DB
+	// CHECK error is never thrown back at the user.
 	if p.MaxTokens < 0 {
 		p.MaxTokens = 0
 	}
@@ -1904,8 +1913,9 @@ func (s *Server) pgSaveProfile(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"id": id})
 }
 
-// pgGetLLMRetryPolicy 返回全局重试策略(五层各自的次数+间隔)。未配置过 → 全零，
-// 前端把零显示成「默认」。
+// pgGetLLMRetryPolicy returns the global retry policy (attempts + interval for each of
+// the five layers). Never configured -> all zero, and the frontend renders zero as
+// "default".
 func (s *Server) pgGetLLMRetryPolicy(w http.ResponseWriter, r *http.Request) {
 	pg := s.pg(w)
 	if pg == nil {
@@ -1914,9 +1924,10 @@ func (s *Server) pgGetLLMRetryPolicy(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, pg.LLMRetryPolicy())
 }
 
-// pgSaveLLMRetryPolicy 保存全局重试策略。三个「跟着端点走」的层(建连/空响应/同
-// provider 安全窗口)是 provider 的构建参数或调用参数，改完必须让缓存里的 provider
-// 重建；熔断参数则直接推给进程级 Registry。
+// pgSaveLLMRetryPolicy saves the global retry policy. The three endpoint-bound layers
+// (connect, empty response, same-provider safe window) are provider build or call
+// parameters, so the cached provider must be rebuilt after a change; the
+// circuit-breaker parameters are pushed straight into the process-level Registry.
 func (s *Server) pgSaveLLMRetryPolicy(w http.ResponseWriter, r *http.Request) {
 	pg := s.pg(w)
 	if pg == nil {
@@ -2008,9 +2019,9 @@ func (s *Server) pgActivateProfile(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
 
-// pgLLMPoolStatus reports the failover ("轮询") switches, the resolved chain order
-// and every profile's circuit-breaker state — what the LLM page renders as the
-// "轮询顺序" strip and the per-card health badges.
+// pgLLMPoolStatus reports the failover switches, the resolved chain order and every
+// profile's circuit-breaker state - what the LLM page renders as the rotation-order strip
+// and the per-card health badges.
 func (s *Server) pgLLMPoolStatus(w http.ResponseWriter, r *http.Request) {
 	if s.pg(w) == nil {
 		return
@@ -2019,7 +2030,7 @@ func (s *Server) pgLLMPoolStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // pgLLMPoolReset clears a tripped profile's circuit breaker so the next call
-// tries it again immediately ("立即恢复"). id=0 clears every profile.
+// tries it again immediately ("recover now"). id=0 clears every profile.
 func (s *Server) pgLLMPoolReset(w http.ResponseWriter, r *http.Request) {
 	pg := s.pg(w)
 	if pg == nil {
@@ -2181,15 +2192,15 @@ func (s *Server) pgListModels(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"ok": false, "error": lastErr})
 }
 
-// --- prompt template helpers (Go text/template + catalog 白名单) ---
+// --- prompt template helpers (Go text/template + catalog allowlist) ---
 
 // globalPromptVars are runtime variables available to EVERY agent (built-in and
 // custom) regardless of its per-agent catalog. Each agent's render path fills them
 // (see agent.nowStr, rendered fresh each turn), so a prompt may always reference
 // {{.Now}} — e.g. subtract it from a fixed start stamp to reason about elapsed time.
 var globalPromptVars = []db.PromptVar{
-	{Name: "Now", Description: "서버 현재 시각(실행할 때마다 실시간으로 갱신되며, 고정된 시작 시각에서 빼면 경과 시간을 계산할 수 있습니다)", Example: "2026-08-11 14:30:00 CST", Source: "runtime"},
-	{Name: "DataDir", Description: "서버 데이터 루트 디렉터리(모든 작업/대화 산출물의 루트이며, 각 에이전트는 그 아래 하위 디렉터리에 실제로 기록합니다. 예: <DataDir>/<taskID>)", Example: "/app/data", Source: "runtime"},
+	{Name: "Now", Description: "Current server time (refreshed live on every run; subtract a fixed start time from it to compute elapsed time)", Example: "2026-08-11 14:30:00 CST", Source: "runtime"},
+	{Name: "DataDir", Description: "Server data root directory (the root of every task/conversation artefact; each agent really writes into a subdirectory below it, e.g. <DataDir>/<taskID>)", Example: "/app/data", Source: "runtime"},
 }
 
 // withGlobalVars appends the universal runtime vars onto an agent's own catalog,

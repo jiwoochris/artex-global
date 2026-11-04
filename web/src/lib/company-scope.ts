@@ -2,9 +2,9 @@ import type { CompanyScopeKind, CompanyScopeRule } from "@/lib/types";
 
 export const MAX_COMPANY_SCOPE_VALUE_LENGTH = 1024;
 
-// 검증 결과는 지역화 가능한 "오류 코드"로 돌려준다. 이 모듈은 React 밖 순수 함수라
-// 직접 번역할 수 없으므로, 노출 지점(scope-text-editor 는 next-intl 의 t(), mock
-// handler 는 companyScopeErrorText())이 코드를 각 언어 문구로 바꾼다.
+// Validation returns a localizable "error code" instead of text. This module is a pure
+// function outside React and cannot translate, so the display sites (scope-text-editor uses
+// next-intl's t(), the mock handler uses companyScopeErrorText()) turn the code into text.
 export type CompanyScopeErrorCode =
   | "empty"
   | "tooLong"
@@ -144,26 +144,26 @@ export function companyScopeRuleError(rule: CompanyScopeRule): CompanyScopeError
   return "";
 }
 
-// mock handler(React 밖) 전용: 오류 코드를 한국어 문구로 바꾼다. 실제 UI 는
-// scope-text-editor 가 next-intl 의 t("scopeEditor.error.*") 로 지역화한다.
+// mock handler only (outside React): turns an error code into display text. The real UI
+// localizes instead through scope-text-editor's t("scopeEditor.error.*").
 export function companyScopeErrorText(code: CompanyScopeErrorCode | "" | undefined): string {
   switch (code) {
     case "empty":
-      return "범위 값을 입력해 주세요";
+      return "Enter a scope value";
     case "tooLong":
-      return `최대 ${MAX_COMPANY_SCOPE_VALUE_LENGTH}자까지 입력할 수 있습니다`;
+      return `At most ${MAX_COMPANY_SCOPE_VALUE_LENGTH} characters allowed`;
     case "domainSpace":
-      return "공백 없이 유효한 도메인 또는 URL을 입력해 주세요";
+      return "Enter a valid domain or URL without spaces";
     case "domainInvalid":
-      return "유효한 도메인 또는 URL을 입력해 주세요";
+      return "Enter a valid domain or URL";
     case "ipInvalid":
-      return "유효한 IP를 입력해 주세요";
+      return "Enter a valid IP address";
     case "cidrInvalid":
-      return "유효한 CIDR 대역을 입력해 주세요";
+      return "Enter a valid CIDR range";
     case "cidrPrefixV4":
-      return "IPv4 대역 프리픽스는 /16 ~ /32 범위여야 합니다";
+      return "An IPv4 range prefix must be between /16 and /32";
     case "cidrPrefixV6":
-      return "IPv6 대역 프리픽스는 /32 ~ /128 범위여야 합니다";
+      return "An IPv6 range prefix must be between /32 and /128";
     default:
       return "";
   }

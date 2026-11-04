@@ -21,13 +21,13 @@ type AgentTrigger struct {
 	OnTaskTimeout      bool       `json:"on_task_timeout"`
 	OnToolCall         bool       `json:"on_tool_call"`
 	OnTaskCreate       bool       `json:"on_task_create"`
-	IntervalMessage    string     `json:"interval_message"` // 各触发条件的独立用户消息
+	IntervalMessage    string     `json:"interval_message"` // separate user message for each trigger condition
 	FindingMessage     string     `json:"finding_message"`
 	GoalMessage        string     `json:"goal_message"`
 	TaskTimeoutMessage string     `json:"task_timeout_message"`
 	ToolCallMessage    string     `json:"tool_call_message"`
 	TaskCreateMessage  string     `json:"task_create_message"`
-	ToolNames          []string   `json:"tool_names"` // 选中的工具 key 列表(DB 存 JSON 文本)
+	ToolNames          []string   `json:"tool_names"` // selected tool key list (stored as JSON text in DB)
 	LastFire           *time.Time `json:"last_fire,omitempty"`
 }
 
@@ -157,9 +157,9 @@ type TaskEvent struct {
 	VulnClass  string `json:"vulnclass"`   // finding only
 	Severity   string `json:"severity"`    // finding only
 	Tool       string `json:"tool"`        // tool-call only: tool name
-	ToolInput  string `json:"tool_input"`  // tool-call only: 入参(JSON 文本)
-	ToolOutput string `json:"tool_output"` // tool-call only: 返回内容
-	ToolIsErr  bool   `json:"tool_is_err"` // tool-call only: 工具返回是否为错误
+	ToolInput  string `json:"tool_input"`  // tool-call only: input arguments (JSON text)
+	ToolOutput string `json:"tool_output"` // tool-call only: returned content
+	ToolIsErr  bool   `json:"tool_is_err"` // tool-call only: whether the tool returned an error
 }
 
 // NewFindingsSince returns findings with node id > lastID across all live tasks,

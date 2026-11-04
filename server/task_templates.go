@@ -14,14 +14,14 @@ import (
 
 const maxTaskTemplateRequestBytes = 512 << 10
 
-// 작업 템플릿 API 가 사용자에게 돌려주는 응답 문구. 식별자, JSON 필드명, 요청 본문
-// 키는 원문을 유지하고 사람이 읽는 메시지만 한국어로 둔다.
+// Response messages the task template API returns to users. Identifiers, JSON field names,
+// and request body keys keep their original form; only human-readable messages are localized.
 const (
-	errTaskTemplateRequestTooLarge = "요청 본문이 너무 큽니다"
-	errTaskTemplateNameConflict    = "이미 존재하는 템플릿 이름입니다"
-	errTaskTemplateRuleInvalid     = "가로채기/허용 규칙이 올바르지 않습니다: "
-	errTaskTemplateNoFields        = "name, description, goal, category_id, intercept_rules 중 하나 이상을 제공해야 합니다"
-	errTaskTemplateFieldTooLongFmt = "%s 항목은 최대 %d자까지 입력할 수 있습니다"
+	errTaskTemplateRequestTooLarge = "The request body is too large"
+	errTaskTemplateNameConflict    = "This template name already exists"
+	errTaskTemplateRuleInvalid     = "The interception/allow rule is invalid: "
+	errTaskTemplateNoFields        = "You must provide at least one of name, description, goal, category_id, or intercept_rules"
+	errTaskTemplateFieldTooLongFmt = "%s can be at most %d characters"
 )
 
 // taskTemplateRequest uses pointers so PATCH can distinguish omitted fields from

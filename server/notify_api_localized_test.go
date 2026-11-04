@@ -8,61 +8,68 @@ import (
 	"github.com/Autumn-27/artex/db"
 )
 
-// notify_api.go 의 알림 설정 API 응답 문구와 테스트 메시지를 한국어로 유지하는 회귀 방어
-// 테스트다. 한국어 판정은 F3a 가 만든 assertKoreanError(한글 포함·중국어 한자 0)를 재사용한다.
+// Regression guard for the notification-settings API response wording in notify_api.go: every
+// message is its exact English source text (assertEnglishMessage).
 
-// TestNotifyErrorConstantsLocalized 는 응답 상수 10종과 테스트 메시지 상수 3종이 전부
-// 한국어임을 단언한다. 어느 하나라도 중국어로 되돌리면 이 테스트가 실패한다.
+// TestNotifyErrorConstantsLocalized asserts that all ten response constants and the three test
+// message constants are their exact English source text. Reverting any of them to Korean or
+// Chinese, or rewording one, fails this test.
 func TestNotifyErrorConstantsLocalized(t *testing.T) {
-	cases := map[string]string{
-		"notifyErrBadJSON":         notifyErrBadJSON,
-		"notifyErrKindInvalidFmt":  fmt.Sprintf(notifyErrKindInvalidFmt, "email / webhook"),
-		"notifyErrNameMissing":     notifyErrNameMissing,
-		"notifyErrNameEmpty":       notifyErrNameEmpty,
-		"notifyErrModeInvalid":     notifyErrModeInvalid,
-		"notifyErrRateNegative":    notifyErrRateNegative,
-		"notifyErrChannelID":       notifyErrChannelID,
-		"notifyErrKindUnregFmt":    fmt.Sprintf(notifyErrKindUnregFmt, "bogus"),
-		"notifyErrDeliveryID":      notifyErrDeliveryID,
-		"notifyErrChannelNotFound": notifyErrChannelNotFound,
-		"notifyTestName":           notifyTestName,
-		"notifyTestClass":          notifyTestClass,
-		"notifyTestSummary":        notifyTestSummary,
+	cases := []struct{ label, msg, wantEnglish string }{
+		{"notifyErrBadJSON", notifyErrBadJSON, "The request body is not valid JSON: "},
+		{"notifyErrKindInvalidFmt", fmt.Sprintf(notifyErrKindInvalidFmt, "email / webhook"),
+			"Invalid channel type. Possible values: email / webhook"},
+		{"notifyErrNameMissing", notifyErrNameMissing, "Enter a channel name"},
+		{"notifyErrNameEmpty", notifyErrNameEmpty, "The channel name must not be empty"},
+		{"notifyErrModeInvalid", notifyErrModeInvalid, "Invalid delivery mode. Possible values: realtime / digest"},
+		{"notifyErrRateNegative", notifyErrRateNegative, "The rate limit must not be negative"},
+		{"notifyErrChannelID", notifyErrChannelID, "Invalid channel id"},
+		{"notifyErrKindUnregFmt", fmt.Sprintf(notifyErrKindUnregFmt, "bogus"),
+			`Channel type "bogus" is not registered`},
+		{"notifyErrDeliveryID", notifyErrDeliveryID, "Invalid delivery id"},
+		{"notifyErrChannelNotFound", notifyErrChannelNotFound, "Notification channel not found"},
+		{"notifyTestName", notifyTestName, "Test message · channel configuration is healthy"},
+		{"notifyTestClass", notifyTestClass, "Connection test"},
+		{"notifyTestSummary", notifyTestSummary,
+			"This is an ARTEX notification channel test message. If you received it, your channel configuration is working."},
 	}
-	for label, msg := range cases {
-		assertKoreanError(t, label, msg)
+	for _, c := range cases {
+		assertEnglishMessage(t, c.label, c.msg, c.wantEnglish)
 	}
 }
 
-// TestNotifyChannelLookupErrLocalized 는 「채널 없음 → 404」 경로를 실제 코드로 검사한다.
-// notifyChannelLookupErr 는 Server/DB 없이 w 와 err 만으로 도는 패키지 함수라, 센티넬
-// 오류를 그대로 넘기면 404 응답 본문에 한국어 상수가 실리는 연결까지 DB 없이 확인된다.
+// TestNotifyChannelLookupErrLocalized exercises the "no channel → 404" path through the real code.
+// notifyChannelLookupErr is a package function that runs with only w and err (no Server/DB), so
+// passing the sentinel error through it proves without a DB that the 404 body carries the English
+// constant.
 func TestNotifyChannelLookupErrLocalized(t *testing.T) {
 	rec := httptest.NewRecorder()
 	notifyChannelLookupErr(rec, db.ErrNotificationChannelNotFound)
 	if rec.Code != 404 {
-		t.Fatalf("상태 코드 = %d, 기대 = 404 (본문 %q)", rec.Code, rec.Body.String())
+		t.Fatalf("status code = %d, want = 404 (body %q)", rec.Code, rec.Body.String())
 	}
 	got := decodeErrorField(t, rec.Body.Bytes())
 	if got != notifyErrChannelNotFound {
-		t.Fatalf("응답 문구 = %q, 기대 = %q", got, notifyErrChannelNotFound)
+		t.Fatalf("response message = %q, want = %q", got, notifyErrChannelNotFound)
 	}
-	assertKoreanError(t, "channel_not_found", got)
+	assertEnglishMessage(t, "channel_not_found", got, "Notification channel not found")
 }
 
-// TestNotifyTestMessageLocalized 는 채널 연결 점검용 테스트 메시지를 순수 함수로 조립해
-// 사용자에게 발송되는 본문(제목·분류·요약)이 한국어임을 검사한다. DB·네트워크가 필요 없다.
+// TestNotifyTestMessageLocalized assembles the channel connectivity test message with pure
+// functions and checks that the body sent to the user (title, class, summary) is English. Needs no
+// DB or network.
 func TestNotifyTestMessageLocalized(t *testing.T) {
 	const base = "https://artex.example.test"
 	msg := notifyTestMessage(base)
 	if len(msg.Items) != 1 {
-		t.Fatalf("테스트 메시지 항목 수 = %d, 기대 = 1", len(msg.Items))
+		t.Fatalf("test message item count = %d, want = 1", len(msg.Items))
 	}
 	item := msg.Items[0]
-	assertKoreanError(t, "test.name", item.Name)
-	assertKoreanError(t, "test.class", item.VulnClass)
-	assertKoreanError(t, "test.summary", item.Summary)
+	assertEnglishMessage(t, "test.name", item.Name, "Test message · channel configuration is healthy")
+	assertEnglishMessage(t, "test.class", item.VulnClass, "Connection test")
+	assertEnglishMessage(t, "test.summary", item.Summary,
+		"This is an ARTEX notification channel test message. If you received it, your channel configuration is working.")
 	if msg.HomeURL != base || item.DetailURL != base {
-		t.Fatalf("링크 보존 실패: HomeURL=%q DetailURL=%q (기대 %q)", msg.HomeURL, item.DetailURL, base)
+		t.Fatalf("link preservation failed: HomeURL=%q DetailURL=%q (want %q)", msg.HomeURL, item.DetailURL, base)
 	}
 }

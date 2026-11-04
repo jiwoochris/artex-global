@@ -6,41 +6,45 @@ import (
 	"testing"
 )
 
-// engine.go·engine_timeout.go·goals.go 의 "표시 전용" 런타임 활동 요약 상수를 한국어로
-// 유지하는 회귀 방어 테스트다. 이 요약들은 대시보드 전사(activity transcript)에 노출되지만
-// node_id 를 달지 않아(작업 단위) 어떤 에이전트 컨텍스트로도 되읽히지 않는다 — 되먹임
-// 경로(planner.workerOutput·get_worker_output 도구)는 intent 범위(node_id)에서 'result'/
-// 'text' 활동만 고르기 때문이다. 그래서 한국어화가 두뇌 입력(BRIEF 경계 #1)을 건드리지
-// 않는다. 반대로 두뇌로 되먹여지는 요약(seed 의도 요약 `完成任务目标…`·기본 설명 `未命名任务`
-// 등)은 원문을 보존하므로 이 테스트 대상이 아니다. 한국어 판정은 assertKoreanError(한글
-// 포함·중국어 한자 0, intercept_archive_localized_test.go)를 재사용한다. [[G132]]
+// Regression guard keeping the "display-only" runtime activity summary constants of
+// engine.go·engine_timeout.go·goals.go as their exact English source text. These summaries show up in the dashboard transcript
+// (activity transcript) but carry no node_id (they are task-scoped), so they are never read back into any
+// agent context — the feedback path (planner.workerOutput·get_worker_output tool) picks only 'result'/
+// 'text' activities within intent scope (node_id). So translating these summaries does not touch
+// the brain input (BRIEF boundary #1). Conversely the summaries fed back to the brain (the seed intent summary `Complete the task goal…`·the default description `unnamed task`
+// etc.) keep the original text, so they are not covered by this test. Assertions use
+// assertEnglishMessage (intercept_archive_localized_test.go). [[G132]]
 func TestRuntimeActivitySummariesLocalized(t *testing.T) {
-	// 포맷 인자 없는 고정 요약: 그대로 한국어여야 한다.
-	plain := map[string]string{
-		"goalless_task_done": goallessTaskDoneSummary,
-		"goal_breakdown_r0":  goalBreakdownRound0Summary,
-		"queued_no_llm":      queuedNoLLMSummary,
-		"queued_fifo":        queuedFIFOSummary,
-	}
-	for label, msg := range plain {
-		assertKoreanError(t, label, msg)
+	// Fixed summaries without format arguments: they must be the English source text as-is.
+	for _, c := range []struct{ label, msg, wantEnglish string }{
+		{"goalless_task_done", goallessTaskDoneSummary,
+			"All goals achieved and the intents launched directly finished, so the task is being closed"},
+		{"goal_breakdown_r0", goalBreakdownRound0Summary, "Goal breakdown round 0"},
+		{"queued_no_llm", queuedNoLLMSummary,
+			"Queued: no runnable LLM configuration right now, so it starts automatically once one is restored"},
+		{"queued_fifo", queuedFIFOSummary,
+			"Queued: earlier work is still waiting, so it starts automatically in FIFO order"},
+	} {
+		assertEnglishMessage(t, c.label, c.msg, c.wantEnglish)
 	}
 
-	// %d 포맷 문자열: 포맷 인자가 살아 있고, 포맷한 결과도 한국어이며 숫자가 실제로
-	// 반영되는지 확인한다.
-	fmtCases := map[string]string{
-		"planner_round":       plannerRoundSummaryFmt,
-		"timeout_final_round": timeoutFinalRoundSummaryFmt,
-		"queued_conc_limit":   queuedConcurrencyLimitSummaryFmt,
+	// %d format strings: check that the format argument is still there, that the formatted result
+	// is the English source text and that the number is really reflected.
+	fmtCases := []struct{ label, f, wantEnglish string }{
+		{"planner_round", plannerRoundSummaryFmt, "Planning round 7"},
+		{"timeout_final_round", timeoutFinalRoundSummaryFmt,
+			"Task timed out — final wrap-up and judgment (round 7)"},
+		{"queued_conc_limit", queuedConcurrencyLimitSummaryFmt,
+			"Queued: the concurrency limit of 7 is reached, so it starts automatically as soon as a slot frees up"},
 	}
-	for label, f := range fmtCases {
-		if !strings.Contains(f, "%d") {
-			t.Fatalf("%s: 포맷 인자 %%d 가 사라졌습니다: %q", label, f)
+	for _, c := range fmtCases {
+		if !strings.Contains(c.f, "%d") {
+			t.Fatalf("%s: the %%d format argument disappeared: %q", c.label, c.f)
 		}
-		got := fmt.Sprintf(f, 7)
-		assertKoreanError(t, label, got)
+		got := fmt.Sprintf(c.f, 7)
+		assertEnglishMessage(t, c.label, got, c.wantEnglish)
 		if !strings.Contains(got, "7") {
-			t.Fatalf("%s: 포맷 인자가 결과에 반영되지 않았습니다: %q", label, got)
+			t.Fatalf("%s: the format argument is not reflected in the result: %q", c.label, got)
 		}
 	}
 }

@@ -14,6 +14,8 @@ import (
 )
 
 func TestCompanyScopeInputsAcceptStructuredAndLegacyRules(t *testing.T) {
+	// "京 ICP备 123号" is a real ICP licence string as operators paste it, so the legacy
+	// free-form scope value must keep round-tripping unchanged.
 	var inputs companyScopeInputs
 	if err := json.Unmarshal([]byte(`[
 		"example.com",
@@ -137,6 +139,7 @@ func TestCompanyScopeHTTPErrorClassificationAndBounds(t *testing.T) {
 		body, err := json.Marshal(map[string]any{
 			"name": "Oversized Scope",
 			"scope": []map[string]string{{
+				// 界 is a 3-byte rune, so a repeated rune proves the cap counts characters, not bytes.
 				"kind": "keyword", "value": strings.Repeat("界", db.MaxCompanyScopeRawRunes+1),
 			}},
 		})

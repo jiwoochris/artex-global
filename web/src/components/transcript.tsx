@@ -179,18 +179,18 @@ function toolInputText(tool: string, raw: string): string {
 }
 
 // InterceptCard renders an inline intercept_request approval card. The pending_id
-// is extracted from the summary (format: "도구 X 승인 요청 (#N)") so buttons are
+// is extracted from the summary (format: "tool X approval request (#N)") so buttons are
 // available immediately without waiting for the detail load.
 function InterceptCard({ step, getDetail }: { step: Activity; getDetail: (seq: number) => Promise<string> }) {
   const t = useTranslations("transcript");
-  // extract pending_id from summary: "도구 Bash 승인 요청 (#42)"
+  // extract pending_id from summary: "tool Bash approval request (#42)"
   const pendingId = React.useMemo(() => {
     const m = /\(#(\d+)\)/.exec(step.summary);
     return m ? parseInt(m[1], 10) : null;
   }, [step.summary]);
 
   const toolName = React.useMemo(() => {
-    const m = /도구\s+(\S+)\s+승인/.exec(step.summary);
+    const m = /Tool\s+(\S+)\s+approval request/.exec(step.summary);
     return m ? m[1] : step.summary;
   }, [step.summary]);
 
@@ -260,7 +260,7 @@ function InterceptCard({ step, getDetail }: { step: Activity; getDetail: (seq: n
   const inputStr = detail?.input ? JSON.stringify(detail.input).slice(0, 200) : null;
 
   const row = pending
-    ? { ...pending, status: decided || pending.status, conv_title: "", conv_agent_key: "", rule_name: "" }
+    ? { ...pending, status: decided ?? pending.status, conv_title: "", conv_agent_key: "", rule_name: "" }
     : null;
 
   return (
@@ -382,7 +382,7 @@ function ToolBlock({
   // effect below re-fetches — so the output shows up instead of being cached out.
   const loadedKey = React.useRef<string | null>(null);
   const { use, result } = group;
-  const toolName = use?.tool || result?.tool || t("tool.name");
+  const toolName = use?.tool ?? result?.tool ?? t("tool.name");
   const ToolIcon = toolName === "Bash" ? Terminal : Wrench;
   const running = !result;
   const ok = !!result && !result.is_error;

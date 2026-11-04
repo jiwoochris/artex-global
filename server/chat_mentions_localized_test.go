@@ -6,30 +6,35 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/Autumn-27/artex/config"
 )
 
 // TestChatMentionErrorsLocalized guards F3b chat_mentions.go: every user-facing
-// @멘션(인용) error response must be Korean (Hangul present, no Chinese Han). The
-// wire token labels (chatMentionPattern·chatMentionKinds), the agent-input
-// snapshot header, and the truncation markers fed into that snapshot stay in the
-// original language by design and are intentionally not checked here.
+// @mention (citation) error response must be the exact English source message
+// (and the Spanish overlay when es is active). The wire token labels
+// (chatMentionPattern·chatMentionKinds), the agent-input snapshot header, and the
+// truncation markers fed into that snapshot stay in the original language by
+// design and are intentionally not checked here.
 func TestChatMentionErrorsLocalized(t *testing.T) {
 	// Fixed user-facing literals.
-	for label, msg := range map[string]string{
-		"badID":       errChatMentionBadID,
-		"tooMany":     errChatMentionTooMany,
-		"badSearch":   errChatMentionBadSearch,
-		"dataUnavail": errChatMentionDataUnavail,
-		"tooLarge":    errChatMentionTooLarge,
+	for _, c := range []struct{ label, msg, wantEnglish string }{
+		{"badID", errChatMentionBadID, "The citation ID is invalid. Please select again"},
+		{"tooMany", errChatMentionTooMany, "A single message can cite up to 10 records"},
+		{"badSearch", errChatMentionBadSearch, "The citation type is invalid or the search term exceeds 200 characters"},
+		{"dataUnavail", errChatMentionDataUnavail, "Citation data is currently unavailable"},
+		{"tooLarge", errChatMentionTooLarge, "The cited content is too large. Reduce the citation records and try again"},
 	} {
-		assertKoreanError(t, label, msg)
+		assertEnglishMessage(t, c.label, c.msg, c.wantEnglish)
 	}
 
+	// The 漏洞/字 below are wire-token and length-limit fixtures, not display text:
+	// they must keep matching the Chinese mention tokens the frontend still sends.
 	// parseChatMentions — a non-positive id inside a valid wire token.
 	if _, err := parseChatMentions("@[漏洞#0]"); err == nil {
-		t.Fatal("잘못된 인용 ID 가 통과해서는 안 됩니다")
+		t.Fatal("an invalid citation ID must not pass")
 	} else {
-		assertKoreanError(t, "parse.badID", err.Error())
+		assertEnglishMessage(t, "parse.badID", err.Error(), "The citation ID is invalid. Please select again")
 	}
 
 	// parseChatMentions — exceeding the per-message mention cap (11 distinct ids).
@@ -38,16 +43,16 @@ func TestChatMentionErrorsLocalized(t *testing.T) {
 		fmt.Fprintf(&b, "@[漏洞#%d] ", i)
 	}
 	if _, err := parseChatMentions(b.String()); err == nil {
-		t.Fatal("인용 상한 초과가 통과해서는 안 됩니다")
+		t.Fatal("exceeding the citation cap must not pass")
 	} else {
-		assertKoreanError(t, "parse.tooMany", err.Error())
+		assertEnglishMessage(t, "parse.tooMany", err.Error(), "A single message can cite up to 10 records")
 	}
 
 	// composeChatMentionMessage — a mention is present but the database is nil.
 	if _, err := composeChatMentionMessage(nil, "@[漏洞#1]"); err == nil {
-		t.Fatal("DB 없이 인용 해석이 통과해서는 안 됩니다")
+		t.Fatal("citation resolution must not pass without a DB")
 	} else {
-		assertKoreanError(t, "compose.dataUnavail", err.Error())
+		assertEnglishMessage(t, "compose.dataUnavail", err.Error(), "Citation data is currently unavailable")
 	}
 
 	// searchChatMentions — invalid kind and over-long query are rejected before
@@ -56,17 +61,31 @@ func TestChatMentionErrorsLocalized(t *testing.T) {
 		w := httptest.NewRecorder()
 		(&Server{}).searchChatMentions(w, httptest.NewRequest("GET", "/api/chat/mentions?"+q, nil))
 		if w.Code != 400 {
-			t.Fatalf("검증 실패(400)를 기대했으나 %d 가 반환되었습니다 (%s)", w.Code, q)
+			t.Fatalf("expected validation failure (400) but got %d (%s)", w.Code, q)
 		}
-		assertKoreanError(t, "search."+q, decodeErrorField(t, w.Body.Bytes()))
+		assertEnglishMessage(t, "search."+q, decodeErrorField(t, w.Body.Bytes()),
+			"The citation type is invalid or the search term exceeds 200 characters")
 	}
 
-	// The display label map mirrors the UI mention kinds, and the not-found
-	// template resolves to a fully Korean message for a known kind.
+	// The display label map mirrors the UI mention kinds in both supported
+	// output languages, and the not-found template resolves to a fully English
+	// message for a known kind.
 	for _, kind := range []string{"finding", "asset", "company", "endpoint", "ip", "app", "root_domain", "subdomain", "service"} {
-		if chatMentionKindLabel[kind] == "" {
-			t.Fatalf("종류 라벨이 누락되었습니다: %s", kind)
+		for _, lang := range config.SupportedLanguages {
+			if chatMentionKindLabel[lang][kind] == "" {
+				t.Fatalf("missing %s kind label: %s", lang, kind)
+			}
 		}
 	}
-	assertKoreanError(t, "notFound", fmt.Sprintf(errChatMentionNotFoundFmt, chatMentionKindLabel["finding"], 7))
+	assertEnglishMessage(t, "notFound",
+		fmt.Sprintf(trMsg(errChatMentionNotFoundFmt), chatMentionKindLabel[config.ActiveLanguage()]["finding"], 7),
+		"The cited finding #7 record does not exist or its type does not match. Remove it and select again")
+
+	// Spanish overlay: the label and the template switch to es.
+	t.Cleanup(func() { config.CurrentLanguage = nil })
+	config.CurrentLanguage = func() string { return "es" }
+	if got, want := fmt.Sprintf(trMsg(errChatMentionNotFoundFmt), chatMentionKindLabel["es"]["finding"], 7),
+		"El registro hallazgo #7 citado no existe o su tipo no coincide. Elimínelo y selecciónelo de nuevo"; got != want {
+		t.Fatalf("es notFound = %q, want %q", got, want)
+	}
 }

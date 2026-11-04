@@ -18,20 +18,23 @@ type companyScopeInputs []db.ScopeInput
 
 const maxCompanyMutationBodyBytes = 2 << 20
 
-// 회사·자산 API 가 사용자에게 돌려주는 오류 응답 문구. 용어집 기준으로 company 는
-// "회사"로 둔다. 사람이 읽는 메시지만 한국어로 두고 식별자·필드명은 원문 보존.
+// Error responses the company/asset API returns to users. Per the glossary,
+// "company" stays "company". Only human-readable messages are localized;
+// identifiers and field names keep their original form.
 const (
-	errCompanyRequestTooLarge = "요청 본문이 너무 큽니다"
-	errCompanyNameConflict    = "이미 존재하는 회사 이름입니다"
+	errCompanyRequestTooLarge = "The request body is too large"
+	errCompanyNameConflict    = "The company name already exists"
 )
 
-// 자산 출처(provenance) summary 라벨. task_asset_links.source_summary 에 저장돼 작업
-// 상세 화면(sessions·assets 탭)에 그대로 표시되는 사용자 노출 문구다. 한곳에 모아
-// 두어 같은 패널에서 출처 라벨이 언어별로 어긋나지 않게 한다(db.manualTaskScopeSummary
-// 도 같은 성격의 수동 추가 라벨). 비교·분기에 쓰이지 않는 표시 전용 값이다.
+// Asset provenance summary labels. They are stored in
+// task_asset_links.source_summary and shown verbatim in the task detail screen
+// (sessions and assets tabs), so they are user-facing text. Keep them in one
+// place so the provenance label never drifts within the same panel
+// (db.manualTaskScopeSummary is the manual-add label of the same kind). These are
+// display-only values: nothing compares or branches on them.
 const (
-	taskAssetSourceAPISummary  = "자산 API 로 등록"
-	taskAssetSourceTaskSummary = "작업 설명 또는 목표로 초기화"
+	taskAssetSourceAPISummary  = "Registered through the asset API"
+	taskAssetSourceTaskSummary = "Initialized from the task description or goal"
 )
 
 func decodeCompanyMutationRequest(w http.ResponseWriter, r *http.Request, value any) bool {
@@ -363,7 +366,7 @@ func (s *Server) listAssets(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// task_id scopes the DSL search to a task's assets (the task detail
-		// "测试资产" search); 0 means the global asset view.
+		// "test assets" search); 0 means the global asset view.
 		taskID, _ := strconv.ParseInt(q.Get("task_id"), 10, 64)
 		total, err = as.CountDSL(dsl, typ, taskID)
 		if err == nil && offset < total {

@@ -104,9 +104,9 @@ func TestSideLongExchangeAndSnapshotCompactionAreBounded(t *testing.T) {
 			snap := Snapshot{Request: fixture(), Model: Model{WindowTokens: 32000}}
 			var history []Exchange
 			if hugeHistory {
-				history = []Exchange{{Ordinal: 1, Question: "earlier", Answer: strings.Repeat("历史依据ABC", 14000), Status: "completed"}}
+				history = []Exchange{{Ordinal: 1, Question: "earlier", Answer: strings.Repeat("historical evidence ABC", 14000), Status: "completed"}}
 			} else {
-				snap.Request.Messages = append([]llm.Message{llm.UserText(strings.Repeat("old tool evidence 中文", 9000))}, snap.Request.Messages...)
+				snap.Request.Messages = append([]llm.Message{llm.UserText(strings.Repeat("old tool evidence text", 9000))}, snap.Request.Messages...)
 			}
 			original := mustJSON(t, snap)
 			calls, answers := 0, 0

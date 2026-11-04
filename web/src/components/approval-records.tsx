@@ -36,7 +36,7 @@ import type {
   InterceptPending,
   InterceptReviewInput,
 } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { cn, firstNonEmpty } from "@/lib/utils";
 
 type Translator = ReturnType<typeof useTranslations>;
 
@@ -513,13 +513,13 @@ export function ApprovalDetail({
               ) : null}
               <dl className="grid gap-2 text-muted-foreground text-xs [overflow-wrap:anywhere]">
                 <div>
-                  {t("toolCallId")}: {audit.tool_use_id || t("notRecorded")}
+                  {t("toolCallId")}: {firstNonEmpty(audit.tool_use_id, t("notRecorded"))}
                 </div>
                 <div>
                   {t("inputDigest")}: {audit.input_digest}
                 </div>
                 <div>
-                  {t("configDigest")}: {audit.config_digest || t("notRecorded")}
+                  {t("configDigest")}: {firstNonEmpty(audit.config_digest, t("notRecorded"))}
                 </div>
                 {audit.model_input_digest ? (
                   <div>

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 // ── DSL autocomplete ──────────────────────────────────────────────────────────
-// Shared by the global asset view (/function/assets) and the per-task 测试资产
+// Shared by the global asset view (/function/assets) and the per-task test-assets
 // search, so both search boxes behave and look identical. Field/operator/logic
 // descriptions are translation keys (namespace "assetSearch") resolved at render.
 

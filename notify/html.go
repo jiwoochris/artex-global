@@ -5,11 +5,14 @@ import (
 	"strings"
 )
 
-// 本文件渲染邮件的 HTML 正文。刻意用内联样式 + 简单表格布局而不是现代 CSS：
-// 邮件客户端（尤其 Outlook 与国内企业邮箱）对 <style> 块和 flex/grid 的支持
-// 差异极大，内联样式是唯一在各家都能正确显示的写法。
+// This file renders the HTML body of an email. Inline styles plus a simple table
+// layout are used deliberately instead of modern CSS: email clients (especially
+// Outlook and enterprise webmail) differ wildly in their support for <style>
+// blocks and flex/grid, so inline styles are the only thing that renders correctly
+// everywhere.
 
-// htmlSeverityColor 返回级别对应的强调色，用于左侧色条与标题。
+// htmlSeverityColor returns the accent color for a severity, used for the left bar
+// and the title.
 func htmlSeverityColor(severity string) string {
 	switch severity {
 	case "critical":
@@ -25,12 +28,12 @@ func htmlSeverityColor(severity string) string {
 	}
 }
 
-// htmlTitle 返回邮件主题。
+// htmlTitle returns the email subject.
 func htmlTitle(m Message) string {
 	return markdownTitle(m)
 }
 
-// htmlBody 渲染邮件正文 HTML。maxRunes<=0 表示不截断。
+// htmlBody renders the email body HTML. maxRunes<=0 means no truncation.
 func htmlBody(m Message, maxRunes int) string {
 	var b strings.Builder
 	b.WriteString(`<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;font-size:14px;color:#262626;line-height:1.6;">`)
@@ -43,19 +46,20 @@ func htmlBody(m Message, maxRunes int) string {
 		b.WriteString(htmlItem(m.Items[0], true))
 	}
 	if m.HomeURL != "" {
-		fmt.Fprintf(&b, `<p style="margin:16px 0 0;"><a href="%s" style="color:#1677ff;">플랫폼에서 전체 보기</a></p>`, htmlEscapeAttr(m.HomeURL))
+		fmt.Fprintf(&b, `<p style="margin:16px 0 0;"><a href="%s" style="color:#1677ff;">View everything in the platform</a></p>`, htmlEscapeAttr(m.HomeURL))
 	}
 	b.WriteString(`</div>`)
 	return TruncateHTML(b.String(), maxRunes)
 }
 
-// htmlBatchIntro 渲染汇总邮件开头：条数与级别分布。
+// htmlBatchIntro renders the opening of a digest email: the item count and severity
+// breakdown.
 func htmlBatchIntro(m Message) string {
 	var b strings.Builder
 	if m.WindowMinutes > 0 {
-		fmt.Fprintf(&b, `<h2 style="font-size:16px;margin:0 0 4px;">최근 %d분간 신규 취약점 %d건</h2>`, m.WindowMinutes, len(m.Items))
+		fmt.Fprintf(&b, `<h2 style="font-size:16px;margin:0 0 4px;">%d new vulnerabilities in the last %d minutes</h2>`, len(m.Items), m.WindowMinutes)
 	} else {
-		fmt.Fprintf(&b, `<h2 style="font-size:16px;margin:0 0 4px;">신규 취약점 %d건</h2>`, len(m.Items))
+		fmt.Fprintf(&b, `<h2 style="font-size:16px;margin:0 0 4px;">%d new vulnerabilities</h2>`, len(m.Items))
 	}
 	counts := map[string]int{}
 	for _, it := range m.Items {
@@ -74,8 +78,8 @@ func htmlBatchIntro(m Message) string {
 	return b.String()
 }
 
-// htmlItem 渲染单个漏洞。full=true 时含摘要与回链（单条推送），
-// false 时压缩成一行（汇总列表）。
+// htmlItem renders one finding. full=true includes the summary and back-link
+// (single push); false compresses it to one line (digest list).
 func htmlItem(it Item, full bool) string {
 	color := htmlSeverityColor(it.Severity)
 	var b strings.Builder
@@ -103,27 +107,29 @@ func htmlItem(it Item, full bool) string {
 	}
 
 	if it.IsStatusChange() {
-		fmt.Fprintf(&b, `<div><b>상태 변경</b>: %s → %s</div>`,
+		fmt.Fprintf(&b, `<div><b>Status change</b>: %s → %s</div>`,
 			htmlEscape(StatusLabel(it.FromStatus)), htmlEscape(StatusLabel(it.ToStatus)))
 	}
 	if it.VulnClass != "" && it.VulnClass != it.Title() {
-		fmt.Fprintf(&b, `<div><b>유형</b>: %s</div>`, htmlEscape(it.VulnClass))
+		fmt.Fprintf(&b, `<div><b>Type</b>: %s</div>`, htmlEscape(it.VulnClass))
 	}
 	if a := assetLine(it.Assets, maxAssetsShown); a != "" {
-		fmt.Fprintf(&b, `<div><b>자산</b>: %s</div>`, htmlEscape(a))
+		fmt.Fprintf(&b, `<div><b>Assets</b>: %s</div>`, htmlEscape(a))
 	}
 	if s := OneLine(it.Summary, maxSummaryRunes); s != "" {
-		fmt.Fprintf(&b, `<div><b>개요</b>: %s</div>`, htmlEscape(s))
+		fmt.Fprintf(&b, `<div><b>Summary</b>: %s</div>`, htmlEscape(s))
 	}
 	if it.DetailURL != "" {
-		fmt.Fprintf(&b, `<div style="margin-top:6px;"><a href="%s" style="color:#1677ff;">상세 보기</a></div>`, htmlEscapeAttr(it.DetailURL))
+		fmt.Fprintf(&b, `<div style="margin-top:6px;"><a href="%s" style="color:#1677ff;">View details</a></div>`, htmlEscapeAttr(it.DetailURL))
 	}
 	b.WriteString(`</div>`)
 	return b.String()
 }
 
-// htmlEscape 转义 HTML 文本内容。漏洞标题与摘要来自被测目标与模型输出，
-// 是不可信内容——不转义就等于允许把任意 HTML（含外链图片）注入到邮件里。
+// htmlEscape escapes HTML text content. Finding titles and summaries come from the
+// tested target and from model output, so they are untrusted — not escaping them
+// would allow arbitrary HTML (including remote images) to be injected into the
+// email.
 func htmlEscape(s string) string {
 	s = strings.ReplaceAll(s, "&", "&amp;")
 	s = strings.ReplaceAll(s, "<", "&lt;")
@@ -131,8 +137,8 @@ func htmlEscape(s string) string {
 	return s
 }
 
-// htmlEscapeAttr 转义 HTML 属性值（在文本转义之外额外处理引号，
-// 防止 URL 里的引号提前闭合 href 属性）。
+// htmlEscapeAttr escapes an HTML attribute value (handling quotes on top of the
+// text escaping, so a quote inside a URL cannot close the href attribute early).
 func htmlEscapeAttr(s string) string {
 	s = htmlEscape(s)
 	s = strings.ReplaceAll(s, "\"", "&quot;")

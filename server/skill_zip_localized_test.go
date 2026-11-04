@@ -4,41 +4,62 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"unicode"
 )
 
 // TestSkillZipErrorsLocalized guards the F3b skill_zip.go bundle: every user-facing
 // skill-upload error response (fsUploadSkill surfaces these via
-// writeErr(400, err.Error()), see server_mgmt.go) must be Korean, and no zip-method
-// display name may stay Chinese. Reverting any of these literals to Chinese fails here.
+// writeErr(400, err.Error()), see server_mgmt.go) is its exact English source text,
+// and the zip-method display names are the English labels shown in that message.
+// Reverting any of these literals to another language fails here.
 func TestSkillZipErrorsLocalized(t *testing.T) {
 	// Message constants rendered with sample arguments.
-	assertKoreanError(t, "errSkillZipParse",
-		fmt.Errorf(errSkillZipParse, fmt.Errorf("boom")).Error())
-	assertKoreanError(t, "errSkillZipEncrypted",
-		fmt.Sprintf(errSkillZipEncrypted, "demo/SKILL.md"))
-	assertKoreanError(t, "errSkillZipUnsupported",
-		fmt.Sprintf(errSkillZipUnsupported, "LZMA", 14, "demo/SKILL.md"))
+	assertEnglishMessage(t, "errSkillZipParse",
+		fmt.Errorf(errSkillZipParse, fmt.Errorf("boom")).Error(),
+		"Failed to parse the archive file (must be zip format): boom")
+	assertEnglishMessage(t, "errSkillZipEncrypted",
+		fmt.Sprintf(errSkillZipEncrypted, "demo/SKILL.md"),
+		"The archive is encrypted (demo/SKILL.md). Please upload an unencrypted zip file.")
+	assertEnglishMessage(t, "errSkillZipUnsupported",
+		fmt.Sprintf(errSkillZipUnsupported, "LZMA", 14, "demo/SKILL.md"),
+		"Unsupported compression method: LZMA (method 14), file demo/SKILL.md. "+
+			"Please recompress it with Store or Deflate "+
+			"(in 7-Zip/WinRAR pick Deflate, or use the operating system's built-in compressor or the command line zip -r).")
 
-	// A non-zip upload must reach the user as a Korean hint, not a raw stdlib error.
+	// A non-zip upload must reach the user as the English hint, not a raw stdlib error.
 	if _, err := newSkillZipReader([]byte("this is not a zip archive")); err == nil {
-		t.Fatal("비-zip 입력은 오류를 반환해야 합니다")
+		t.Fatal("a non-zip input must return an error")
 	} else {
-		assertKoreanError(t, "newSkillZipReader", err.Error())
-		if !strings.Contains(err.Error(), "압축 파일") {
-			t.Fatalf("parse error = %q, want '압축 파일' 안내", err.Error())
+		assertEnglishPrefix(t, "newSkillZipReader", err.Error(),
+			"Failed to parse the archive file (must be zip format): zip:")
+		if !strings.Contains(err.Error(), "archive file") {
+			t.Fatalf("parse error = %q, want the 'archive file' hint", err.Error())
 		}
 	}
 
-	// No zip-method display name may carry a Chinese Han ideograph; the two
-	// translated ones (AES, unknown fallback) must be Korean.
-	for m, name := range zipMethodNames {
-		for _, r := range name {
-			if unicode.Is(unicode.Han, r) {
-				t.Fatalf("zipMethodNames[%d] = %q 에 중국어 한자가 남아 있습니다", m, name)
-			}
-		}
+	// Every zip-method display name is a fixed English label.
+	cases := []struct {
+		method      uint16
+		wantEnglish string
+	}{
+		{zipMethodStore, "Store"},
+		{zipMethodDeflate, "Deflate"},
+		{zipMethodDeflate64, "Deflate64"},
+		{zipMethodBzip2, "bzip2"},
+		{zipMethodLZMA, "LZMA"},
+		{zipMethodZstdPKW, "Zstandard"},
+		{zipMethodZstd, "Zstandard"},
+		{zipMethodXZ, "XZ"},
+		{zipMethodJPEG, "JPEG"},
+		{zipMethodWavPack, "WavPack"},
+		{zipMethodPPMd, "PPMd"},
+		{zipMethodAES, "AES encryption"},
+		{0xffff, "unknown"},
 	}
-	assertKoreanError(t, "zipMethodName(AES)", zipMethodName(zipMethodAES))
-	assertKoreanError(t, "zipMethodName(unknown)", zipMethodName(0xffff))
+	for _, c := range cases {
+		assertEnglishMessage(t, fmt.Sprintf("zipMethodName(%d)", c.method), zipMethodName(c.method), c.wantEnglish)
+	}
+	// The table above lists every label in zipMethodNames plus the unknown fallback.
+	if len(zipMethodNames) != len(cases)-1 {
+		t.Fatalf("zipMethodNames has %d entries but %d labels are pinned", len(zipMethodNames), len(cases)-1)
+	}
 }

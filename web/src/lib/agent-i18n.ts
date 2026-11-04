@@ -5,56 +5,59 @@ import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import type { Agent } from "@/lib/types";
 
-// 기본 에이전트(builtin)의 이름·설명·프롬프트 변수 라벨은 DB 시드 데이터라
-// 중국어로만 들어 있다(db/db.go 의 builtinAgents, server/finding_retests.go 의
-// 漏洞复测 에이전트). DB 값을 언어별로 둘 수 없고 시드가 ON CONFLICT DO NOTHING 이라
-// 이미 설치된 인스턴스에는 반영되지도 않으므로, 화면에서는 key 로 메시지 파일
-// (web/messages/{ko,en,zh,es,ja}.json 의 builtinAgents 네임스페이스)에서 번역을 찾아
-// 보여 주고, 없으면 DB 값을 그대로 쓴다. 사용자가 만든 에이전트는 항상 DB 값.
+// Names, descriptions and prompt-variable labels of builtin agents are DB seed data and
+// exist only in Chinese (builtinAgents in db/db.go, the vulnerability-retest agent in
+// server/finding_retests.go). A DB column cannot hold per-language values, and the seed runs
+// ON CONFLICT DO NOTHING so it never reaches installed instances either. The UI therefore
+// looks the translation up by key in the message files (the builtinAgents namespace of
+// web/messages/{en,es}.json) and falls back to the DB value when a key is missing. Agents
+// created by users always render the DB value.
 
-// retester 는 DB 에 builtin=false 로 시드되지만(server FindingRetestAgentKey) 시스템이
-// 심은 고정 key 라 번역 대상에 포함한다. builtin=true 인 에이전트(goals/planner/
-// mainagent/worker/auto/pentest)는 agent.builtin 으로 걸러지므로 여기 둘 필요가 없다.
+// retester is seeded with builtin=false (server FindingRetestAgentKey) but is a fixed key
+// planted by the system, so it is translatable too. Agents with builtin=true (goals/planner/
+// mainagent/worker/auto/pentest) are filtered by agent.builtin and need no entry here.
 const SYSTEM_SEEDED_AGENT_KEYS = new Set(["retester"]);
 
 function isSystemSeeded(agent: { key: string; builtin?: boolean }): boolean {
   return !!agent.builtin || SYSTEM_SEEDED_AGENT_KEYS.has(agent.key);
 }
 
-// useAgentLabels 는 기본 에이전트의 이름·설명·프롬프트 변수 라벨을 현재 언어로
-// 돌려주는 헬퍼 묶음이다. 모든 표시 지점에서 이 헬퍼를 거쳐 라벨을 얻는다.
+// useAgentLabels returns a helper bundle that renders builtin agent names, descriptions and
+// prompt-variable labels in the active language. Every display site gets labels through it.
 export function useAgentLabels() {
   const t = useTranslations("builtinAgents");
 
-  // 호출 쪽이 이 함수들을 useMemo·useCallback 의존성으로 쓰므로(대화 그룹·필터 계산),
-  // 언어(t)가 바뀔 때만 새 묶음을 만든다. 매 렌더 새 객체면 그 계산이 매번 다시 돈다.
+  // Callers use these functions as useMemo/useCallback dependencies (conversation grouping,
+  // filter computation), so the bundle is rebuilt only when the language (t) changes. A new
+  // object per render would recompute everything on every render.
   return useMemo(() => {
-    // name 은 기본 에이전트면 번역 이름을, 아니면 DB 이름(agent.name)을 돌려준다.
+    // name returns the translated name for builtin agents, otherwise the DB name (agent.name).
     const name = (agent: { key: string; name: string; builtin?: boolean }): string => {
       if (isSystemSeeded(agent) && t.has(`${agent.key}.name`)) return t(`${agent.key}.name`);
       return agent.name;
     };
 
-    // description 은 기본 에이전트면 번역 설명을, 아니면 DB 설명(없으면 빈 문자열)을
-    // 돌려준다. 빈 설명 폴백 문구는 호출 쪽에서 기존대로 붙인다.
+    // description returns the translated description for builtin agents, otherwise the DB
+    // description (empty string when absent). Callers keep appending their own fallback text
+    // for an empty description.
     const description = (agent: { key: string; description?: string; builtin?: boolean }): string => {
       if (isSystemSeeded(agent) && t.has(`${agent.key}.description`)) return t(`${agent.key}.description`);
       return agent.description ?? "";
     };
 
-    // nameByKey 는 Agent 객체 없이 key 만 있을 때(대화 그룹 묶기 등) 쓰는 변형이다.
-    // 조회기(agent 를 돌려주는 함수)를 받아 있으면 번역, 없으면 key 를 돌려준다.
+    // nameByKey is the variant used when only a key is available (conversation grouping). It
+    // takes a lookup function: a hit yields the label, a miss yields the key.
     const nameByKey = (
       key: string,
       lookup: (key: string) => { key: string; name: string; builtin?: boolean } | undefined,
     ): string => {
       const agent = lookup(key);
-      // biome-ignore lint/nursery/useNullishCoalescing: 이름이 빈("") 에이전트도 예전처럼 key 로 대신 보여 줘야 하므로 || 가 의도된 동작이다.
+      // biome-ignore lint/nursery/useNullishCoalescing: an agent with an empty ("") name must still show its key, so || is intentional.
       return (agent && name(agent)) || key;
     };
 
-    // varLabel 은 기본 에이전트의 프롬프트 변수 라벨(예: goals 의 "任务总目标")을
-    // 번역한다. 없으면 DB 라벨(fallback)을 그대로 쓴다.
+    // varLabel translates a builtin agent's prompt-variable label (e.g. goals' "overall task objective")
+    // and falls back to the DB label when the key is missing.
     const varLabel = (agentKey: string, builtin: boolean, varName: string, fallback: string): string => {
       if ((builtin || SYSTEM_SEEDED_AGENT_KEYS.has(agentKey)) && t.has(`${agentKey}.vars.${varName}`)) {
         return t(`${agentKey}.vars.${varName}`);
@@ -66,22 +69,20 @@ export function useAgentLabels() {
   }, [t]);
 }
 
-// 에이전트 목록은 화면 여러 곳(승인 기록 등)이 key → 표시 이름 변환에만 쓰므로
-// 한 번 받아 모듈 단위로 공유한다. 실패하면 다음 호출에서 다시 받는다.
+// Several screens (approval records, …) need the agent list only to map key → display name,
+// so it is fetched once and shared at module scope. A failure clears it for the next call.
 let agentListPromise: Promise<Agent[]> | null = null;
 function loadAgentList(): Promise<Agent[]> {
-  if (!agentListPromise) {
-    agentListPromise = api.agents().catch((err) => {
-      agentListPromise = null;
-      throw err;
-    });
-  }
+  agentListPromise ??= api.agents().catch((err) => {
+    agentListPromise = null;
+    throw err;
+  });
   return agentListPromise;
 }
 
-// useAgentNameByKey 는 에이전트 객체 없이 key 만 가진 화면(승인·가로채기 기록의
-// conv_agent_key 등)에서 쓰는 변환기를 돌려준다. 기본 에이전트는 현재 언어 이름,
-// 사용자 에이전트는 DB 이름, 목록에 없거나 아직 못 받았으면 key 를 그대로 보여 준다.
+// useAgentNameByKey returns the mapper used by screens that only hold a key (conv_agent_key in
+// approval/intercept records, …): builtin agents render their translated name, user agents
+// their DB name, and a key missing from the list (or a list still loading) renders as-is.
 export function useAgentNameByKey(): (key: string) => string {
   const labels = useAgentLabels();
   const [agents, setAgents] = useState<Map<string, Agent>>(() => new Map());
@@ -92,7 +93,7 @@ export function useAgentNameByKey(): (key: string) => string {
         if (alive) setAgents(new Map(list.map((a) => [a.key, a])));
       })
       .catch(() => {
-        // 목록을 못 받으면 key 를 그대로 보여 준다(다음 마운트에서 다시 시도).
+        // When the list fails to load the key renders as-is (the next mount retries).
       });
     return () => {
       alive = false;

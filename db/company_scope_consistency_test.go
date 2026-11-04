@@ -172,6 +172,7 @@ func TestResolveAndRecomputeUseStableCompanyIDTieBreak(t *testing.T) {
 }
 
 func TestCompanyScopeLimitsAndCheckedErrors(t *testing.T) {
+	// A 3-byte rune, so the boundary really exercises rune counting rather than byte counting.
 	boundary := strings.Repeat("界", MaxCompanyScopeRawRunes)
 	if err := ValidateCompanyScopeInputBounds([]ScopeInput{{Kind: "keyword", Value: boundary}}); err != nil {
 		t.Fatalf("exact raw rune boundary rejected: %v", err)
@@ -180,7 +181,7 @@ func TestCompanyScopeLimitsAndCheckedErrors(t *testing.T) {
 	if err := ValidateCompanyScopeInputBounds([]ScopeInput{{Kind: "keyword", Value: boundary + "界"}}); !errors.As(err, &validationErr) {
 		t.Fatalf("oversized raw value error=%v want CompanyScopeValidationError", err)
 	}
-	// 条数不再设上限,只校验单条长度。
+	// The rule count is no longer capped; only each individual length is checked.
 	if err := ValidateCompanyScopeInputBounds(make([]ScopeInput, 1000)); err != nil {
 		t.Fatalf("rule count should be unbounded, got %v", err)
 	}
@@ -193,7 +194,7 @@ func TestCompanyScopeLimitsAndCheckedErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer cleanupCompany(d, companyID)
-	// 曾经封顶 256 条,逐个 IP / 域名录范围的企业很容易撞上;现在不限条数。
+	// This used to be capped at 256 rules, which companies entering scope IP by IP / domain by domain hit easily; there is no rule-count limit now.
 	const bulk = 300
 	rules := make([]ScopeInput, bulk)
 	for i := range rules {

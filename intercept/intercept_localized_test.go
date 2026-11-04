@@ -4,97 +4,77 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"unicode"
+
+	"github.com/Autumn-27/artex/config"
 )
 
-// hasHangul reports whether s contains any Hangul syllable.
-func hasHangul(s string) bool {
-	for _, r := range s {
-		if r >= 0xAC00 && r <= 0xD7A3 {
-			return true
-		}
-	}
-	return false
-}
-
-// hasHan reports whether s contains any CJK Han ideograph.
-func hasHan(s string) bool {
-	for _, r := range s {
-		if unicode.Is(unicode.Han, r) {
-			return true
-		}
-	}
-	return false
-}
-
-// assertKorean fails if s lacks Hangul or still carries Han ideographs. Reverting
-// any localized message back to Chinese trips hasHan, so the test is not vacuous.
-func assertKorean(t *testing.T, label, s string) {
+// wantEnglish asserts that a user-visible literal is exactly its English source text.
+func wantEnglish(t *testing.T, label, got, want string) {
 	t.Helper()
-	if !hasHangul(s) {
-		t.Errorf("%s: 한글이 없습니다: %q", label, s)
-	}
-	if hasHan(s) {
-		t.Errorf("%s: 한자가 남아 있습니다: %q", label, s)
+	if got != want {
+		t.Errorf("%s: want %q, got %q", label, want, got)
 	}
 }
 
-// TestInterceptMessagesLocalized pins the user-facing judge/approval messages to
-// Korean. These surface in the approval record reason, the activity stream, and
+// TestInterceptMessagesLocalized pins the user-facing judge/approval messages to their exact
+// English source text. These surface in the approval record reason, the activity stream, and
 // the 409 response for an already-decided request.
 func TestInterceptMessagesLocalized(t *testing.T) {
-	for _, c := range []struct{ name, s string }{
-		{"msgReviewContextIncomplete", msgReviewContextIncomplete},
-		{"msgModelApprovalFailed", msgModelApprovalFailed},
-		{"msgModelOutputUnparsable", msgModelOutputUnparsable},
-		{"reasonWorkCanceled", reasonWorkCanceled},
-		{"reasonWorkCanceledPreExec", reasonWorkCanceledPreExec},
-		{"reasonApprovalTimeout", reasonApprovalTimeout},
-		{"reasonManualDeny", reasonManualDeny},
-		{"reasonManualAllow", reasonManualAllow},
-		{"ErrAlreadyDecided", ErrAlreadyDecided.Error()},
+	for _, c := range []struct{ name, got, want string }{
+		{"msgReviewContextIncomplete", msgReviewContextIncomplete, "The review context is incomplete, so human confirmation is required: "},
+		{"msgModelApprovalFailed", msgModelApprovalFailed, "Model approval failed; handled according to the failure policy: "},
+		{"msgModelOutputUnparsable", msgModelOutputUnparsable, "The model output could not be parsed; handled according to the failure policy"},
+		{"reasonWorkCanceled", reasonWorkCanceled, "The task was cancelled"},
+		{"reasonWorkCanceledPreExec", reasonWorkCanceledPreExec, "The task was cancelled before execution"},
+		{"reasonApprovalTimeout", reasonApprovalTimeout, "Approval timed out; handled according to the timeout policy"},
+		{"reasonManualDeny", reasonManualDeny, "A human denied the execution"},
+		{"reasonManualAllow", reasonManualAllow, "A human allowed the execution"},
+		{"ErrAlreadyDecided", ErrAlreadyDecided.Error(), "This approval has already been handled or does not exist. Refresh the records and try again"},
 	} {
-		assertKorean(t, c.name, c.s)
+		wantEnglish(t, c.name, c.got, c.want)
 	}
 }
 
-// TestJudgeActionLabelLocalized checks the three judge verdict labels are Korean
-// (허용 / 차단 / 확인 요청, per the glossary) and that an unknown action still
+// TestJudgeActionLabelLocalized checks the three judge verdict labels: the English source
+// labels for the default language and the Spanish overlay for es. An unknown action still
 // passes through untranslated.
 func TestJudgeActionLabelLocalized(t *testing.T) {
-	for _, action := range []string{"allow", "deny", "ask"} {
-		assertKorean(t, "judgeActionLabel("+action+")", judgeActionLabel(action))
+	t.Cleanup(func() { config.CurrentLanguage = nil })
+	config.CurrentLanguage = func() string { return "en" }
+	for action, want := range map[string]string{"allow": "allow", "deny": "deny", "ask": "ask"} {
+		wantEnglish(t, "judgeActionLabel("+action+")/en", judgeActionLabel(action), want)
+	}
+	config.CurrentLanguage = func() string { return "es" }
+	for action, want := range map[string]string{"allow": "permitir", "deny": "bloquear", "ask": "preguntar"} {
+		wantEnglish(t, "judgeActionLabel("+action+")/es", judgeActionLabel(action), want)
 	}
 	if got := judgeActionLabel("weird"); got != "weird" {
 		t.Errorf("judgeActionLabel(weird) = %q, want passthrough", got)
 	}
 }
 
-// TestDefaultMessageLocalized checks the rule-derived deny/ask messages are Korean
-// and still embed the rule name, while allow stays empty.
+// TestDefaultMessageLocalized checks the rule-derived deny/ask messages are English and still
+// embed the rule name, while allow stays empty.
 func TestDefaultMessageLocalized(t *testing.T) {
-	for _, action := range []string{"deny", "ask"} {
-		msg := defaultMessage(action, "R1")
-		assertKorean(t, "defaultMessage("+action+")", msg)
-		if !strings.Contains(msg, "R1") {
-			t.Errorf("defaultMessage(%s) dropped rule name: %q", action, msg)
-		}
-	}
+	wantEnglish(t, "defaultMessage(deny)", defaultMessage("deny", "R1"),
+		"This tool cannot be executed under interception rule [R1]")
+	wantEnglish(t, "defaultMessage(ask)", defaultMessage("ask", "R1"),
+		"This tool requires user approval under interception rule [R1]. Please wait")
 	if got := defaultMessage("allow", "R1"); got != "" {
 		t.Errorf("defaultMessage(allow) = %q, want empty", got)
 	}
 }
 
-// TestToolApprovalSummaryLocalized checks the activity summary is Korean and stays
-// parseable by transcript.tsx, which extracts the pending id via /\(#(\d+)\)/ and
-// the tool name via /도구\s+(\S+)\s+승인/.
+// TestToolApprovalSummaryLocalized checks the activity summary is English and stays parseable
+// by transcript.tsx, which extracts the pending id via /\(#(\d+)\)/ and the tool name via
+// /Tool\s+(\S+)\s+approval/.
 func TestToolApprovalSummaryLocalized(t *testing.T) {
 	s := fmt.Sprintf(msgToolApprovalRequestFmt, "Bash", 42)
-	assertKorean(t, "msgToolApprovalRequestFmt", s)
+	wantEnglish(t, "msgToolApprovalRequestFmt", s, "Tool Bash approval request (#42)")
 	if !strings.Contains(s, "(#42)") {
 		t.Errorf("summary lost the (#N) marker (transcript.tsx pending_id regex): %q", s)
 	}
-	if !strings.Contains(s, "도구 Bash 승인") {
-		t.Errorf("summary lost the '도구 X 승인' shape (transcript.tsx toolName regex): %q", s)
+	if !strings.Contains(s, "Tool Bash approval") {
+		t.Errorf("summary lost the 'Tool X approval' shape (transcript.tsx toolName regex): %q", s)
 	}
 }

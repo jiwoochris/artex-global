@@ -25,52 +25,61 @@ const (
 	maxConversationTitleRunes    = 200
 )
 
-// 대화(채팅) 엔드포인트가 HTTP 응답으로 돌려주는 사용자 노출 문구다. 한국어 UI 에서
-// 요청이 실패하면 이 문구가 그대로 토스트로 뜨므로 한국어로 둔다. 요청 필드명
-// (agent_key·title·pinned·ids·id)·식별자(LLM·API Key·token)는 사용자가 요청을 고치는 데
-// 쓰는 값이라 원문 그대로 둔다. 用語: 配置→설정(B4c-5), agent→에이전트. %d 가 든 상수는
-// fmt.Sprintf 형식 문자열이다. 기본 대화 제목·센티넬은 아래 convDefaultTitle·
-// convAttachmentTitle 로 분리했고(F8), 재검증 사유·트랜스크립트 오류 문구는 아래
-// convRetest* 상수·transcriptErrorSummary 로 분리했다(F9). 트리거 메시지 골격은 아직
-// 이 묶음 밖이다(F10·저널 참조). 로그·주석은 BRIEF 방침상 최하위.
+// User-facing text the conversation (chat) endpoints return over HTTP. A failed
+// request shows this text verbatim as a toast in the UI, so it is localized.
+// Request field names (agent_key·title·pinned·ids·id) and identifiers (LLM·API
+// Key·token) are what the user fixes the request with, so they stay verbatim.
+// Constants containing %d are fmt.Sprintf format strings. The default
+// conversation title/sentinel live below as convDefaultTitle·convAttachmentTitle
+// (F8); the revalidation reasons and transcript error text live below as the
+// convRetest* constants·transcriptErrorSummary (F9). The trigger-message skeleton
+// is still outside this group (F10, see the journal). Logs and comments are lowest
+// priority per the BRIEF.
 const (
-	convErrRequestTooLarge = "요청 본문이 너무 큽니다"
-	convErrAgentKeyEmpty   = "agent_key 는 비어 있을 수 없습니다"
-	convErrAgentKeyTooLong = "agent_key 는 최대 %d자까지 입력할 수 있습니다"
-	convErrAgentNotFound   = "에이전트를 찾을 수 없습니다"
-	convErrLLMProfile      = "지정한 LLM 설정이 존재하지 않거나 API Key 가 설정되지 않았습니다"
-	convErrTitleTooLong    = "제목은 최대 %d자까지 입력할 수 있습니다"
-	convErrTitleOrPinned   = "title 또는 pinned 중 하나 이상을 제공해야 합니다"
-	convErrTitleEmpty      = "제목은 비어 있을 수 없습니다"
-	convErrBadConvID       = "대화 id 가 올바르지 않습니다"
-	convErrIDsCount        = "ids 개수는 1에서 %d 사이여야 합니다"
-	convErrMessageEmpty    = "메시지는 비어 있을 수 없습니다"
-	convErrBusy            = "이 대화가 이전 메시지를 처리하고 있습니다. 잠시 기다려 주세요"
+	convErrRequestTooLarge = "The request body is too large"
+	convErrAgentKeyEmpty   = "agent_key cannot be empty"
+	convErrAgentKeyTooLong = "agent_key can be at most %d characters"
+	convErrAgentNotFound   = "Agent not found"
+	convErrLLMProfile      = "The specified LLM configuration does not exist or has no API Key configured"
+	convErrTitleTooLong    = "The title can be at most %d characters"
+	convErrTitleOrPinned   = "You must provide either title or pinned"
+	convErrTitleEmpty      = "The title cannot be empty"
+	convErrBadConvID       = "The conversation id is invalid"
+	convErrIDsCount        = "The number of ids must be between 1 and %d"
+	convErrMessageEmpty    = "The message cannot be empty"
+	convErrBusy            = "This conversation is still processing the previous message. Please wait a moment"
 )
 
-// 대화 기본 제목. convDefaultTitle 은 표시 문구이자 센티넬이다. 대화를 만들 때 제목으로
-// 쓰고, 첫 사용자 메시지가 오면 제목이 비었거나 이 값일 때만 자동 제목으로 덮어쓴다
-// (sendConversationMessage). 대입하는 쪽과 비교하는 쪽이 어긋나면 자동 제목 분기가
-// 깨지므로 한 상수로 묶는다. convAttachmentTitle 은 첨부만 보낸 첫 메시지의 기본 제목이다.
+// Default conversation titles. convDefaultTitle is both display text and a
+// sentinel: it is used as the title when a conversation is created, and
+// sendConversationMessage replaces it with an auto-generated title only while the
+// stored title is empty or equal to this value. The side that assigns and the
+// side that compares must agree or the auto-title branch breaks, hence one
+// constant. convAttachmentTitle is the default title for a first message that only
+// carries an attachment.
 const (
-	convDefaultTitle    = "새 대화"
-	convAttachmentTitle = "첨부 메시지"
+	convDefaultTitle    = "New conversation"
+	convAttachmentTitle = "Message with attachment"
 )
 
-// 재검증(finding_retest) 종결 사유. runConversationTurn 이 재검증 대화를 봉인할 때 쓰고,
-// finding_retests.error 컬럼에 저장돼 재검증 패널(finding-retest-panel) 의 item.error 로
-// 그대로 노출된다(사용자 노출). db/finding_retests.go 의 형제 사유(결론 미저장·서비스 재시작)도
-// 같은 컬럼·패널이라 그 파일에서 함께 한국어로 둔다. 종결 상태 값("failed"/"stopped"/
-// "completed")은 StatusLabel 로 한국어 라벨에 매핑되는 센티넬이라 ASCII 로 유지한다(F9).
+// Revalidation (finding_retest) termination reasons. runConversationTurn uses them
+// when it seals a revalidation conversation, and they are stored in the
+// finding_retests.error column and shown verbatim as item.error in the revalidation
+// panel (finding-retest-panel), so they are user-facing. The sibling reasons in
+// db/finding_retests.go (conclusion not saved, service restart) share the same
+// column and panel, so they are localized there too. The terminal status values
+// ("failed"/"stopped"/"completed") are sentinels mapped to labels by StatusLabel,
+// so they stay ASCII (F9).
 const (
-	convRetestFailedToStart    = "재검증을 시작하지 못했습니다"
-	convRetestStatusReadFailed = "재검증 상태를 읽지 못했습니다. 다시 시작해 주세요"
-	convRetestStoppedOrClosed  = "재검증이 중지되었거나 서비스가 종료되었습니다"
+	convRetestFailedToStart    = "Failed to start the revalidation"
+	convRetestStatusReadFailed = "Failed to read the revalidation status. Please start it again"
+	convRetestStoppedOrClosed  = "The revalidation was stopped or the service shut down"
 )
 
-// isDefaultConversationTitle 은 대화가 아직 자동 생성된 기본 제목(빈 값 또는
-// convDefaultTitle)을 달고 있는지 알려준다. 이 경우 첫 사용자 메시지가 제목을 자동으로
-// 덮어쓴다. 생성 기본값과 이 판정이 같은 상수를 쓰므로 둘이 어긋날 수 없다.
+// isDefaultConversationTitle reports whether a conversation still carries the
+// auto-generated default title (empty, or convDefaultTitle). In that case the first
+// user message overwrites the title. Creation default and this check share one
+// constant, so they cannot drift apart.
 func isDefaultConversationTitle(title string) bool {
 	return title == "" || title == convDefaultTitle
 }
@@ -442,7 +451,7 @@ func (s *Server) pgSendConversationMessage(w http.ResponseWriter, r *http.Reques
 	}
 	var req struct {
 		Message     string           `json:"message"`
-		Attachments []chatAttachment `json:"attachments,omitempty"` // 方式1 上传的文件(路径相对会话工作目录)
+		Attachments []chatAttachment `json:"attachments,omitempty"` // files uploaded via mode 1 (path relative to the conversation working directory)
 	}
 	if err := decode(r, &req); err != nil {
 		writeErr(w, 400, err.Error())
@@ -543,15 +552,15 @@ func (s *Server) conversationRunContext(id int64, busyKey string) (context.Conte
 	return ctx, cancel
 }
 
-// transcriptErrorSummary 는 실행이 실패했을 때 활동 전사(transcript)에 남기는 오류 요약을
-// 만든다. label 은 실패한 주체를 가리키며, 채팅 턴은 빈 문자열, 작업 메인 에이전트는
-// "메인 에이전트"를 넣는다. 두 전사 모두 "(…오류: …)" 형태로 같게 렌더되도록 한 곳에 모은다.
-// err 원문은 그대로 보존하고 바깥 라벨만 한국어로 둔다(F9).
+// transcriptErrorSummary builds the error summary left in the activity transcript when a run fails;
+// label names the failing party — an empty string for a chat turn, "main agent" for the task main agent.
+// Both transcripts render the same "(…error: …)" shape, so it is gathered in one place.
+// The raw err text is preserved as-is and only the outer label is English (F9).
 func transcriptErrorSummary(label, errMsg string) string {
 	if label != "" {
 		label += " "
 	}
-	return "(" + label + "오류: " + errMsg + ")"
+	return "(" + label + "error: " + errMsg + ")"
 }
 
 func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelCauseFunc, c *db.Conversation, msg, busyKey string) {
@@ -619,7 +628,7 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 			log.Printf("[conv %d] append activity failed: %v", c.ID, err)
 		}
 	}
-	// On a manual stop ctx is cancelled; Chat already emits a clean "已手动停止"
+	// On a manual stop ctx is cancelled; Chat already emits a clean "stopped manually"
 	// step, so skip the raw-error entry — only surface genuine failures.
 	if _, err := ca.Chat(ctx, c.AgentKey, sessionID, msg, maxTurns, maxDuration, webSearch, emit); err != nil {
 		finishReason = err.Error()
@@ -633,16 +642,16 @@ func (s *Server) runConversationTurn(ctx context.Context, cancel context.CancelC
 	_ = pg.TouchConversation(c.ID)
 }
 
-// triggerBehavior is an agent's cached P3 trigger post-processing策略 (see the
+// triggerBehavior is an agent's cached P3 trigger post-processing policy (see the
 // agents table trigger_* columns). Read once per fire in StartTriggeredRun so the
 // pump never touches the DB while holding queueMu.
 type triggerBehavior struct {
 	runMode     string // serial | parallel
-	mergeMode   string // by_task | all | none (serial 用;parallel 忽略,每条各自一个会话)
-	maxParallel int    // parallel 用的每 agent 并发上限;<=0=不限
+	mergeMode   string // by_task | all | none (serial only; parallel ignores it, each event gets its own conversation)
+	maxParallel int    // per-agent concurrency cap for parallel; <=0 = unlimited
 }
 
-// readTriggerBehavior loads an agent's策略, falling back to safe defaults
+// readTriggerBehavior loads an agent's policy, falling back to safe defaults
 // (serial / all / 5) on any error or unknown enum value.
 func (s *Server) readTriggerBehavior(agentKey string) triggerBehavior {
 	b := triggerBehavior{runMode: "serial", mergeMode: "all", maxParallel: 5}
@@ -665,7 +674,7 @@ func (s *Server) readTriggerBehavior(agentKey string) triggerBehavior {
 }
 
 // StartTriggeredRun enqueues a P3 trigger fire for agentKey and pumps the queue. The
-// agent's策略 decides concurrency + merge: serial → run one at a time (optionally
+// agent's policy decides concurrency + merge: serial → run one at a time (optionally
 // merging by task / all / none); parallel → run each fire in its own concurrent
 // conversation up to trigger_max_parallel. Distinct agents always run concurrently.
 func (s *Server) StartTriggeredRun(agentKey, title, message string, taskID int64, mergeable bool, taskDesc, taskGoal string) {
@@ -756,19 +765,19 @@ func (s *Server) nextTriggerRun(agentKey string, cfg triggerBehavior) triggeredR
 	return mergeTriggeredRuns(group)
 }
 
-// [F10/F19 경계 판정 · 두뇌 입력 보존] 아래 P3 트리거 메시지 합성부(taskContextHeader·
-// finalTriggerMessage·mergeTriggeredRuns·mergeAllRuns)가 만드는 중국어 문구는 번역하지 않고
-// 원문을 보존한다. 조립된 message 는 runTriggeredRun 에서 finalTriggerMessage(item) →
-// ca.Chat 의 user 메시지로 들어가는 에이전트 입력(두뇌)이자, 동시에 AppendConvActivity
-// (kind="user")로 전사에 노출되는 이중 용도 문자열이다. 대상: `【任务 …】`(작업 컨텍스트
-// 헤더)·`【本会话合并了…请一并处理】`(합병 안내)·`── 触发 N ──`(구분선). BRIEF 경계 #1
-// (에이전트 두뇌는 번역하지 않는다 — TSecBench 벤치마크 동작 보존)에 해당하고, 표시만
-// 한국어로 가르려면 두뇌용·전사용 두 문자열을 따로 나르도록 구조를 바꿔야 해(F16 동형)
-// 고위험·저가치라 보류한다. 합병 run 의 conversation 제목(`合并触发 · …`)은 ca.Chat 에
-// 안 들어가는 표시 전용이지만, 그 본문(위 보존 대상)이 중국어로 고정되므로 제목만 바꾸면
-// 한 대화에서 제목=한국어·본문=중국어로 섞인다(F7·F8·F12 혼재 금지) — 가치도 낮아 함께 보존.
-// 회귀 가드: trigger_merge_test.go 가 `【任务 #`·`── 触发 `·`共 N 个任务`·`【本会话合并了`·
-// `（目标：` 프레이밍을 핀한다(우발 한국어화 시 FAIL).
+// [F10/F19 boundary decision · brain input preserved] the trigger framing produced by the P3 trigger
+// message synthesis below (taskContextHeader·finalTriggerMessage·mergeTriggeredRuns·mergeAllRuns) is not
+// translated; the original text is preserved. The assembled message is the agent input (brain) that
+// runTriggeredRun passes to ca.Chat as the user message through finalTriggerMessage(item), and at the same
+// time it is the dual-purpose string exposed in the transcript via AppendConvActivity
+// (kind="user"). Targets: `[Task …]`(the task context
+// header)·`[This conversation merged … please handle them together]`(the merge notice)·`── Trigger N ──`(the separator). This falls under BRIEF boundary #1
+// (the agent brain is not translated — TSecBench benchmark behavior preservation), and splitting only the
+// display into English would mean carrying two strings, brain and transcript, separately (same shape as F16)
+// at high risk and low value, so it is deferred. The merged run's conversation title (`Merged trigger · …`) never
+// reaches ca.Chat and is display-only, but its body (the preservation target above) is fixed as Chinese, so changing only the title
+// would mix title=English·body=Chinese in one conversation (F7·F8·F12 no mixing) — the value is low, so it is preserved as well.
+// Regression guard: trigger_merge_test.go pins the `[Task #`·`── Trigger `·`N tasks in total`·`[This conversation merged`·
 //
 // taskContextHeader renders a task's description/goal once. Same-task fires share
 // this block, so the scheduler no longer repeats it per event (a long task goal
@@ -782,9 +791,9 @@ func taskContextHeader(taskID int64, desc, goal string) string {
 		return ""
 	}
 	if goal != "" {
-		return fmt.Sprintf("【任务 #%d %s（目标：%s）】", taskID, trunc(desc, 200), trunc(goal, 500))
+		return fmt.Sprintf("[Task #%d %s (goal: %s)]", taskID, trunc(desc, 200), trunc(goal, 500))
 	}
-	return fmt.Sprintf("【任务 #%d %s】", taskID, trunc(desc, 200))
+	return fmt.Sprintf("[Task #%d %s]", taskID, trunc(desc, 200))
 }
 
 // finalTriggerMessage renders the message actually sent to the agent for a single
@@ -808,16 +817,16 @@ func mergeTriggeredRuns(items []triggeredRun) triggeredRun {
 	}
 	first := items[0]
 	var b strings.Builder
-	fmt.Fprintf(&b, "【本会话合并了任务 #%d 的 %d 条触发事件，请一并处理】\n", first.taskID, len(items))
+	fmt.Fprintf(&b, "[This conversation merged the trigger events of task #%d (%d of them), please handle them together]\n", first.taskID, len(items))
 	if h := taskContextHeader(first.taskID, first.taskDesc, first.taskGoal); h != "" {
 		fmt.Fprintf(&b, "%s\n", h) // same task → task context appears once
 	}
 	for i, it := range items {
-		fmt.Fprintf(&b, "\n── 触发 %d ──\n%s\n", i+1, it.message)
+		fmt.Fprintf(&b, "\n── Trigger %d ──\n%s\n", i+1, it.message)
 	}
 	return triggeredRun{
 		agentKey:  first.agentKey,
-		title:     fmt.Sprintf("合并触发 · task#%d · %d 条", first.taskID, len(items)),
+		title:     fmt.Sprintf("Merged trigger · task#%d · %d events", first.taskID, len(items)),
 		message:   b.String(),
 		taskID:    first.taskID,
 		mergeable: true,
@@ -845,7 +854,7 @@ func mergeAllRuns(items []triggeredRun) triggeredRun {
 		groups[it.taskID] = append(groups[it.taskID], it)
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "【本会话合并了队列中的 %d 条触发事件（共 %d 个任务），请一并处理】\n", len(items), len(order))
+	fmt.Fprintf(&b, "[This conversation merged the %d trigger events queued up (%d tasks in total), please handle them together]\n", len(items), len(order))
 	seq := 0
 	for _, tid := range order {
 		g := groups[tid]
@@ -854,12 +863,12 @@ func mergeAllRuns(items []triggeredRun) triggeredRun {
 		}
 		for _, it := range g {
 			seq++
-			fmt.Fprintf(&b, "\n── 触发 %d（task#%d）──\n%s\n", seq, tid, it.message)
+			fmt.Fprintf(&b, "\n── Trigger %d (task#%d) ──\n%s\n", seq, tid, it.message)
 		}
 	}
 	return triggeredRun{
 		agentKey:  first.agentKey,
-		title:     fmt.Sprintf("合并触发 · 全部 · %d 条", len(items)),
+		title:     fmt.Sprintf("Merged trigger · all · %d events", len(items)),
 		message:   b.String(),
 		taskID:    first.taskID,
 		mergeable: true,

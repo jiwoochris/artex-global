@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { sseUrl } from "@/lib/api";
 import { isBtwCommand, type SideExchange, type SideHistory, sideAPI } from "@/lib/side-questions";
 
-// crypto.randomUUID 仅在安全上下文可用(https/localhost);经 IP+http 访问时降级。
+// crypto.randomUUID is only available in secure contexts (https/localhost); degrade when accessed over IP+http.
 function newSideRequestID(): string {
   return (
     globalThis.crypto?.randomUUID?.() ?? `btw-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`

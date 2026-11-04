@@ -32,7 +32,7 @@ export function TodoPopover({
     setErr("");
     try {
       const detail = await fetchDetail(seq);
-      const start = detail.indexOf("{"); // detail 可能带 "TodoWrite " 前缀
+      const start = detail.indexOf("{"); // detail may carry a "TodoWrite " prefix
       const parsed = JSON.parse(start >= 0 ? detail.slice(start) : detail);
       setTodos(Array.isArray(parsed?.todos) ? parsed.todos : []);
     } catch {

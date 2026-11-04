@@ -87,14 +87,14 @@ function hasSubItems(item: NavMainItem): item is NavMainParentItem {
   return Boolean(item.subItems?.length);
 }
 
-// 그룹 번호 → nav.group.* 메시지 키. 사이드바 라벨은 데이터(sidebar-items.ts)가 아니라
-// 렌더 시점에 useTranslations 로 번역한다. 매핑이 없는 그룹은 원문 label 로 떨어진다.
+// Group number → nav.group.* message key. Sidebar labels are not data (sidebar-items.ts) but
+// are translated at render time with useTranslations. Groups without a mapping fall back to the raw label.
 const GROUP_MESSAGE_KEY: Record<number, string> = { 1: "function", 2: "system" };
 
 export function NavMain({ items }: NavMainProps) {
   const t = useTranslations("nav");
   const rawPath = usePathname();
-  // 路由段含中文，pathname 可能是百分号编码，解码后再与导航 url 比较，保证高亮命中。
+  // Route segments contain Chinese characters, so pathname may be percent-encoded; decode it before comparing with the nav url to make the highlight match.
   const path = (() => {
     try {
       return decodeURIComponent(rawPath);

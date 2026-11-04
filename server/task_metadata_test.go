@@ -50,7 +50,7 @@ func TestTaskMetadataPatchReturnsRenameAndPin(t *testing.T) {
 		t.Fatalf("unexpected task patch response: %+v", updated)
 	}
 
-	body, _ = json.Marshal(map[string]any{"name": strings.Repeat("任", maxTaskNameRunes+1)})
+	body, _ = json.Marshal(map[string]any{"name": strings.Repeat("a", maxTaskNameRunes+1)})
 	req = httptest.NewRequest(http.MethodPatch, "/api/tasks/"+task.ID, bytes.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+token)
 	rec = httptest.NewRecorder()

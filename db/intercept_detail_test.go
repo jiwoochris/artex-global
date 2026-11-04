@@ -16,7 +16,8 @@ func TestInterceptDetails(t *testing.T) {
 	t.Cleanup(func() { _ = d.Close() })
 	create := func(t *testing.T, audit *InterceptAudit) int64 {
 		t.Helper()
-		id, err := d.CreateInterceptPending(0, 0, "approval-detail-test", "test", "Write", []byte(`{"path":"report.md"}`), "[模型] 请确认", audit)
+		// "[模型]" is the audit marker the model-decision path writes; it is a stable sentinel, so it keeps its Han characters.
+		id, err := d.CreateInterceptPending(0, 0, "approval-detail-test", "test", "Write", []byte(`{"path":"report.md"}`), "[模型] please confirm", audit)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -49,7 +50,7 @@ func TestInterceptDetails(t *testing.T) {
 		var wg sync.WaitGroup
 		for range 8 {
 			wg.Go(func() {
-				ok, err := d.ResolveIntercept(id, "allowed", "allow", "人工允许执行")
+				ok, err := d.ResolveIntercept(id, "allowed", "allow", "manually allowed to execute")
 				if err != nil {
 					t.Error(err)
 				}
@@ -90,7 +91,7 @@ func TestInterceptDetails(t *testing.T) {
 	})
 	t.Run("denied output and timeout allow", func(t *testing.T) {
 		id := create(t, &InterceptAudit{RunID: "run", ToolUseID: "call", ExecutionStatus: "not_started"})
-		if _, err := d.ResolveIntercept(id, "denied", "deny", "人工拒绝"); err != nil {
+		if _, err := d.ResolveIntercept(id, "denied", "deny", "manually denied"); err != nil {
 			t.Fatal(err)
 		}
 		if err := d.CompleteIntercept(id, "run", "call", "failed", "Blocked by hook", false); err != nil {
@@ -101,7 +102,7 @@ func TestInterceptDetails(t *testing.T) {
 			t.Fatal("denial presented as executed")
 		}
 		id = create(t, &InterceptAudit{RunID: "run2", ToolUseID: "call2", Correlation: "exact", InitialAction: "ask"})
-		if _, err := d.ResolveIntercept(id, "timeout", "allow", "超时允许"); err != nil {
+		if _, err := d.ResolveIntercept(id, "timeout", "allow", "allowed on timeout"); err != nil {
 			t.Fatal(err)
 		}
 		if err := d.CompleteIntercept(id, "run2", "call2", "succeeded", "ok", false); err != nil {

@@ -28,19 +28,20 @@ type Database struct {
 type Config struct {
 	Database Database `json:"database"`
 	SkillDir string   `json:"skill_dir"`
-	// Language is the bootstrap/default user-facing output language for the
-	// artex-global ("en"/"ko"/"zh"/"es"/"ja"). Empty → DefaultLanguage. At
-	// runtime a value stored in the settings table (edited in the UI) overrides it.
+	// Language is the bootstrap/default user-facing output language ("en" or
+	// "es"; anything else is rejected). Empty → DefaultLanguage. At runtime a
+	// value stored in the settings table (edited in the UI) overrides it.
 	Language string `json:"language"`
 }
 
 // SupportedLanguages lists the user-facing output languages artex-global can
-// switch between. Agent output, UI strings and backend messages all key off these.
-var SupportedLanguages = []string{"en", "ko", "zh", "es", "ja"}
+// switch between: English (the source language) and Spanish. Agent output, UI
+// strings and backend messages all key off these.
+var SupportedLanguages = []string{"en", "es"}
 
 // DefaultLanguage is the out-of-box user-facing language when nothing is
-// configured. artex-global defaults to English; Korean, Chinese, Spanish and
-// Japanese are selectable at runtime via the language setting (and ARTEX_LANG).
+// configured. English is the source language; Spanish is selectable at runtime
+// via the language setting (and ARTEX_LANG).
 const DefaultLanguage = "en"
 
 // NormalizeLanguage lower-cases and validates a language code, returning "" when
@@ -59,31 +60,33 @@ func NormalizeLanguage(code string) string {
 // output language picked at runtime (settings table) layered over the bootstrap
 // default. It is the single source backend display strings (enum labels, etc.)
 // read through ActiveLanguage. nil (unit tests / standalone) → ActiveLanguage
-// falls back to "ko", which keeps the Korean localization golden tests green.
+// falls back to DefaultLanguage.
 var CurrentLanguage func() string
 
 // ActiveLanguage resolves the language for backend display strings. Precedence:
 // the runtime hook (settings table, via the server) over an unwired fallback of
-// "ko". Production always wires CurrentLanguage, so a fresh deploy resolves to the
-// configured default (DefaultLanguage = "en") through that hook; the "ko" fallback
-// only applies when the hook is absent (unit tests / standalone), so the Korean
-// localization golden tests hold without each having to pin the language.
+// DefaultLanguage ("en"). Production always wires CurrentLanguage, so a fresh
+// deploy resolves to the configured default through that hook; the fallback only
+// applies when the hook is absent (unit tests / standalone). Only "en" and "es"
+// are valid results; an unsupported value from the hook is ignored.
 func ActiveLanguage() string {
 	if CurrentLanguage != nil {
 		if v := NormalizeLanguage(CurrentLanguage()); v != "" {
 			return v
 		}
 	}
-	return "ko"
+	return DefaultLanguage
 }
 
 // Language resolves the default user-facing output language with precedence:
 //
 //	env ARTEX_LANG  >  config file (language)  >  DefaultLanguage
 //
-// This is the bootstrap default only. The runtime value a user picks in the UI is
-// stored in the settings table and takes precedence over this — the server layers
-// the two and wires the result into the agent and message catalogs.
+// Only "en" and "es" are valid; unsupported values at every level are ignored and
+// fall through to the next source. This is the bootstrap default only. The runtime
+// value a user picks in the UI is stored in the settings table and takes
+// precedence over this — the server layers the two and wires the result into the
+// agent and message catalogs.
 func Language() string {
 	if v := NormalizeLanguage(os.Getenv("ARTEX_LANG")); v != "" {
 		return v
@@ -200,16 +203,16 @@ func SkillDir() string {
 // DSN came from (for startup logging).
 func PostgresDSN() (dsn, source string, err error) {
 	if v := strings.TrimSpace(os.Getenv("ARTEX_PG_DSN")); v != "" {
-		return v, trCfg("환경 변수 ARTEX_PG_DSN"), nil
+		return v, trCfg("environment variable ARTEX_PG_DSN"), nil
 	}
 	db := Load().Database
 	if d := strings.TrimSpace(db.DSN); d != "" {
-		return d, fmt.Sprintf(trCfg("설정 파일 %s (database.dsn)"), Path()), nil
+		return d, fmt.Sprintf(trCfg("config file %s (database.dsn)"), Path()), nil
 	}
 	if db.Host != "" || db.DBName != "" || db.User != "" {
-		return db.buildDSN(), fmt.Sprintf(trCfg("설정 파일 %s (database 필드)"), Path()), nil
+		return db.buildDSN(), fmt.Sprintf(trCfg("config file %s (database fields)"), Path()), nil
 	}
-	return "", "", fmt.Errorf(trCfg("데이터베이스 설정을 찾을 수 없습니다: 환경 변수 ARTEX_PG_DSN 이 설정되어 있지 않고, 설정 파일 %s 에도 database (dsn 또는 host/user/dbname) 설정이 없습니다. 설정 파일을 만들거나 환경 변수를 설정한 뒤 다시 시도하세요"), Path())
+	return "", "", fmt.Errorf(trCfg("database configuration not found: environment variable ARTEX_PG_DSN is not set, and config file %s has no database (dsn or host/user/dbname) configuration. Create a config file or set the environment variable, then try again"), Path())
 }
 
 func (d Database) buildDSN() string {
