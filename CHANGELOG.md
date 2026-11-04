@@ -55,6 +55,8 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 
 ### Fixed
 
+- **The one-click updater now checks this repository.** Its release source was still `Autumn-27/artex`, a repository that does not exist, so the update check would never have found a release. It is hard-coded to `yukiteruamano/artex-global` on purpose (a configurable update source would be a remote-code-execution channel).
+- **`CREATE DATABASE` quotes the database name instead of concatenating it.** The name comes from the DSN; one containing a double quote would have closed the identifier and run arbitrary SQL on the maintenance connection. PostgreSQL forbids a parameter there, so the name is now sanitised with `pgx.Identifier` and a new test pins the embedded-quote and injection cases.
 - Distinguish task report loading failures from empty reports and offer a retry button. Late responses from a previous task cannot replace the current task report.
 
 ## [0.3.15-global.1] · 2026-10-14 · ARTEX-global transition release
