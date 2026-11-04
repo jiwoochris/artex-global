@@ -101,7 +101,7 @@ it as the guard control marker and explains the defender-side reading.
 | Swap and settle | Marker file, atomic swap, 30 s settle window: if the new build dies inside it, the backup is restored on the next boot | `selfupdate/bootstrap.go:117-168`, `selfupdate/bootstrap.go:215-256`, `cmd/artex/main.go:107` |
 | Restart | The API closes a channel that `run` selects on; the process exits and `start.sh` relaunches it | `server/update.go:48-50`, `cmd/artex/main.go:133-138`, `start.sh:12-26` |
 | UI | `GET /api/update/check`, `POST /api/update/apply`, `POST /api/update/rollback`, `GET /api/update/stream` (progress hub) | `server/update.go:239-380` |
-| Container | `InDocker()` disables in-place replacement, so a containerised install updates by rebuilding the image | `selfupdate/selfupdate.go:165-180`, [`docs/docker-hardened.md`](../docker-hardened.md) |
+| Container | `InDocker()` disables in-place replacement, so a containerised install updates by rebuilding the image | `selfupdate/selfupdate.go:165-180`, [`docs/docker.md`](../docker.md) |
 
 ### 8.6 Skill distribution
 

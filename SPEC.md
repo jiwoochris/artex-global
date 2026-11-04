@@ -13,7 +13,7 @@ update the spec, then implement with a test that proves the behavior.
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Contribution workflow |
 | [`SECURITY.md`](SECURITY.md) | Vulnerability reporting |
 | [`docs/defense.md`](docs/defense.md) | Defence/detection material for autonomous AI attacks |
-| [`docs/docker-hardened.md`](docs/docker-hardened.md) | Hardened container image and compose stack |
+| [`docs/docker.md`](docs/docker.md) | The single Docker stack: posture, verification, opt-in overlays, limitations |
 | [`docs/finding-traffic-evidence.md`](docs/finding-traffic-evidence.md) | How a finding binds to captured traffic evidence |
 | [`CHANGELOG.md`](CHANGELOG.md) | Released behavior history |
 | [`MAINTAINING.md`](MAINTAINING.md) | Maintainer runbook (release, i18n, CI) |

@@ -7,10 +7,12 @@
 # emulate the apt layer for arm64; Next/Go are no longer compiled under emulation, which
 # is far faster.
 #
-# The process runs as the unprivileged user `artex` (uid/gid 10001), the same identity
-# Dockerfile.hardened uses; only the build steps in this file run as root. The root
-# filesystem stays writable so the UI's one-click self-update keeps working — that is the
-# one deliberate difference from the hardened image.
+# The process runs as the unprivileged user `artex` (uid/gid 10001); only the build steps
+# in this file run as root. The root filesystem stays writable so the UI's one-click
+# self-update keeps working. The isolation that makes that safe lives in docker-compose.yml
+# (capability drop, no-new-privileges, capped tmpfs, process and log limits, loopback-only
+# ports); docs/docker.md explains each decision, including the read-only overlay for
+# deployments that upgrade only by pulling a new image.
 #
 # To build the image by hand locally, prepare the binary yourself first:
 #   cd web && pnpm install --frozen-lockfile && pnpm run build:static && cd ..
@@ -78,7 +80,6 @@ RUN pnpm add -g @playwright/mcp playwright @playwright/cli \
     && rm -rf /var/lib/apt/lists/*
 # Unprivileged runtime user. A real home directory is created because this image's root
 # filesystem is writable: tools that cache in $HOME (Chromium profiles, pnpm) write there.
-# The hardened image instead points HOME at the /tmp tmpfs, since its rootfs is read-only.
 RUN groupadd -g ${ARTEX_GID} artex \
     && useradd -u ${ARTEX_UID} -g ${ARTEX_GID} -m -d /home/artex -s /usr/sbin/nologin artex
 ENV HOME=/home/artex
@@ -102,10 +103,16 @@ RUN mkdir -p /app/data && chown -R ${ARTEX_UID}:${ARTEX_GID} /app
 VOLUME ["/app/data"]
 USER ${ARTEX_UID}:${ARTEX_GID}
 EXPOSE 8787 8788
+# `docker stop` sends SIGTERM to PID 1 only; start.sh forwards it to artex so the process
+# shuts down gracefully instead of being SIGKILLed after the grace period.
+STOPSIGNAL SIGTERM
+# Same probe docker-compose.yml uses, so `docker run` without compose still reports health.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -fsS -o /dev/null http://127.0.0.1:8787/api/health || exit 1
 ENTRYPOINT ["/app/start.sh"]
 # 8788 is the traffic-recording MITM proxy, which has **no authentication**: it is pinned
-# to container loopback exactly like Dockerfile.hardened does, so nothing on the Docker
-# network (or the LAN) can use it as an open, TLS-terminating forward proxy. Publishing it
+# to container loopback, so nothing on the Docker network (or the LAN) can use it as an
+# open, TLS-terminating forward proxy. Publishing it
 # is not enough to reach it — routing a browser through the proxy needs a deliberate CMD
 # override to `-proxy 0.0.0.0:8788` (docker-compose.yml does that through
 # ARTEX_PROXY_ADDR); only do that on a host you control.

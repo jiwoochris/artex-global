@@ -1,3 +1,19 @@
+# ARTEX — single Docker stack (application + PostgreSQL).
+#
+#   cp .env.example .env      # set POSTGRES_PASSWORD and, optionally, an LLM key
+#   docker compose up -d      # pulls the published image and starts both services
+#   → http://127.0.0.1:8787   # first visit: create the admin password at /setup
+#
+# The same file builds from source when you want that instead of the published image:
+#   docker compose build && docker compose up -d
+#
+# Security posture: this stack runs unprivileged, with no capability except NET_RAW, with
+# a private database network, capped process counts, capped logs and no host access
+# beyond the two loopback ports. Every decision, its rationale and the optional stricter
+# overlay (read-only root filesystem) are documented in docs/docker.md. If you change this
+# file, keep scripts/check-docker-posture.py green — CI runs it.
+name: artex
+
 services:
   postgres:
     # Digest-pinned (multi-arch index) so an upstream retag cannot change what runs.
@@ -8,17 +24,46 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-artex}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    # Internal network only: the database can talk to artex and nothing else, so a
+    # compromised database cannot reach the internet or the host's LAN.
+    networks:
+      - db_net
+    # The official entrypoint starts as root only to chown the data directory and then
+    # drops to the postgres user; these five capabilities are exactly what that needs.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    # No shell inside a runaway database: cap the process count.
+    pids_limit: 512
+    # Docker's default logging driver grows without limit and fills the host disk.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    stop_grace_period: 30s
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-artex} -d ${POSTGRES_DB:-artex}"]
       interval: 5s
       timeout: 3s
       retries: 10
-    restart: unless-stopped
 
   artex:
     # Image this fork publishes to GitHub Container Registry on every release tag (v*)
-    # (the docker job in .github/workflows/release.yml). Upstream autumn27/artex was taken down from Docker Hub.
+    # (the docker job in .github/workflows/release.yml). `build:` is here so the same
+    # compose file can build from source (`docker compose build`); `up` uses the image.
     image: ghcr.io/yukiteruamano/artex-global:${ARTEX_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,16 +82,15 @@ services:
       ARTEX_ADMIN_PASSWORD: ${ARTEX_ADMIN_PASSWORD:-}
       # Browser cross-origin allow list (comma-separated). The built-in UI is same-origin, so this is usually left empty.
       ARTEX_CORS_ORIGINS: ${ARTEX_CORS_ORIGINS:-}
-      # Server-side default output language (ko·en·zh·es). Empty means Korean. Agent output and error messages follow the
-      # "display language" setting first, while server console logs follow only this value.
+      # Server-side default output language (en or es). Empty means English.
       ARTEX_LANG: ${ARTEX_LANG:-}
     ports:
-      # By default the port is published only on the host's 127.0.0.1. To connect directly from another device, set
-      # ARTEX_BIND=0.0.0.0 in .env, but finish the initial setup (admin password) first and
-      # preferably use the reverse-proxy (HTTPS) setup described in the README.
+      # Both ports are published on the host's loopback only. To reach the UI from another
+      # device set ARTEX_BIND=0.0.0.0 in .env — but finish the initial setup first, and
+      # prefer the reverse-proxy (HTTPS) layout described in the README.
       - "${ARTEX_BIND:-127.0.0.1}:8787:8787"
-      # Only reachable once the proxy really listens on a non-loopback address — see the
-      # ARTEX_PROXY_ADDR opt-in under `command:` below. Harmless otherwise.
+      # Only useful once the proxy really listens on a non-loopback address — see the
+      # ARTEX_PROXY_ADDR opt-in under `command:` below.
       - "127.0.0.1:8788:8788"
     # The image's CMD already pins the recording proxy to container loopback: it has no
     # authentication, so leaving it on 0.0.0.0 turns the container into an open,
@@ -56,22 +100,74 @@ services:
     #   ARTEX_PROXY_ADDR=0.0.0.0:8788   (default 127.0.0.1:8788)
     # -addr stays :8787: the UI/API port is authenticated and published per ARTEX_BIND.
     command: ["-addr", ":8787", "-proxy", "${ARTEX_PROXY_ADDR:-127.0.0.1:8788}"]
-    # setuid binaries get no privilege bump (the agent already runs unprivileged).
+    # The image already runs as the unprivileged uid/gid 10001 (`artex`); pinning it here
+    # keeps that true even if someone rebuilds the image with a different USER.
+    user: "10001:10001"
+    # tini as PID 1 reaps the processes the agent spawns; start.sh still forwards SIGTERM,
+    # so `docker stop` remains graceful.
+    init: true
+    # No capability except NET_RAW, which is what raw-socket port scanning needs. ICMP
+    # (`ping`) additionally works through the ping_group_range sysctl below, so it does not
+    # depend on the capability being effective for the unprivileged user. Whether the
+    # unprivileged user can use NET_RAW depends on the runtime; docs/docker.md has a one-line
+    # probe, and connect-scan (`-sT`) always works without it.
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
     security_opt:
       - no-new-privileges:true
-    volumes:
-      # Bind-mounts of host directories: the container runs as uid/gid 10001 (`artex`, baked into
-      # the image), so these two must be written by that uid once — otherwise the app cannot
-      # write jwt.key/SQLite/skills and fails to start:
-      #   sudo chown -R 10001:10001 data skills
-      # (docker-compose.hardened.yml uses named volumes instead and needs no chown.)
-      # Binds the data directory (including jwt.key, SQLite, etc.) to data/ in the project root.
-      # You can inspect and back up from the host, and it survives container recreation.
-      - ./data:/app/data
-      # Mounts the project-root skills into the container (overriding /app/skills baked into the image).
-      # Editing a skill needs no image rebuild: the container reads these host files directly.
-      - ./skills:/app/skills
+    sysctls:
+      net.ipv4.ping_group_range: "0 2147483647"
+    # The agent runs downloaded tools and shells out from /tmp; keep it writable and
+    # executable, but block setuid tricks and cap its size so a runaway tool eats RAM
+    # instead of the host disk.
+    tmpfs:
+      - /tmp:rw,exec,nosuid,nodev,size=${ARTEX_TMP_SIZE:-2g},mode=1777
+    # Capped process count (Chromium/Playwright needs a few hundred). Raise with
+    # ARTEX_PIDS_LIMIT if you run very wide parallel scans.
+    pids_limit: ${ARTEX_PIDS_LIMIT:-4096}
+    # No core dumps on the host, and enough file descriptors for wide scans.
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 16384
+      core: 0
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+    stop_grace_period: 60s
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8787/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    volumes:
+      # Bind mounts keep data and skills inspectable, backable up and editable from the
+      # host. The container writes as uid/gid 10001 (`artex`), so these two directories
+      # must belong to that uid once, otherwise the app cannot create jwt.key, the SQLite
+      # index or a skill and fails to start:
+      #   sudo chown -R 10001:10001 data skills
+      # Prefer named volumes instead (nothing of the host mounted)? Use
+      # docker-compose.volumes.yml:  docker compose -f docker-compose.yml -f docker-compose.volumes.yml up -d
+      - ./data:/app/data
+      - ./skills:/app/skills
+    networks:
+      - app_net
+      - db_net
 
 volumes:
   pgdata:
+
+networks:
+  # Egress bridge: outbound internet is required (LLM APIs, scan targets, tooling).
+  app_net:
+    driver: bridge
+  # No egress at all: private bridge for postgres <-> artex.
+  db_net:
+    driver: bridge
+    internal: true

@@ -1,5 +1,15 @@
 # Security review — artex-global
 
+> **Status (2026-11).** The container findings in this review (H-2, H-3, M-7) were remediated by
+> consolidating the separate "hardened" stack into the single `docker-compose.yml`: the unprivileged
+> user, `cap_drop: ALL` + `NET_RAW`, `no-new-privileges`, private database network, capped
+> processes/logs/tmpfs and loopback-only ports are now the default, the Node build no longer runs a
+> remote installer, and base images are digest-pinned. `Dockerfile.hardened`,
+> `docker-compose.hardened.yml` and `docs/docker-hardened.md` no longer exist, so the `file:line`
+> references to them below describe the pre-consolidation tree and are kept as the audit record.
+> `deploy/posture_test.go` now enforces the posture in CI.
+
+
 **Branch:** `chore/i18n-en-es-hardening` (HEAD `fdfb7a1`)
 **Date:** 2026-11-03
 **Type:** static/manual review + automated scanners. No repository file other than this report was modified;

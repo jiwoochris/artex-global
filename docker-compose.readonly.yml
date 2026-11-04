@@ -1,0 +1,17 @@
+# Opt-in overlay: freeze the container filesystem.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.readonly.yml up -d
+#
+# What changes: the root filesystem becomes immutable, so the agent can only write to
+# /app/data, /app/skills and the /tmp tmpfs. What you lose: the UI's one-click update
+# (it replaces /app/artex in place). Upgrade by pulling a new image:
+#
+#   docker compose pull && docker compose up -d
+#
+# docs/docker.md §6 explains when this is the right tradeoff.
+services:
+  artex:
+    read_only: true
+    # HOME must be writable for Chromium profiles and pnpm under a read-only rootfs.
+    environment:
+      HOME: /tmp

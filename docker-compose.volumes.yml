@@ -1,0 +1,19 @@
+# Opt-in overlay: keep data and skills in named Docker volumes instead of the
+# host bind mounts used by the default stack.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.volumes.yml up -d
+#
+# What changes: nothing on the host is writable by the agent; the `chown -R
+# 10001:10001 data skills` step becomes unnecessary. What you lose: direct access
+# from the host — inspect or copy with `docker compose cp` / `docker run --rm`.
+#
+# docs/docker.md §6 explains the tradeoff between the two storage modes.
+services:
+  artex:
+    volumes:
+      - artex_data:/app/data
+      - artex_skills:/app/skills
+
+volumes:
+  artex_data:
+  artex_skills:

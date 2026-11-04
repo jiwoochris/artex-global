@@ -110,7 +110,7 @@ jobs:
       # artifacts it describes, so it detects corruption and CDN tampering but not a
       # compromised release. The one-click updater (selfupdate/github.go + stage.go) fetches
       # SHA256SUMS and the binary from the same channel, over TLS, with no signature — see
-      # docs/docker-hardened.md §6. A real fix needs a detached signature (minisign or
+      # docs/docker.md §6. A real fix needs a detached signature (minisign or
       # Sigstore/cosign) produced here from a key the maintainer holds, the public half
       # compiled into the binary, and a verification step before the swap; without a key
       # under CI control nothing can actually sign yet, so this stays a documented gap.

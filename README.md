@@ -108,7 +108,7 @@ The image bundles common tools (ripgrep, curl, vim, npm, nmap, and more), and wh
 Upstream provides several methods: an install script (`./install.sh`), precompiled binaries (Releases), and a single-binary build from source. The essentials are reproduced below.
 
 - **Install script:** running `./install.sh` detects/installs Docker and then lets you choose "① all-in-Docker" or "② local compile and run." "① all-in-Docker" pulls and starts the same image as the quick start above (`ghcr.io/yukiteruamano/artex-global`), while "② local compile and run" builds it yourself the same way as the **single-binary build from source** below.
-- **Hardened container deployment:** `Dockerfile.hardened` and `docker-compose.hardened.yml` build the same app as an unprivileged container with a read-only rootfs, zero capabilities and its own networks. Setup, API keys, isolation checks and known limitations are in [docs/docker-hardened.md](docs/docker-hardened.md).
+- **Container deployment and its security posture:** `docker-compose.yml` is the only stack — unprivileged user, `cap_drop: ALL` with a single `NET_RAW`, `no-new-privileges`, private database network, capped processes/logs/tmpfs, loopback-only ports. Setup, API keys, the verification commands, the opt-in read-only and named-volume overlays and the known limitations are in [docs/docker.md](docs/docker.md).
 - **Single-binary build from source:**
 
   ```bash
