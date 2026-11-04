@@ -37,8 +37,8 @@ const banner = `
 // printBanner writes the startup banner + version/runtime info to stdout.
 func printBanner(addr string) {
 	fmt.Print(banner)
-	fmt.Println("  AI 자율 침투 테스트 시스템")
-	fmt.Printf("  버전 %s  ·  %s/%s  ·  %s  ·  수신 대기 %s\n\n",
+	fmt.Println("  AI Autonomous Penetration Testing System")
+	fmt.Printf("  version %s  ·  %s/%s  ·  %s  ·  listening on %s\n\n",
 		version, runtime.GOOS, runtime.GOARCH, runtime.Version(), addr)
 }
 
@@ -48,6 +48,30 @@ func printBanner(addr string) {
 // in a function that can *return* rather than os.Exit past its own defers.
 func main() {
 	os.Exit(run())
+}
+
+// newHTTPServer configures the API listener's timeouts. Every one of them is
+// explicit: with only ReadHeaderTimeout, a slow body or a pile of idle keep-alive
+// connections held a server slot indefinitely.
+func newHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:    addr,
+		Handler: handler,
+		// Slow-header attack window.
+		ReadHeaderTimeout: 10 * time.Second,
+		// Whole request read. Deliberately generous: a work-dir upload may legally
+		// carry 512 MiB (server's maxWorkspaceUpload) over a slow link, and the
+		// per-route MaxBytesReader caps the size, so this only bounds how long a slow
+		// body may take instead of never. Idle keep-alive connections are closed much
+		// sooner by IdleTimeout.
+		ReadTimeout: 15 * time.Minute,
+		// Response write. Must exceed the slowest synchronous handler (10-minute
+		// custom-tool runs and scope-sentry sync finish well inside it). The four SSE
+		// routes stay open indefinitely, so they clear this deadline per request
+		// (server.streamsExemptFromWriteTimeout).
+		WriteTimeout: 15 * time.Minute,
+		IdleTimeout:  120 * time.Second,
+	}
 }
 
 func run() int {
@@ -85,9 +109,9 @@ func run() int {
 		cfgPath = abs
 	}
 	if _, e := os.Stat(cfgPath); e == nil {
-		log.Printf(config.T("[config] 설정 파일: %s"), cfgPath)
+		log.Printf(config.T("[config] config file: %s"), cfgPath)
 	} else {
-		log.Printf(config.T("[config] 설정 파일: %s (파일 없음 · 환경 변수 ARTEX_PG_DSN 만 사용)"), cfgPath)
+		log.Printf(config.T("[config] config file: %s (not found · using only environment variable ARTEX_PG_DSN)"), cfgPath)
 	}
 
 	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -111,14 +135,10 @@ func run() int {
 	if abs, err := filepath.Abs(skillDir); err == nil {
 		skillDir = abs
 	}
-	log.Printf(config.T("[config] skill 디렉터리: %s"), skillDir)
+	log.Printf(config.T("[config] skill directory: %s"), skillDir)
 	srv := server.New(ctx, mgr, skillDir, *dataDir, config.BaseDir())
 	srv.WarnIfExposed(*addr)
-	httpSrv := &http.Server{
-		Addr:              *addr,
-		Handler:           srv.Handler(),
-		ReadHeaderTimeout: 10 * time.Second,
-	}
+	httpSrv := newHTTPServer(*addr, srv.Handler())
 
 	go func() {
 		log.Printf("ARTEX %s backend listening on %s (data=%s, workers=%d)", version, *addr, *dataDir, mgr.Workers())
