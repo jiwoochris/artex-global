@@ -377,6 +377,8 @@ Local development and testing:
 - Frontend: `cd web && pnpm run dev` (proxies `/api` to the backend, with hot reload)
 - Tests: `go test ./...`
 - Mock preview (no backend): `cd web && NEXT_PUBLIC_MOCK=1 pnpm run dev`
+- Everything else (build, tests, linters, Docker, release, audit): `make` — see `make help`.
+  `make check` is the same gate CI enforces.
 
 The changes this global edition adds on top of upstream ARTEX are tracked in the [changelog (CHANGELOG.md)](CHANGELOG.md).
 

@@ -91,6 +91,29 @@ run the Docker Compose stack below. Detection and defence material about Windows
 **targets** is intentionally retained: it documents attacking and defending those systems, not
 running ARTEX on them.
 
+### Using make
+
+`make` is the entry point for everything below; it wraps the same commands the CI workflows
+run, so a local result and a CI result mean the same thing.
+
+```bash
+make                 # the full target list, grouped, with a description per target
+make setup           # go modules + pnpm store from the lockfile
+make check           # local merge gate: gofmt check, go vet, biome, shellcheck, actionlint, go + web tests, i18n
+make ci              # everything the push/PR workflows verify (adds doc links, language gate, posture)
+make audit           # govulncheck (reachable vulnerabilities) + pnpm audit --prod
+make binary          # ./artex with the frontend embedded
+make dev             # backend :8787 + proxy :8788 + frontend :5173
+make docker-up       # run the stack (see docs/docker.md)
+make release         # both Linux targets as zips + SHA256SUMS in dist/
+make clean           # remove build outputs
+make test-go-db      # per-package DB integration tests (needs ARTEX_PG_DSN)
+```
+
+Toolchains are overridable, which matters when `go` is not on `PATH`:
+`make test-go GO=/usr/local/go/bin/go`, or
+`make lint-shell SHELLCHECK="uvx --from shellcheck-py shellcheck"`.
+
 ### Backend (Go)
 
 If Go is installed locally, run the following from the repository root.
@@ -220,7 +243,7 @@ and the description is written in English.
 
 Examples.
 
-```
+```text
 feat(agent): force user-facing output into the selected language (langDirective)
 docs: make English the canonical document language, drop translated copies
 i18n(web): Spanish translation of the dashboard navigation labels

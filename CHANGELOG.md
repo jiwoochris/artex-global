@@ -37,6 +37,10 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 
 - **pnpm 12.17.0.** `packageManager` in `web/package.json` and the `corepack prepare` pin in the `Dockerfile` move from 12.16.1 to 12.17.0, so CI (which reads `packageManager`), the image and local development all resolve the same release. The lockfile was regenerated with 12.17.0 and `pnpm install --frozen-lockfile`, the type check, the unit tests, the i18n gate, the production audit and the static export were re-run against it.
 
+### Developer tooling
+
+- **`Makefile` as the single entry point.** `make` lists every target with a description; the targets wrap the same commands CI runs (`make check` = format, lint, tests, i18n; `make ci` adds doc links, the language gate and the posture tests), plus `make binary`, `make dev`, `make docker-*` (up, overlays, logs, reset), `make release`, `make audit`, `make test-detections` and `make clean`. Toolchains are overridable (`make test-go GO=/path/to/go`), which matters when `go` is not on `PATH`. CONTRIBUTING and the README now point at it instead of repeating the commands.
+
 ### CI
 
 - **New `security.yml` gate.** `govulncheck` on every dependency change and weekly, failing only on vulnerabilities the code actually reaches, plus `pnpm audit --prod` failing at high/critical. `SPEC.md` REQ-SEC-11 asked for this; until now the check only happened when a maintainer ran it by hand. The minimatch advisory is fixed by an override in `web/pnpm-workspace.yaml`; the remaining one is a transitive `deepmerge` advisory with no patched release.
