@@ -71,6 +71,6 @@ body:
     attributes:
       label: Environment
       description: OS, whether you use Docker, the LLM model, and so on.
-      placeholder: "e.g. macOS 15 / Docker Compose / claude-opus-4-8"
+      placeholder: "e.g. Debian 13 (Trixie) / Docker Compose / claude-opus-4-8"
     validations:
       required: false

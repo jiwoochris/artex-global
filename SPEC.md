@@ -45,6 +45,8 @@ sense.
 - Multi-tenant SaaS operation, billing, or a hosted control plane.
 - Any behavior against systems the operator is not explicitly authorized to test.
   Authorization is a hard precondition, not a feature (see §7.1).
+- Running ARTEX natively on Windows or macOS (REQ-PLAT-1). Attacking and defending
+  Windows/macOS *targets* stays in scope and is not a non-goal.
 
 ---
 
@@ -254,6 +256,17 @@ Two enforcement points keep this honest:
 | REQ-DEP-5 | Container base image is `python:3.12-slim-trixie` (Debian Trixie); build stages pinned; no `latest` for the runtime base |
 | REQ-DEP-6 | New runtime dependencies require a stated reason and a license check (AGPL-3.0 compatible) |
 
+### 5.1 Platform support (REQ-PLAT-1)
+
+| ID | Requirement |
+| --- | --- |
+| REQ-PLAT-1 | Release artifacts are Linux only (`linux/amd64` and `linux/arm64`); no Windows or macOS native build, supervisor script or release asset is produced. |
+
+The decision rule behind it: anything about *running* ARTEX outside Linux is out of scope;
+anything about *attacking or defending* Windows/macOS targets is in scope and must not be removed.
+The container image is the supported way to run ARTEX on a Windows or macOS host, because Docker
+there is already a Linux VM.
+
 ---
 
 ## 6. Architecture
@@ -345,6 +358,7 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 | REQ-UI-1 static export, no literals | `web/src/**` | `pnpm run build:static`, `check:i18n` | W2 |
 | REQ-SEC-2..12 | see §4 | one test per fix | W5 |
 | REQ-DEP-1..6 | `go.mod`, `web/package.json`, `Dockerfile*` | `go test ./...`, `pnpm test --run`, Dockerfile review | W0a/W0b |
+| REQ-PLAT-1 Linux-only artifacts | `.github/workflows/release.yml`, `build.sh`, `start.sh` | `deploy/platform_test.go` | W6 |
 | REQ-QA-1..5 | §7 | the gate itself | all |
 
 ### 8.2 Acceptance criteria for the current change set

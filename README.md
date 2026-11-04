@@ -107,6 +107,8 @@ The image bundles common tools (ripgrep, curl, vim, npm, nmap, and more), and wh
 
 Upstream provides several methods: an install script (`./install.sh`), precompiled binaries (Releases), and a single-binary build from source. The essentials are reproduced below.
 
+> **Supported platform: Linux.** Release binaries and the release images are built for `linux/amd64` and `linux/arm64` only, and the shell scripts (`install.sh`, `start.sh`, `update.sh`) assume a POSIX system. On any other host, run the container stack from the quick start above — it works wherever Docker runs.
+
 - **Install script:** running `./install.sh` detects/installs Docker and then lets you choose "① all-in-Docker" or "② local compile and run." "① all-in-Docker" pulls and starts the same image as the quick start above (`ghcr.io/yukiteruamano/artex-global`), while "② local compile and run" builds it yourself the same way as the **single-binary build from source** below.
 - **Container deployment and its security posture:** `docker-compose.yml` is the only stack — unprivileged user, `cap_drop: ALL` with a single `NET_RAW`, `no-new-privileges`, private database network, capped processes/logs/tmpfs, loopback-only ports. Setup, API keys, the verification commands, the opt-in read-only and named-volume overlays and the known limitations are in [docs/docker.md](docs/docker.md).
 - **Single-binary build from source:**
@@ -120,7 +122,7 @@ Upstream provides several methods: an install script (`./install.sh`), precompil
 
 > The frontend uses **pnpm**, pinned by `packageManager` in `web/package.json` (enable it with `corepack enable`). The `pnpm install` in step 1) installs the devDependencies the build needs (e.g. `@tailwindcss/postcss`); `--prod=false` makes that explicit, so an inherited `NODE_ENV=production` or a global `prod` setting cannot leave `@tailwindcss/postcss` missing and fail the build with `Error: Cannot find module '@tailwindcss/postcss'`.
 
-> Launch with `start.sh` (`start.bat` on Windows) rather than running `./artex` directly. That script is a supervisor that restarts the program based on its exit code, and it also handles the UI's "one-click update."
+> Launch with `start.sh` rather than running `./artex` directly. That script is a supervisor that restarts the program based on its exit code, and it also handles the UI's "one-click update."
 
 ---
 

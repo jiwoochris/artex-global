@@ -85,6 +85,12 @@ binding, `report_finding`'s `traffic_refs`, and so on), read the
 - Node.js 22 or later (per the release workflow)
 - Docker and Docker Compose (for local runs and verification)
 
+**Supported platform: Linux.** Go builds, the shell scripts (`install.sh`, `start.sh`, `update.sh`,
+`dev.sh`) and the release assets (`linux/amd64`, `linux/arm64`) are Linux-only; on another host,
+run the Docker Compose stack below. Detection and defence material about Windows and macOS
+**targets** is intentionally retained: it documents attacking and defending those systems, not
+running ARTEX on them.
+
 ### Backend (Go)
 
 If Go is installed locally, run the following from the repository root.

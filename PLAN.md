@@ -78,7 +78,7 @@ File ownership is exclusive per wave so parallel agents never edit the same file
 - `web/.npmrc` / `web/pnpm-workspace.yaml` only if pnpm requires them (build scripts approval).
 - `.github/workflows/{ci,web,release,docs,detections}.yml` → `pnpm/action-setup` + `--frozen-lockfile`.
 - `Dockerfile`, `Dockerfile.hardened` → `python:3.12-slim-trixie`; npm → pnpm inside the image.
-- Shell scripts (`build.sh`, `install.sh`, `start.sh`, `update.sh`, `dev.sh`, `reset-password.sh`, `build-cloud.sh`, `start-cloud.sh`, `start.bat`) — web-related commands only.
+- Shell scripts (`build.sh`, `install.sh`, `start.sh`, `update.sh`, `dev.sh`, `reset-password.sh`, `build-cloud.sh`, `start-cloud.sh`, `start.bat` (since removed, see W6)) — web-related commands only.
 - Verification: `pnpm install --frozen-lockfile`, `pnpm exec tsc --noEmit`, `pnpm test --run`, `pnpm run build:static`.
 
 **W0b — Go dependency update**
@@ -158,6 +158,25 @@ dependency/image policy, test strategy, acceptance criteria.
   CORS/proxy defaults, dependency supply chain.
 - Verification: full Go + web suites, plus targeted tests per fix.
 
+### W6 — Linux-only consolidation
+
+**Owner decision (final):** ARTEX runs on Linux only. The runtime is a Go binary plus a Debian
+Trixie container image, and Docker on Windows/macOS is already a Linux VM, so the native
+Windows/macOS builds and supervisor scripts are removed. What is explicitly **kept**: every piece
+of knowledge about attacking or defending Windows and macOS *targets* — `detections/` (Sigma,
+Suricata, MISP, ATT&CK material, Windows event-log rules), the agent prompts, `docs/defense.md`,
+and the input hardening that tolerates Windows-produced artefacts.
+
+- Removed `start.bat`; `.github/workflows/release.yml` builds only `linux/amd64` and `linux/arm64`;
+  `build.sh` compiles those two targets and refuses any other `goos`.
+- Docs/UI strings that told the reader to use a Windows build were rewritten: README, CONTRIBUTING,
+  `MAINTAINING.md`, the runtime architecture document, the Playwright skill and the bug-report
+  template.
+- New normative requirement REQ-PLAT-1 in SPEC §5.1, with the decision rule (running elsewhere is
+  out of scope; attacking/defending Windows/macOS targets is in scope and must not be removed).
+- Verification: `go test ./deploy/` (`deploy/platform_test.go` guards the Linux-only contract),
+  `python3 scripts/check-doc-links.py`, `python3 scripts/check-non-english.py`.
+
 ---
 
 ## 4. Test plan — every functional change has a test
@@ -220,6 +239,7 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 | W3b | English source language | done — every user-facing literal translated to English, `server/errmsg_catalog.go` re-keyed English → `{es}` (354 entries), `config/msg_i18n.go` re-keyed, 151 new Spanish pairs merged, write-once prompt/tool reseed added |
 | W4 | Comment/docstring translation | done — `python3 /tmp/pi/scan.py .` reports 23 Korean + 856 Chinese characters left, all on the documented sentinel/fixture allow-list (SPEC §3.5.1) |
 | W5 | Security review | done — `docs/security-review.md` (4 High, 9 Medium, 5 Low, with verified file:line evidence); HTTP-layer and infrastructure findings remediated with tests |
+| W6 | Linux-only consolidation | done — `start.bat` and the Windows/macOS release matrix entries removed, docs/UI strings rewritten, REQ-PLAT-1 added, `deploy/platform_test.go` guards the contract |
 
 ### 7.1 Verification snapshot (this machine, no PostgreSQL)
 
