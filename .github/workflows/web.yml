@@ -19,20 +19,24 @@ on:
 permissions:
   contents: read
 
+# A new push to the same branch cancels the previous run.
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # The static export build is the merge gate. `NEXT_EXPORT=1 next build` also runs the
   # TypeScript type check, because next.config does not set typescript.ignoreBuildErrors,
   # so a type error or a failed export turns this job red and blocks the merge.
   #
-  # The biome lint is a merge gate too. After the pre-existing lint debt inherited from
-  # upstream (G7) was cleared to zero (errors 8 -> 0: 6 a11y in the skills tree, 1
-  # package.json formatter, 1 logo.svg noSvgWithoutTitle), the informational step was
-  # promoted to a gate. `pnpm run check` (biome check) errors now turn this job red and
-  # block the merge, so the cleaned-up state cannot be silently re-dirtied. Warnings and
-  # infos do not affect the exit code (biome is non-zero only at the error level) and do
-  # not block a merge.
+  # The biome lint is a merge gate too. The lint debt inherited from upstream was cleared
+  # to zero and the informational step was promoted to a gate: `pnpm run check` (biome
+  # check) errors turn this job red and block the merge, so the clean state cannot be
+  # silently re-dirtied. Warnings and infos do not affect the exit code (biome is non-zero
+  # only at the error level) and do not block a merge.
   web:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: web

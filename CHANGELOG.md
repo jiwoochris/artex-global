@@ -33,6 +33,12 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 - **`reset-password.sh`** reads `POSTGRES_*` from `.env` with `sed` instead of sourcing it, because sourcing executes whatever the file contains.
 - **`build.sh`** no longer aborts when no release archive matched the checksum glob.
 
+### CI
+
+- **New `security.yml` gate.** `govulncheck` on every dependency change and weekly, failing only on vulnerabilities the code actually reaches, plus `pnpm audit --prod` failing at high/critical. `SPEC.md` REQ-SEC-11 asked for this; until now the check only happened when a maintainer ran it by hand. The minimatch advisory is fixed by an override in `web/pnpm-workspace.yaml`; the remaining one is a transitive `deepmerge` advisory with no patched release.
+- **Publishing is attributable.** The release workflow attests build provenance for the zips and `SHA256SUMS`, and the container image now carries an SBOM and max-mode provenance. This does not replace the missing checksum signature, but a downloader can verify origin with `gh attestation verify` without any key held by the maintainer.
+- **The sprint's CI gaps are closed:** `go.mod` is the single source of truth for the Go version (three copies of `"1.26"` were three places to forget), `ci.yml` and `web.yml` cancel superseded runs, every job has a timeout, the release matrix runs both Linux binaries (arm64 under QEMU), `actionlint` lints the workflows themselves, and the release workflow no longer restores package caches, which is the cache-poisoning path into signed artifacts.
+
 ### Fixed
 
 - Distinguish task report loading failures from empty reports and offer a retry button. Late responses from a previous task cannot replace the current task report.

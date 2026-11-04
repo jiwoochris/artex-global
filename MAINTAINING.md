@@ -279,13 +279,14 @@ This repository is a fork of upstream ARTEX, so the local `git remote` has both 
 you do not specify a repository in a `gh` command, `gh` **picks the upstream repository as the
 default** and shows you run results from upstream, which does not have our workflows. You can then see
 upstream CI green and **mistakenly think our CI passed**, or judge our workflows (`ci.yml`,
-`detections.yml`) as "HTTP 404 ... not found" by mistake.
+`web.yml`, `detections.yml`, `docs.yml`, `security.yml`) as "HTTP 404 ... not found" by mistake.
 
 So when checking CI, always name the repository explicitly.
 
 ```bash
 gh run list -R yukiteruamano/artex-global --workflow ci.yml --limit 5
 gh run list -R yukiteruamano/artex-global --workflow detections.yml --limit 5
+gh run list -R yukiteruamano/artex-global --workflow security.yml --limit 5
 ```
 
 Once set, you can make `gh` default to our repository even when you omit `-R`. Note, however, that
@@ -378,13 +379,19 @@ The workflow is split into four jobs.
 - **frontend.** Statically exports the frontend once (`web/out`) and uploads that output as the
   `web-dist` artifact. The binaries job below downloads and reuses this output per target.
 - **binaries.** Cross-compiles the two Linux targets (amd64 and arm64) and packages a zip per target.
-  On the linux amd64 binary it runs an `artex -h` smoke test to confirm the binary actually runs.
-- **release.** Gathers all zips, generates a `SHA256SUMS` checksum file, and creates a GitHub Release
-  with the zips and the checksum attached.
+  Both binaries get an `artex -h` smoke test: amd64 natively, arm64 inside an arm64 container under
+  QEMU, so a broken arm64 build is caught before the image is pushed.
+- **release.** Gathers all zips, generates a `SHA256SUMS` checksum file, attests their build
+  provenance (`gh attestation verify` checks that these bytes came from this workflow and commit,
+  without a maintainer-held key), and creates a GitHub Release with the zips and the checksum
+  attached.
 - **docker.** Takes the linux binaries cross-compiled by binaries, builds a multi-architecture
   (amd64/arm64) image, and pushes it to GitHub Container Registry as `ghcr.io/yukiteruamano/artex-global`
   with the release tag and `latest`. It logs in with the workflow's built-in `GITHUB_TOKEN` (job
-  permission `packages: write`), so no extra secrets are needed.
+  permission `packages: write`), so no extra secrets are needed. The image manifest carries an SBOM
+  and max-mode provenance (`docker buildx imagetools inspect <image>`), and the workflow deliberately
+  uses no package cache: it publishes signed artifacts, so a cache written by an untrusted
+  pull-request run must not be restorable there.
 
 ### 9.3 Do the build assumptions match the repository structure
 

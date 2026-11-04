@@ -11,6 +11,12 @@ on:
 permissions:
   contents: read
 
+# A new push to the same branch cancels the previous run, so rapid pushes do not queue
+# redundant build+test runs.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Runs build, static analysis and tests without a database. This reproduces the
   # environment a contributor gets after cloning the repository and running `go test ./...`
@@ -20,13 +26,15 @@ jobs:
   # example changing a message in one package while breaking another package's assertion).
   go:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
-          go-version: "1.26"
+          # go.mod is the single source of truth (it pins a patch release).
+          go-version-file: go.mod
           cache: true
       - name: go build
         run: go build ./...
@@ -52,6 +60,8 @@ jobs:
   # itself through EnsureLLMUsageTable.
   go-db:
     runs-on: ubuntu-latest
+    # Six packages, each with its own PostgreSQL service: allow for image pulls.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -77,9 +87,29 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
-          go-version: "1.26"
+          # go.mod is the single source of truth (it pins a patch release).
+          go-version-file: go.mod
           cache: true
       - name: go test (DB integration - ${{ matrix.pkg }} package in isolation)
         env:
           ARTEX_PG_DSN: postgres://artex:artex@localhost:5432/artex?sslmode=disable
         run: go test ./${{ matrix.pkg }}/ -count=1
+
+  # Lints the workflows themselves: expression typos, unknown contexts, invalid `needs`,
+  # bad `runs-on` values and shell problems in `run:` blocks (it uses the runner's
+  # shellcheck). Without this, a typo in a workflow only shows up when the workflow runs —
+  # which for release.yml means on a tag, when it is most expensive.
+  workflows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      # Pinned so a red/green change cannot depend on when the job ran.
+      - name: actionlint (workflow syntax, expressions and run-block shell)
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12

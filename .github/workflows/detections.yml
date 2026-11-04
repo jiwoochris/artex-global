@@ -71,7 +71,10 @@ concurrency:
 jobs:
   detections:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Eleven steps, several of which pull Docker images on a cold runner (sigma-cli,
+    # scapy, suricata, python). 20 minutes was too tight for a cold cache and produced
+    # intermittent red runs.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:

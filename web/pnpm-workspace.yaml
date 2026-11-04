@@ -2,3 +2,10 @@ allowBuilds:
   "@parcel/watcher": true
   "@swc/core": true
   sharp: true
+
+# Force the patched release of minimatch (GHSA: potential DoS via globparts, fixed in
+# 11.0.1). The advisory is a transitive dependency; `pnpm audit --prod` in
+# .github/workflows/security.yml fails on high/critical, and this keeps the moderate one
+# from ageing into a blocker.
+overrides:
+  minimatch: ">=11.0.1"

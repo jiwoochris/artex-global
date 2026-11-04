@@ -27,6 +27,9 @@ concurrency:
 jobs:
   links:
     runs-on: ubuntu-latest
+    # Two stdlib-only Python passes over ~47 documents: seconds, so this only guards
+    # against something pathological (a hung filesystem).
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
