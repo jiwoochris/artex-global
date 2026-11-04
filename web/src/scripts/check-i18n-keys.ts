@@ -1,9 +1,9 @@
 /**
  * Script: check-i18n-keys.ts
  *
- * 로케일 메시지 파일(web/messages/{ko,en,zh,es,ja}.json)의 키 정합성 가드.
- * ko.json 을 기준으로 나머지 로케일의 키 집합이 완전히 일치하는지(누락·추가 모두) 검사하고,
- * 불일치가 있으면 비-0 으로 종료한다. 실행: npm run check:i18n
+ * Key-parity guard for the locale message files (web/messages/{en,es}.json). Compares every
+ * other locale's key set against the `en` baseline (both missing and extra keys) and exits
+ * non-zero on a mismatch. Run: npm run check:i18n
  */
 
 import { diffKeys, flattenKeys, isInSync } from "./i18n-keys";
@@ -11,8 +11,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const MESSAGES_DIR = path.resolve(__dirname, "../../messages");
-const BASELINE = "ko";
-const LOCALES = ["en", "zh", "es", "ja"] as const;
+const BASELINE = "en";
+const LOCALES = ["es"] as const;
 
 function readLocale(locale: string): Set<string> {
   const file = path.join(MESSAGES_DIR, `${locale}.json`);
@@ -29,24 +29,24 @@ const baseline = readLocale(BASELINE);
 let failed = false;
 
 console.log("─".repeat(64));
-console.log(`i18n 키 정합성 검사 (기준: ${BASELINE}.json, ${baseline.size} 키)`);
+console.log(`i18n key parity check (baseline: ${BASELINE}.json, ${baseline.size} keys)`);
 console.log("─".repeat(64));
 
 for (const locale of LOCALES) {
   const diff = diffKeys(baseline, readLocale(locale));
   if (isInSync(diff)) {
-    console.log(`[OK] ${locale}.json — 일치`);
+    console.log(`[OK] ${locale}.json — in sync`);
     continue;
   }
   failed = true;
-  console.log(`[FAIL] ${locale}.json — 불일치`);
-  if (diff.missing.length) console.log(`   누락 ${diff.missing.length}: ${preview(diff.missing)}`);
-  if (diff.extra.length) console.log(`   추가 ${diff.extra.length}: ${preview(diff.extra)}`);
+  console.log(`[FAIL] ${locale}.json — out of sync`);
+  if (diff.missing.length) console.log(`   missing ${diff.missing.length}: ${preview(diff.missing)}`);
+  if (diff.extra.length) console.log(`   extra ${diff.extra.length}: ${preview(diff.extra)}`);
 }
 
 console.log("─".repeat(64));
 if (failed) {
-  console.error("i18n 키가 어긋났습니다. 누락/추가 키를 맞춘 뒤 다시 실행하세요.");
+  console.error("i18n keys are out of sync. Align the missing/extra keys and run again.");
   process.exit(1);
 }
-console.log("모든 로케일의 키 집합이 일치합니다.");
+console.log("All locale key sets match.");

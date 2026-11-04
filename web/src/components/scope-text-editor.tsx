@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { MAX_COMPANY_SCOPE_VALUE_LENGTH, type ParsedCompanyScopeText } from "@/lib/company-scope";
 import type { CompanyScopeKind } from "@/lib/types";
 
-// 라벨은 렌더 시점에 t(`kind.${kind}`) 로 해석(아래 배지).
+// Labels are resolved at render time via t(`kind.${kind}`) (badges below).
 const SCOPE_KINDS: CompanyScopeKind[] = ["domain", "ip", "cidr", "icp", "keyword"];
 
 export function ScopeTextEditor({
@@ -34,8 +34,8 @@ export function ScopeTextEditor({
     for (const rule of parsed.rules) result.set(rule.kind, (result.get(rule.kind) ?? 0) + 1);
     return result;
   }, [parsed.rules]);
-  // company-scope.ts 는 번역할 수 없는 순수 모듈이라 오류 "코드"만 돌려준다. 여기서
-  // 코드별 메시지로 해석한다(tooLong 은 최대 글자 수를 함께 보간).
+  // company-scope.ts is a pure, untranslatable module, so it only returns error "codes". Here
+  // they are resolved into per-code messages (tooLong also interpolates the max character count).
   const errorText = React.useCallback(
     (code: string) => {
       if (code === "tooLong") return t("error.tooLong", { max: MAX_COMPANY_SCOPE_VALUE_LENGTH });

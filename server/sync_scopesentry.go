@@ -9,45 +9,48 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/mcphttp"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/mcphttp"
 )
 
-// 자산 동기화(ScopeSentry 데이터 소스).
+// Asset sync (ScopeSentry data source).
 //
-// ScopeSentry 는 ASM 자산 측량 플랫폼으로, MCP 인터페이스를 통해 [프로젝트]/[작업] 두 차원으로
-// 서브도메인·웹 애플리케이션·서비스 등의 자산을 가져와 ARTEX 의 회사 + 자산 모델로 매핑한다.
-// 데이터 소스 자체는 "ScopeSentry" 라는 이름의 http 전송 MCP 행이다(url + X-API-Key 헤더를 mcp_servers 에 저장).
+// ScopeSentry is an ASM attack-surface platform. Over its MCP interface it serves assets
+// (subdomains, web applications, services) along the two dimensions [project] and [task],
+// which are mapped onto ARTEX's company + asset model. The data source itself is an
+// mcp_servers row named "ScopeSentry" with http transport (url + X-API-Key header stored
+// in mcp_servers).
 //
-// 에이전트 도구 계층과 달리, 여기서는 mcphttp.Client.Call 로 MCP 도구를 직접 호출해 원본 JSON 을 받고,
-// AskUser 권한 팝업을 띄우지 않는다(백그라운드 일괄 동기화).
+// Unlike the agent tool layer, this calls MCP tools directly through mcphttp.Client.Call
+// to get raw JSON and never raises the AskUser permission popup (background bulk sync).
 
 const (
 	scopeSentryMCPName = "ScopeSentry"
-	syncMaxPerType     = 5000 // 단일 대상·단일 유형당 저장 보호 상한
+	syncMaxPerType     = 5000 // safety cap on stored rows per target and asset type
 	syncDefaultPage    = 100
 )
 
-// 사용자 노출 메시지(writeErr 응답 + 동기화 결과 warnings/errors JSON). 식별자·enum·MCP 도구명·
-// JSON 필드명(dimension·targets 등)은 원문 그대로 두고, 중국어 문구만 한국어로 옮긴다(BRIEF F3 방침).
-// UI(web/messages/ko.json 의 sync 네임스페이스)와 "데이터 소스" 표기를 맞춘다.
+// User-visible messages (writeErr responses + the warnings/errors JSON of a sync result).
+// Identifiers, enums, MCP tool names and JSON field names (dimension, targets, ...) stay
+// verbatim; only the prose is localized (BRIEF F3). Wording matches the UI's "data source"
+// terminology.
 const (
-	errSSDataSourceMissingFmt = "데이터 소스 %s 가 없습니다. 먼저 생성해 주세요"
-	errSSDataSourceNoURLFmt   = "데이터 소스 %s 에 URL 이 설정되지 않았습니다. 먼저 설정해 주세요"
-	errSSListProjectsPrefix   = "list_projects_data 호출에 실패했습니다: "
-	errSSParseProjectsPrefix  = "프로젝트 목록을 해석하지 못했습니다: "
-	errSSListTasksPrefix      = "list_tasks 호출에 실패했습니다: "
-	errSSParseTasksPrefix     = "작업 목록을 해석하지 못했습니다: "
-	errSSDimension            = "dimension 값은 project 또는 task 중 하나여야 합니다"
-	errSSTargetsEmpty         = "targets 항목은 비워 둘 수 없습니다"
-	warnSSProjectMetaFmt      = "프로젝트 %s 의 상세 정보를 가져오지 못했습니다: %v"
-	warnSSCompanyCreateFmt    = "회사 %s 생성에 실패했습니다: %v"
-	warnSSUnknownAssetPrefix  = "알 수 없는 자산 유형이라 건너뛰었습니다: "
-	errSSFetchFmt             = "%s(%s) 자산을 가져오지 못했습니다: %v"
-	warnSSTruncatedFmt        = "%s(%s) 가 %d 건 상한에 도달해 잘렸습니다"
-	errSSParseSubdomainPrefix = "subdomain 응답을 해석하지 못했습니다: "
-	errSSParseAppPrefix       = "app 응답을 해석하지 못했습니다: "
-	errSSParseServicePrefix   = "service 응답을 해석하지 못했습니다: "
+	errSSDataSourceMissingFmt = "Data source %s does not exist. Please create it first"
+	errSSDataSourceNoURLFmt   = "No URL is set for data source %s. Please set it first"
+	errSSListProjectsPrefix   = "Failed to call list_projects_data: "
+	errSSParseProjectsPrefix  = "Failed to parse the project list: "
+	errSSListTasksPrefix      = "Failed to call list_tasks: "
+	errSSParseTasksPrefix     = "Failed to parse the task list: "
+	errSSDimension            = "The dimension value must be either project or task"
+	errSSTargetsEmpty         = "targets cannot be empty"
+	warnSSProjectMetaFmt      = "Could not fetch details for project %s: %v"
+	warnSSCompanyCreateFmt    = "Failed to create company %s: %v"
+	warnSSUnknownAssetPrefix  = "Skipped unknown asset type: "
+	errSSFetchFmt             = "Failed to fetch asset %s(%s): %v"
+	warnSSTruncatedFmt        = "%s(%s) was truncated at the %d-row limit"
+	errSSParseSubdomainPrefix = "Failed to parse the subdomain response: "
+	errSSParseAppPrefix       = "Failed to parse the app response: "
+	errSSParseServicePrefix   = "Failed to parse the service response: "
 )
 
 // findMCPByName returns the MCP server row with the given name, or nil.

@@ -1,3 +1,3 @@
-// Mock 开关。构建期注入的公开变量（NEXT_PUBLIC_ 前缀才在浏览器可读）。
-// Vercel 上设 NEXT_PUBLIC_MOCK=1 即整站走 mock、无需后端。
+// Mock switch. A public variable injected at build time (only the NEXT_PUBLIC_ prefix is readable in the browser).
+// Setting NEXT_PUBLIC_MOCK=1 on Vercel makes the whole site run on mock data, no backend needed.
 export const MOCK = process.env.NEXT_PUBLIC_MOCK === "1";

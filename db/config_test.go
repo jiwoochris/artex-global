@@ -106,16 +106,16 @@ func TestConfigStores(t *testing.T) {
 	if err != nil || ag == nil {
 		t.Fatalf("planner agent: %v", err)
 	}
-	v1, err := d.SavePrompt(ag.ID, "你是规划者 {{.Goal}}", "init", "test")
+	v1, err := d.SavePrompt(ag.ID, "You are the planner {{.Goal}}", "init", "test")
 	if err != nil {
 		t.Fatal(err)
 	}
-	v2, _ := d.SavePrompt(ag.ID, "你是规划者 v2 {{.Goal}} {{.Scope}}", "edit", "test")
+	v2, _ := d.SavePrompt(ag.ID, "You are the planner v2 {{.Goal}} {{.Scope}}", "edit", "test")
 	if v2 != v1+1 {
 		t.Fatalf("version should increment: %d -> %d", v1, v2)
 	}
 	cur, _ := d.CurrentPrompt(ag.ID)
-	if cur != "你是规划者 v2 {{.Goal}} {{.Scope}}" {
+	if cur != "You are the planner v2 {{.Goal}} {{.Scope}}" {
 		t.Fatalf("current prompt wrong: %q", cur)
 	}
 	vers, _ := d.ListPromptVersions(ag.ID)

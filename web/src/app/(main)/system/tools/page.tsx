@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import type { Agent, Tool } from "@/lib/types";
 
-// Traffic tools are host tools gated by the global 流量捕获 switch: bindable, but
+// Traffic tools are host tools gated by the global Traffic capture switch: bindable, but
 // only usable when capture is on. Keep in sync with traffic.SeedToolMetas.
 const TRAFFIC_TOOL_KEYS = new Set(["traffic_search", "traffic_get"]);
 
@@ -141,7 +141,7 @@ function ToolEditor({
   onClose: () => void;
 }) {
   const t = useTranslations("toolsPage");
-  // traffic tools can't be bound/enabled until the global 流量捕获 switch is on.
+  // traffic tools can't be bound/enabled until the global Traffic capture switch is on.
   const trafficGated = TRAFFIC_TOOL_KEYS.has(tool.key) && !captureOn;
   const [description, setDescription] = React.useState(tool.description);
   const [bound, setBound] = React.useState<string[]>(tool.agents);
@@ -361,13 +361,13 @@ export default function ToolsPage() {
       .agents()
       .then(setAgents)
       .catch(() => {
-        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+        /* Ignore the fetch failure and keep the default state */
       });
     api
       .settings()
       .then((s) => setCaptureOn(!!s.traffic_capture))
       .catch(() => {
-        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+        /* Ignore the fetch failure and keep the default state */
       });
   }, [reload]);
 
@@ -511,7 +511,7 @@ export default function ToolsPage() {
   );
 }
 
-// ---- 自定义工具编辑器 ----
+// ---- Custom tool editor ----
 
 type ExecState = {
   command: string;

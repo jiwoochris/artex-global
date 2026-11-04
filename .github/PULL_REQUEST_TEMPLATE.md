@@ -1,47 +1,51 @@
 <!--
-  이 PR 템플릿은 artex-global(ARTEX 글로벌판) 전용입니다.
-  기여 방침과 현지화 원칙은 CONTRIBUTING.md 를 먼저 읽어 주십시오.
+  This PR template is specific to artex-global (the ARTEX global edition).
+  Please read CONTRIBUTING.md first for the contribution and localization policy.
 -->
 
-## 요약
+## Summary
 
-<!-- 무엇을, 왜 바꾸는지 한두 문장으로 적습니다. -->
+<!-- One or two sentences on what changes and why. -->
 
-## 변경 유형
+## Type of change
 
-<!-- 해당하는 항목에 x 를 넣습니다. -->
+<!-- Put an x in the applicable items. -->
 
-- [ ] 버그 수정 (`fix`)
-- [ ] 기능 추가 (`feat`)
-- [ ] 문서 (`docs`)
-- [ ] 현지화·번역 (`i18n`)
-- [ ] 리팩터링·정리 (`refactor` / `chore`)
-- [ ] 기타:
+- [ ] Bug fix (`fix`)
+- [ ] New feature (`feat`)
+- [ ] Documentation (`docs`)
+- [ ] Localization / translation (`i18n`)
+- [ ] Refactoring / cleanup (`refactor` / `chore`)
+- [ ] Other:
 
-## 관련 이슈
+## Related issues
 
-<!-- 예: Closes #123 -->
+<!-- e.g. Closes #123 -->
 
-## 검증 방법
+## How it was verified
 
-<!-- 어떤 명령으로 무엇을 직접 돌려 확인했는지 적습니다. 결과 로그를 붙이면 좋습니다. -->
+<!-- Which commands you ran, and what you observed. Attaching the output helps. -->
 
-- [ ] Go 변경: `go build ./...` · `go vet ./agent/` · `go test ./agent/` 통과
-- [ ] web 변경: `npm run check` · `npm run build` 통과
-- [ ] UI 변경: 스크린샷 첨부
+- [ ] Go change: `go build ./...` · `go vet ./agent/` · `go test ./agent/` pass
+- [ ] web change: `npm run check` · `npm run build` pass
+- [ ] UI change: screenshots attached
 
-## 현지화 체크리스트
+## Localization checklist
 
-<!-- 현지화와 무관한 PR 이면 이 절은 비워 두어도 됩니다. -->
+<!-- Leave this section empty for changes unrelated to localization. -->
 
-- [ ] 에이전트의 **내부 추론 프롬프트(행동 지침 본문, `agent/promptcatalog.go`·`agent_prompts`)를 번역하지 않았습니다.** (성능 보존)
-- [ ] 사용자에게 노출되는 산출물(탐지 결과·요약·리포트·대화 응답)만 한국어로 다뤘습니다.
-- [ ] 명령·페이로드·코드·URL·로그 원문은 번역 없이 그대로 두었습니다.
-- [ ] UI 문자열은 하드코딩하지 않고 `web/messages/ko.json` 키로 추가했으며, 원문은 `web/messages/zh.json` 에 보존했습니다.
+- [ ] I did **not** translate the agent's **internal reasoning prompts (the behavior-instruction
+      body, `agent/promptcatalog.go` and `agent_prompts`)**. (Performance is preserved.)
+- [ ] I only touched the user-facing output (detection findings, summaries, reports, chat replies) in
+      the selected language.
+- [ ] Commands, payloads, code, URLs, and raw logs were left untranslated.
+- [ ] UI strings are not hard-coded; they were added as keys to `web/messages/en.json` (source) and
+      `web/messages/es.json` (translation).
 
-## 사용 범위 확인
+## Authorized use
 
-- [ ] 이 변경은 [사용 범위](../README.ko.md#️-먼저-읽어-주세요--사용-범위와-국내법-고지)와
-      국내법을 벗어난 사용을 조장하지 않습니다. 검증은 소유·허가 대상 또는 로컬 격리
-      환경에서만 수행했습니다.
-- [ ] 테스트·스캔 산출물을 커밋에 포함하지 않았습니다.
+- [ ] This change does not encourage use outside the
+      [authorized scope](../README.md#️-read-first--authorized-use-and-legal-notice) or beyond
+      applicable law. Verification was performed only against owned/authorized targets or in a local
+      isolated environment.
+- [ ] Test and scan artifacts are not included in the commit.

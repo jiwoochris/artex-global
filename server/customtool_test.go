@@ -84,8 +84,8 @@ func TestShellQuote(t *testing.T) {
 // stdin JSON and the mirrored env var, then print — verifying the whole script
 // param-passing path. Skips if no runnable python3/python is on PATH.
 func TestExecPython(t *testing.T) {
-	// LookPath alone is not enough on Windows: the Store "python3" App Execution
-	// Alias is found but dies with exit status 9009, so probe that it actually runs.
+	// LookPath alone is not enough: a shim on PATH may be found but fail to run, so
+	// probe that the interpreter actually executes before using it.
 	interp := ""
 	for _, c := range []string{"python3", "python"} {
 		if p, err := exec.LookPath(c); err == nil {

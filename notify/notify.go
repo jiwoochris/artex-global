@@ -1,37 +1,45 @@
-// Package notify 实现漏洞发现的 IM / 邮件推送渠道适配层。
+// Package notify implements the IM / email delivery adapters for vulnerability
+// findings.
 //
-// 分层：本包是**叶子包**，只依赖标准库。它不认识数据库、不认识 server。渠道配置
-// 以 map[string]any 传入（对应 notification_channels.config 这一 JSONB 列），
-// 待推送内容以 Message 传入。这样拆开的好处是：签名计算、UTF-8 截断、过滤匹配这些
-// 真正容易出错的地方可以脱离 PostgreSQL 单测，宿主只需在 server 侧做编排。
+// Layering: this package is a **leaf package** and depends only on the standard
+// library. It knows nothing about the database or the server. Channel
+// configuration arrives as a map[string]any (the notification_channels.config
+// JSONB column) and the payload as a Message. Keeping it this way means the
+// genuinely error-prone parts — signature computation, UTF-8 truncation, filter
+// matching — can be unit-tested without PostgreSQL, and the host only has to do
+// the orchestration on the server side.
 //
-// 并发约定：Channel 的实现必须**无状态**。同一个 Channel 实例会被多个渠道配置
-// （甚至同一渠道的多个机器人实例）并发复用，所有凭据一律从 cfg 参数传入，
-// 不允许把 webhook URL 之类的东西缓存进实现自身的字段。
+// Concurrency contract: Channel implementations must be **stateless**. One
+// Channel instance is reused concurrently by several channel configurations
+// (even several bot instances of the same channel), so every credential is
+// passed in through the cfg argument; nothing such as a webhook URL may be
+// cached in the implementation's own fields.
 package notify
 
-// 渠道类型标识。取值同时是 notification_channels.kind 的合法集合，由 server 侧
-// 白名单校验（与 findings.status 同理，不用 DB CHECK，方便后续加渠道）。
+// Channel type identifiers. These values are also the valid set for
+// notification_channels.kind and are whitelisted on the server side (same
+// reasoning as findings.status: no DB CHECK, so channels stay easy to add).
 const (
-	KindDingTalk = "dingtalk" // 钉钉自定义机器人
-	KindFeishu   = "feishu"   // 飞书(含 Lark)自定义机器人
-	KindWeCom    = "wecom"    // 企业微信群机器人
-	KindWebhook  = "webhook"  // 通用 Webhook：自定义方法/头/JSON 模板
+	KindDingTalk = "dingtalk" // DingTalk custom robot
+	KindFeishu   = "feishu"   // Feishu (including Lark) custom robot
+	KindWeCom    = "wecom"    // WeCom group robot
+	KindWebhook  = "webhook"  // Generic webhook: custom method/headers/JSON template
 	KindTelegram = "telegram" // Telegram Bot API
-	KindEmail    = "email"    // SMTP 邮件
+	KindEmail    = "email"    // SMTP email
 )
 
-// 事件类型，对应 notification_events.kind。
+// Event types, matching notification_events.kind.
 const (
 	EventFindingCreated       = "finding_created"
 	EventFindingStatusChanged = "finding_status_changed"
 )
 
-// InitKind 是 config 里为空的 kind 的兜底值。
+// InitKind is the fallback for a channel config whose kind is empty.
 const InitKind = KindDingTalk
 
-// severityRank 把漏洞级别映射成可比较的序数。未知级别返回 0，因此任何
-// min_severity 设置都会把未知级别挡在外面——存疑时不推，避免误报刷屏。
+// severityRank maps a vulnerability severity to a comparable ordinal. An unknown
+// severity yields 0, so any min_severity setting filters it out — when in doubt
+// do not push, which keeps false positives from flooding the channel.
 var severityRank = map[string]int{
 	"low":      1,
 	"medium":   2,
@@ -39,47 +47,41 @@ var severityRank = map[string]int{
 	"critical": 4,
 }
 
-// SeverityRank 返回级别的序数；未知级别返回 0。
+// SeverityRank returns the ordinal for a severity; unknown severities return 0.
 func SeverityRank(severity string) int { return severityRank[severity] }
 
 // Lang, when wired by the server, returns the active user-facing output language
-// ("en"/"ko"/"zh"/"es"/"ja") for the strings this leaf package renders into push /
-// email messages (severity and status labels). Kept as an injected func so the
-// package stays standard-library-only: it does not import config/db/server. nil
-// (unit tests / standalone) → labelLang falls back to "ko", preserving the Korean
-// localization golden tests.
+// ("en"/"es") for the strings this leaf package renders into push / email
+// messages (severity and status labels). Kept as an injected func so the package
+// stays standard-library-only: it does not import config/db/server. nil (unit
+// tests / standalone) → labelLang falls back to "en".
 var Lang func() string
 
 func labelLang() string {
 	if Lang != nil {
 		switch v := Lang(); v {
-		case "en", "ko", "zh", "es", "ja":
+		case "en", "es":
 			return v
 		}
 	}
-	return "ko"
+	return "en"
 }
 
-// severityLabels / statusLabels hold the per-language display strings. "ko" keeps
-// the exact Korean values the localization golden tests pin.
+// severityLabels / statusLabels hold the per-language display strings. "en" is
+// the source language and the fallback.
 var severityLabels = map[string]map[string]string{
-	"ko": {"critical": "🔴 심각", "high": "🟠 높음", "medium": "🟡 중간", "low": "🔵 낮음"},
 	"en": {"critical": "🔴 Critical", "high": "🟠 High", "medium": "🟡 Medium", "low": "🔵 Low"},
-	"zh": {"critical": "🔴 严重", "high": "🟠 高危", "medium": "🟡 中危", "low": "🔵 低危"},
 	"es": {"critical": "🔴 Crítico", "high": "🟠 Alto", "medium": "🟡 Medio", "low": "🔵 Bajo"},
-	"ja": {"critical": "🔴 重大", "high": "🟠 高", "medium": "🟡 中", "low": "🔵 低"},
 }
 
 var statusLabels = map[string]map[string]string{
-	"ko": {"pending": "처리 대기", "in_progress": "처리 중", "confirmed": "확인됨", "resolved": "처리됨", "fixed": "수정됨", "false_positive": "오탐", "ignored": "무시", "duplicate": "중복", "risk_accepted": "위험 수용"},
 	"en": {"pending": "Pending", "in_progress": "In progress", "confirmed": "Confirmed", "resolved": "Resolved", "fixed": "Fixed", "false_positive": "False positive", "ignored": "Ignored", "duplicate": "Duplicate", "risk_accepted": "Risk accepted"},
-	"zh": {"pending": "待处理", "in_progress": "处理中", "confirmed": "已确认", "resolved": "已处理", "fixed": "已修复", "false_positive": "误报", "ignored": "忽略", "duplicate": "重复", "risk_accepted": "接受风险"},
 	"es": {"pending": "Pendiente", "in_progress": "En curso", "confirmed": "Confirmado", "resolved": "Resuelto", "fixed": "Corregido", "false_positive": "Falso positivo", "ignored": "Ignorado", "duplicate": "Duplicado", "risk_accepted": "Riesgo aceptado"},
-	"ja": {"pending": "対応待ち", "in_progress": "対応中", "confirmed": "確認済み", "resolved": "対応済み", "fixed": "修正済み", "false_positive": "誤検知", "ignored": "無視", "duplicate": "重複", "risk_accepted": "リスク受容"},
 }
 
-// SeverityLabel 返回带 emoji 的级别名(按当前输出语言)，用于消息标题与卡片配色。
-// 未知级别原样回显，不臆造。
+// SeverityLabel returns the emoji-prefixed severity name in the active output
+// language, used in message titles and card colors. Unknown severities are
+// echoed back unchanged rather than invented.
 func SeverityLabel(severity string) string {
 	if v, ok := severityLabels[labelLang()][severity]; ok {
 		return v
@@ -87,7 +89,8 @@ func SeverityLabel(severity string) string {
 	return severity
 }
 
-// StatusLabel 把处置状态翻译成当前输出语言，用于状态变更消息。未知状态原样回显。
+// StatusLabel translates a triage status into the active output language, used in
+// status-change messages. Unknown statuses are echoed back unchanged.
 func StatusLabel(status string) string {
 	if v, ok := statusLabels[labelLang()][status]; ok {
 		return v
@@ -95,8 +98,9 @@ func StatusLabel(status string) string {
 	return status
 }
 
-// AtLeast 判断 severity 是否达到 min 门槛。min 为空表示不设门槛，一律通过。
-// 注意未知 severity 的序数为 0，会被任何非空 min 拒掉（见 severityRank 注释）。
+// AtLeast reports whether severity meets the min threshold. An empty min means no
+// threshold, so everything passes. Note that an unknown severity has ordinal 0
+// and is therefore rejected by any non-empty min (see the severityRank comment).
 func AtLeast(severity, min string) bool {
 	if min == "" {
 		return true

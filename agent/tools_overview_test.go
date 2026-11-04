@@ -5,7 +5,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 func TestOverviewTextBudgetIsFairAndUTF8Safe(t *testing.T) {
@@ -18,6 +18,7 @@ func TestOverviewTextBudgetIsFairAndUTF8Safe(t *testing.T) {
 	}
 
 	budget := overviewTextBudget{remaining: 5}
+	// A 3-byte rune: a byte-sliced truncation would cut it in half and produce invalid UTF-8.
 	got := budget.take(strings.Repeat("中", 10), 20)
 	if !utf8.ValidString(got) {
 		t.Fatalf("budget truncation produced invalid UTF-8: %q", got)

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // LogLine is one captured backend log entry exposed by the /api/logs endpoints.
@@ -39,8 +39,13 @@ type logSinkT struct {
 	subs map[chan LogLine]struct{}
 	out  io.Writer // passthrough (stderr)
 
-	dbOnce sync.Once
-	dbCh   chan dbWriteReq // buffered async channel; nil until SetDB is called
+	// secrets holds one-off values (the first-run setup token) that must never be
+	// readable through the API-served copies of a log line: the ring, the SSE fan-out
+	// and the server_logs table. The stderr passthrough keeps them, which is where the
+	// operator is meant to read the token.
+	secrets map[string]struct{}
+	dbOnce  sync.Once
+	dbCh    chan dbWriteReq // buffered async channel; nil until SetDB is called
 }
 
 var logSink = &logSinkT{cap: 3000, subs: map[chan LogLine]struct{}{}, out: os.Stderr}
@@ -122,9 +127,35 @@ func (s *logSinkT) Write(p []byte) (int, error) {
 	_, _ = s.out.Write(p) // keep the terminal output
 	line := strings.TrimRight(string(p), "\n")
 	if strings.TrimSpace(line) != "" {
-		s.add(parseLog(line))
+		s.add(parseLog(s.redactSecrets(line)))
 	}
 	return len(p), nil
+}
+
+// addSecret registers a value that must be masked in every stored/served log line.
+func (s *logSinkT) addSecret(secret string) {
+	if secret == "" {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.secrets == nil {
+		s.secrets = map[string]struct{}{}
+	}
+	s.secrets[secret] = struct{}{}
+}
+
+// redactSecrets masks the registered secrets in one log line. It runs between the
+// stderr passthrough and the ring/DB/SSE fan-out, so the operator console keeps
+// the setup token while /api/logs, /api/logs/history and /api/logs/stream never
+// see it (a database dump or a container log no longer exposes it either).
+func (s *logSinkT) redactSecrets(line string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for secret := range s.secrets {
+		line = strings.ReplaceAll(line, secret, "[redacted]")
+	}
+	return line
 }
 
 func (s *logSinkT) add(l LogLine) {
@@ -212,12 +243,12 @@ func parseLog(line string) LogLine {
 
 func levelOf(msg string) string {
 	low := strings.ToLower(msg)
-	for _, k := range []string{"fatal", "panic", "error", "err:", "失败", "丢弃", "拒绝", "✕", "不可达"} {
+	for _, k := range []string{"fatal", "panic", "error", "err:", "✕"} {
 		if strings.Contains(low, k) {
 			return "error"
 		}
 	}
-	for _, k := range []string{"warn", "disabled", "禁用", "skip", "stopped", "⚠", "重试"} {
+	for _, k := range []string{"warn", "disabled", "skip", "stopped", "⚠"} {
 		if strings.Contains(low, k) {
 			return "warn"
 		}

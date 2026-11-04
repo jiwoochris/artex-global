@@ -1,18 +1,9 @@
 # ARTEX detection rules (Suricata / network)
 
-English · [한국어](README.ko.md)
-
-> 한국어: 이 디렉터리는 [방어·탐지 가이드(docs/defense-ko.md)](../../docs/defense-ko.md) 2·4절의
-> 네트워크 관측 지문을 실제로 배포 가능한 [Suricata](https://suricata.io) 규칙으로 옮긴 것입니다.
-> 로그·호스트 계층은 [`../sigma/`](../sigma/)(Sigma)가 담당합니다. 모든 규칙은 자신이 소유하거나
-> 서면 허가를 받은 시스템을 지키는 **방어·탐지 목적에만** 사용하십시오. 한국어 전체 문서는
-> **[README.ko.md](README.ko.md)** 를 보십시오.
-
 The network-layer companion to the [Sigma rules](../sigma/). These [Suricata](https://suricata.io)
 signatures cover the two ARTEX artifacts that are observable on the wire, and every indicator is grounded in a
 string or behaviour verified in this repository's source, not inferred. The host, log, and SIEM layers live
-under [`../sigma/`](../sigma/); the defense guide ([Korean](../../docs/defense-ko.md) ·
-[English](../../docs/defense-en.md)) explains the full picture.
+under [`../sigma/`](../sigma/); the defense guide ([defense guide](../../docs/defense.md)) explains the full picture.
 
 ## Rules — [`artex.rules`](artex.rules)
 
@@ -94,5 +85,5 @@ suricata -r enrich.pcap -S artex.rules -l out && \
 
 Detection contributions are welcome. New rules should keep every indicator grounded in an observable fact,
 state limitations in a comment, pass `suricata -T` cleanly, and avoid any content that reads as attack
-guidance. See [`../../CONTRIBUTING.en.md`](../../CONTRIBUTING.en.md) and the Sigma layer in
+guidance. See [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) and the Sigma layer in
 [`../sigma/`](../sigma/) / [`../README.md`](../README.md).

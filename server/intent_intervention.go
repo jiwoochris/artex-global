@@ -7,26 +7,26 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 const maxWorkerMessageBytes = 64 << 10
 
-// Worker 개입(사람이 작성한 메시지를 일시정지된 Worker 의도에 주입) API 의 사용자 노출
-// 에러 응답 문구다. 한국어 UI 에서 토스트로 그대로 노출되므로 한국어로 둔다. Worker 는
-// 엔진 역할 이름이라 로마자를 유지하고(용어집), request_id 는 요청 필드명이라 원문 보존.
+// User-facing error responses of the Worker intervention API (injecting a human-written
+// message into a paused Worker intent). They are shown verbatim as toasts in the Korean UI,
+// so they stay Korean. Worker is an engine role name, so it keeps its Latin spelling (glossary), and request_id is a request field name and stays verbatim.
 const (
-	errIntentRequestTooLarge   = "요청 본문이 너무 큽니다"
-	errIntentMessageEmpty      = "메시지는 비워 둘 수 없습니다"
-	errIntentMessageTooLong    = "메시지는 4000자를 초과할 수 없습니다"
-	errIntentBadRequestID      = "request_id 는 1~128자의 영문자, 숫자, -, _, ., : 만 사용할 수 있습니다"
-	errIntentTaskDeleting      = "작업을 삭제하는 중이라 Worker 에게 메시지를 보낼 수 없습니다"
-	errIntentTaskPaused        = "작업이 일시정지되어 있습니다. 먼저 작업을 재개한 뒤 Worker 에게 메시지를 보내세요"
-	errIntentTaskQueued        = "대기 중인 작업에는 Worker 에게 메시지를 보낼 수 없습니다"
-	errIntentTaskTerminal      = "종료된 작업에는 Worker 에게 메시지를 보낼 수 없습니다"
-	errIntentTaskSettling      = "작업을 마무리하는 중이라 Worker 에게 메시지를 보낼 수 없습니다"
-	errIntentInheritedReadonly = "상속된 의도는 읽기 전용이라 Worker 에게 메시지를 보낼 수 없습니다"
-	errIntentNotPaused         = "일시정지된 Worker 에게만 메시지를 보낼 수 있습니다. 먼저 일시정지하세요"
+	errIntentRequestTooLarge   = "The request body is too large"
+	errIntentMessageEmpty      = "The message cannot be empty"
+	errIntentMessageTooLong    = "A message cannot exceed 4000 characters"
+	errIntentBadRequestID      = "request_id may contain only 1–128 characters: letters, digits, -, _, ., and :"
+	errIntentTaskDeleting      = "The task is being deleted, so no message can be sent to the Worker"
+	errIntentTaskPaused        = "The task is paused. Resume the task first, then send a message to the Worker"
+	errIntentTaskQueued        = "Cannot send a message to the Worker for a pending task"
+	errIntentTaskTerminal      = "Messages cannot be sent to the Worker for a terminated task"
+	errIntentTaskSettling      = "Cannot send a message to the Worker while the task is wrapping up"
+	errIntentInheritedReadonly = "Inherited intents are read-only, so no message can be sent to the Worker"
+	errIntentNotPaused         = "Messages can only be sent to a paused Worker. Pause it first"
 )
 
 func validWorkerMessageRequestID(id string) bool {

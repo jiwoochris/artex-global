@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/sidequestion"
 	"github.com/Autumn-27/norma/llm"
 	"github.com/Autumn-27/norma/transcript"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/sidequestion"
 )
 
 type sideAgentProvider struct {
@@ -104,7 +104,7 @@ func TestSideActualChatCheckpointToolResultAndTranscriptIsolation(t *testing.T) 
 			p.calls = 0
 			p.path = filepath.Join(dir, "nonexistent")
 			answer, err := (sidequestion.SideQuestionService{Provider: bound}).Answer(t.Context(), req, streaming, nil)
-			if err != nil || !answer.ToolUse || p.calls != 1 || !strings.Contains(answer.Text, "도구 작업을 실행할 수 없습니다") {
+			if err != nil || !answer.ToolUse || p.calls != 1 || !strings.Contains(answer.Text, "side question") {
 				t.Fatalf("tool denial %+v %v", answer, err)
 			}
 			after, err := os.ReadFile(store.MainPath("conv-987654"))

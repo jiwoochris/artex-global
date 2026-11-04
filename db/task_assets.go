@@ -13,7 +13,7 @@ const (
 	MaxTaskAssetMutationCount = 100
 	MaxTaskAssetSummaryRunes  = 500
 	defaultTaskAssetSource    = "system"
-	manualTaskScopeSummary    = "사용자가 테스트 자산 페이지에서 직접 추가"
+	manualTaskScopeSummary    = "Added manually by the user on the test assets page"
 )
 
 var (
@@ -145,7 +145,7 @@ func (s *AssetStore) RegisterTaskAssetScopes(taskID int64, inputs []ScopeInput) 
 	for index, input := range inputs {
 		rule, err := ParseScopeInput(input)
 		if err != nil {
-			return mutation, fmt.Errorf("%w: 第 %d 条范围无效: %v", ErrTaskAssetInvalid, index+1, err)
+			return mutation, fmt.Errorf("%w: invalid scope at entry %d: %v", ErrTaskAssetInvalid, index+1, err)
 		}
 		parsed = append(parsed, rule)
 	}
@@ -201,7 +201,7 @@ func (s *AssetStore) RegisterTaskAssetScopes(taskID int64, inputs []ScopeInput) 
 			taskScope.Net = rule.Net
 			ip, _, parseErr := net.ParseCIDR(rule.Net)
 			if parseErr != nil {
-				return mutation, fmt.Errorf("%w: 无效 IP: %s", ErrTaskAssetInvalid, rule.Raw)
+				return mutation, fmt.Errorf("%w: invalid IP: %s", ErrTaskAssetInvalid, rule.Raw)
 			}
 			ipValue := ip.String()
 			var alreadyLinked bool
@@ -394,7 +394,7 @@ SELECT intent.id, asset.id, asset.type,
          ELSE '#' || asset.id::text
        END,
        COALESCE(link.source,'anchor'),
-       COALESCE(NULLIF(link.source_summary,''), '의도가 앵커로 연결한 자산'),
+       COALESCE(NULLIF(link.source_summary,''), 'asset linked to the intent by an anchor'),
        link.source_node_id, context.task_id, context.inherited
 FROM context
 JOIN exploration_nodes intent ON intent.exploration_id=context.exploration_id AND intent.kind='intent'

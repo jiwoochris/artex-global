@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Autumn-27/artex/agent"
-	pgdb "github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/traffic"
+	"github.com/yukiteruamano/artex-global/agent"
+	pgdb "github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/traffic"
 )
 
 const taskArchivePollInterval = 2 * time.Second
@@ -117,7 +117,7 @@ func (s *Server) runOneTaskArchiveJob() error {
 func (s *Server) archiveTask(job *pgdb.TaskArchive) (runErr error) {
 	taskID := strconv.FormatInt(job.TaskID, 10)
 	if !s.beginTaskDelete(taskID) {
-		return errors.New("이 작업은 다른 보관 또는 삭제 작업을 진행하고 있습니다")
+		return errors.New("Another archive or delete operation is already in progress for this task")
 	}
 	committed := false
 	defer func() {
@@ -129,7 +129,7 @@ func (s *Server) archiveTask(job *pgdb.TaskArchive) (runErr error) {
 	drainCtx, cancel := context.WithTimeout(s.ctx, taskDeleteDrainTimeout)
 	defer cancel()
 	if err := s.waitTaskQuiescent(drainCtx, taskID); err != nil {
-		return errors.New("작업에 아직 실행 중인 에이전트가 있습니다. 먼저 일시정지한 뒤 보관을 다시 시도하세요")
+		return errors.New("The task still has running agents. Pause them first, then retry the archive")
 	}
 	if err := s.drainTaskSideQuestions(drainCtx, taskID); err != nil {
 		return err
@@ -170,7 +170,7 @@ func (s *Server) archiveTask(job *pgdb.TaskArchive) (runErr error) {
 		return err
 	}
 	if snapshot.ExplorationID != task.ExplorationID {
-		return errors.New("보관 스냅샷을 만드는 동안 작업 탐색 기록이 변경되었습니다")
+		return errors.New("The task exploration record changed while the archive snapshot was being created")
 	}
 	if s.m.traffic != nil && len(snapshot.Hosts) > 0 {
 		_ = s.m.pg.UpdateTaskArchiveProgress(job.ID, "snapshot_traffic", 38)
@@ -220,13 +220,13 @@ func (s *Server) archiveTask(job *pgdb.TaskArchive) (runErr error) {
 	removePackage = false
 	if trafficStage != nil {
 		if err := trafficStage.Commit(); err != nil {
-			warning := "보관을 완료했지만 전용 트래픽 핫 스토리지 정리에 실패했습니다(보관 패키지는 복원할 수 있습니다): " + err.Error()
+			warning := "Archive completed, but cleanup of the dedicated traffic hot storage failed (the archive package can still be restored): " + err.Error()
 			log.Printf("[task-archive] task %s: %s", taskID, warning)
 			_ = s.m.pg.AppendTaskArchiveWarning(job.ID, warning)
 		}
 	}
 	if err := fileStage.commit(); err != nil {
-		warning := "보관을 완료했지만 임시 디렉터리 정리에 실패했습니다: " + err.Error()
+		warning := "Archive completed, but cleanup of the temporary directory failed: " + err.Error()
 		log.Printf("[task-archive] task %s: %s", taskID, warning)
 		_ = s.m.pg.AppendTaskArchiveWarning(job.ID, warning)
 	}
@@ -346,7 +346,7 @@ func (s *Server) restoreTaskArchivePayload(job *pgdb.TaskArchive, snapshot *pgdb
 	}
 	if len(warnings) > 0 {
 		if _, err := s.m.pg.Exploration(snapshot.ExplorationID).AppendActivity(pgdb.Activity{
-			Worker: "system", Kind: "system", Summary: "작업 복원을 완료했지만 일부 연관 항목이 온전히 복원되지 못했습니다", Detail: strings.Join(warnings, "\n"),
+			Worker: "system", Kind: "system", Summary: "Task restore completed, but some related items were not fully restored", Detail: strings.Join(warnings, "\n"),
 		}); err != nil {
 			log.Printf("[task-archive] persist restore warnings for task %d: %v", job.TaskID, err)
 		}
@@ -418,7 +418,7 @@ func (s *Server) deleteTaskArchive(job *pgdb.TaskArchive) error {
 
 func validateArchivePath(dataDir, candidate string) error {
 	if strings.TrimSpace(candidate) == "" {
-		return errors.New("보관 패키지 경로가 비어 있습니다")
+		return errors.New("The archive package path is empty")
 	}
 	root, err := filepath.Abs(taskArchiveRoot(dataDir))
 	if err != nil {
@@ -430,7 +430,7 @@ func validateArchivePath(dataDir, candidate string) error {
 	}
 	relative, err := filepath.Rel(root, path)
 	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-		return errors.New("보관 패키지 경로가 관리 대상 디렉터리 안에 있지 않습니다")
+		return errors.New("The archive package path is not inside the managed directory")
 	}
 	return nil
 }
@@ -449,7 +449,7 @@ func (s *Server) listTaskArchives(w http.ResponseWriter, r *http.Request) {
 func (s *Server) getTaskArchive(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathInt(r, "id")
 	if !ok {
-		writeErr(w, 400, "보관 id 가 유효하지 않습니다")
+		writeErr(w, 400, "The archive id is invalid")
 		return
 	}
 	item, err := s.m.pg.GetTaskArchive(id)
@@ -458,7 +458,7 @@ func (s *Server) getTaskArchive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if item == nil {
-		writeErr(w, 404, "보관을 찾을 수 없습니다")
+		writeErr(w, 404, "Archive not found")
 		return
 	}
 	writeJSON(w, 200, item)
@@ -467,7 +467,7 @@ func (s *Server) getTaskArchive(w http.ResponseWriter, r *http.Request) {
 func (s *Server) queueTaskArchive(w http.ResponseWriter, r *http.Request) {
 	id, ok := canonicalTaskID(r.PathValue("id"))
 	if !ok {
-		writeErr(w, 400, "작업 id 가 유효하지 않습니다")
+		writeErr(w, 400, "The task id is invalid")
 		return
 	}
 	numeric, _ := strconv.ParseInt(id, 10, 64)
@@ -483,7 +483,7 @@ func (s *Server) queueTaskArchive(w http.ResponseWriter, r *http.Request) {
 func (s *Server) queueTaskArchiveRestore(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathInt(r, "id")
 	if !ok {
-		writeErr(w, 400, "보관 id 가 유효하지 않습니다")
+		writeErr(w, 400, "The archive id is invalid")
 		return
 	}
 	item, err := s.m.pg.QueueTaskArchiveRestore(id)
@@ -498,7 +498,7 @@ func (s *Server) queueTaskArchiveRestore(w http.ResponseWriter, r *http.Request)
 func (s *Server) queueTaskArchiveDelete(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathInt(r, "id")
 	if !ok {
-		writeErr(w, 400, "보관 id 가 유효하지 않습니다")
+		writeErr(w, 400, "The archive id is invalid")
 		return
 	}
 	item, err := s.m.pg.QueueTaskArchiveDelete(id)
@@ -518,18 +518,18 @@ func (s *Server) queueTaskArchivesBatch(w http.ResponseWriter, r *http.Request) 
 	}
 	parsed := normalizeBatchTaskIDs(request.TaskIDs)
 	if len(parsed) == 0 {
-		writeErr(w, 400, "task_ids 값은 비워 둘 수 없습니다")
+		writeErr(w, 400, "The task_ids value cannot be empty")
 		return
 	}
 	if len(parsed) > 100 {
-		writeErr(w, 400, "한 번에 최대 100개 작업까지 처리할 수 있습니다")
+		writeErr(w, 400, "You can process at most 100 tasks at a time")
 		return
 	}
 	ids := make([]string, 0, len(parsed))
 	items := make([]archiveBatchItem, 0, len(parsed))
 	for _, item := range parsed {
 		if !item.valid {
-			items = append(items, archiveBatchItem{ID: item.id, Error: "작업 id 가 유효하지 않습니다"})
+			items = append(items, archiveBatchItem{ID: item.id, Error: "The task id is invalid"})
 			continue
 		}
 		ids = append(ids, item.id)
@@ -592,16 +592,16 @@ func (s *Server) deleteTaskArchivesBatch(w http.ResponseWriter, r *http.Request)
 
 func normalizeArchiveIDs(ids []int64) ([]int64, error) {
 	if len(ids) == 0 {
-		return nil, errors.New("archive_ids 값은 비워 둘 수 없습니다")
+		return nil, errors.New("archive_ids cannot be empty")
 	}
 	if len(ids) > 100 {
-		return nil, errors.New("한 번에 최대 100개 보관까지 처리할 수 있습니다")
+		return nil, errors.New("At most 100 archives can be processed at once")
 	}
 	seen := map[int64]bool{}
 	out := make([]int64, 0, len(ids))
 	for _, id := range ids {
 		if id <= 0 {
-			return nil, fmt.Errorf("보관 id %d 가 유효하지 않습니다", id)
+			return nil, fmt.Errorf("archive id %d is invalid", id)
 		}
 		if !seen[id] {
 			seen[id] = true

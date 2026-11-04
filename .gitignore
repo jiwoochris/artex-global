@@ -83,3 +83,8 @@ secrets.env
 # artex.exe 를 포그라운드로 띄울 때 리다이렉트한 런타임 로그
 /artex.out.log
 /artex.err.log
+
+# pnpm store when the package manager keeps it inside the project
+/.pnpm-store/
+# pi agent session scratch (task logs, per-session context)
+/.pi/

@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/intercept"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/intercept"
 )
 
 func TestInterceptFilterHTTP(t *testing.T) {
@@ -34,6 +34,8 @@ func TestInterceptFilterHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, state := range []string{"pending", "allowed", "denied", "timeout"} {
+		// "[模型]" is the stable judge-decision sentinel db/intercept.go classifies on (legacy
+		// wire data, not display text), so the fixture keeps the CJK marker.
 		if _, err := d.CreateDecidedIntercept(0, 0, scope, "test", "Bash", []byte(`{}`), state, "[模型] fixture"); err != nil {
 			t.Fatal(err)
 		}

@@ -2,47 +2,47 @@ package server
 
 import (
 	"net/url"
+	"strings"
 	"testing"
-	"unicode"
 )
 
-// assertKoreanError fails when msg is empty, still carries a CJK Han ideograph
-// (= untranslated Chinese), or carries no Hangul at all. Hangul and ASCII field
-// names/enums are allowed; only Han (unicode.Han) marks a leftover Chinese string.
-func assertKoreanError(t *testing.T, label, msg string) {
+// assertEnglishMessage fails when got is not exactly the English message want.
+// The suite pins the English source output language (testmain_test.go), so a
+// literal that reverts to Korean/Chinese, an accidental reword, or a message
+// that stops reaching the caller all fail here.
+func assertEnglishMessage(t *testing.T, label, got, want string) {
 	t.Helper()
-	if msg == "" {
-		t.Fatalf("%s: 빈 메시지", label)
+	if got != want {
+		t.Fatalf("%s: message = %q, want the English source %q", label, got, want)
 	}
-	hasHangul := false
-	for _, r := range msg {
-		if unicode.Is(unicode.Han, r) {
-			t.Fatalf("%s: 중국어 한자가 남아 있습니다: %q", label, msg)
-		}
-		if unicode.Is(unicode.Hangul, r) {
-			hasHangul = true
-		}
-	}
-	if !hasHangul {
-		t.Fatalf("%s: 한글이 없습니다: %q", label, msg)
+}
+
+// assertEnglishPrefix is assertEnglishMessage for a message that appends a
+// wrapped lower-layer detail: got must start with the exact English want.
+func assertEnglishPrefix(t *testing.T, label, got, want string) {
+	t.Helper()
+	if !strings.HasPrefix(got, want) {
+		t.Fatalf("%s: message = %q, want the English prefix %q", label, got, want)
 	}
 }
 
 // TestInterceptArchiveErrorsLocalized guards the F3 first bundle: every
 // user-facing error response produced by the pure validators in intercept.go and
-// task_archives.go must be Korean (Hangul present, no Chinese Han). If anyone
-// reverts one of these literals to Chinese, this test fails.
+// task_archives.go must be the exact English source message. If anyone reverts
+// one of these literals to Korean or Chinese, this test fails.
 func TestInterceptArchiveErrorsLocalized(t *testing.T) {
 	// intercept.go: interceptFilterParams — query-string validation.
 	if _, err := interceptFilterParams(url.Values{"status": {"bogus"}}); err == nil {
-		t.Fatal("status 검증이 통과해서는 안 됩니다")
+		t.Fatal("status validation must not pass")
 	} else {
-		assertKoreanError(t, "filter.status", err.Error())
+		assertEnglishMessage(t, "filter.status", err.Error(),
+			"status must be one of pending, allowed, denied, timeout")
 	}
 	if _, err := interceptFilterParams(url.Values{"decision_source": {"bogus"}}); err == nil {
-		t.Fatal("decision_source 검증이 통과해서는 안 됩니다")
+		t.Fatal("decision_source validation must not pass")
 	} else {
-		assertKoreanError(t, "filter.decision_source", err.Error())
+		assertEnglishMessage(t, "filter.decision_source", err.Error(),
+			"decision_source must be one of model, rule, unknown")
 	}
 
 	// intercept.go: validateInterceptRuleReq — each branch isolated by making the
@@ -50,52 +50,65 @@ func TestInterceptArchiveErrorsLocalized(t *testing.T) {
 	ruleCases := []struct {
 		label string
 		req   interceptRuleReq
+		want  string
 	}{
-		{"rule.name", interceptRuleReq{Name: ""}},
-		{"rule.match_target", interceptRuleReq{Name: "r", MatchTarget: "bad"}},
-		{"rule.match_type", interceptRuleReq{Name: "r", MatchTarget: "tool_name", MatchType: "bad"}},
-		{"rule.pattern_empty", interceptRuleReq{Name: "r", MatchTarget: "tool_name", MatchType: "string", Pattern: ""}},
-		{"rule.action", interceptRuleReq{Name: "r", MatchTarget: "tool_name", MatchType: "string", Pattern: "p", Action: "bad"}},
-		{"rule.regex", interceptRuleReq{Name: "r", MatchTarget: "tool_name", MatchType: "regex", Pattern: "(", Action: "allow"}},
+		{"rule.name", interceptRuleReq{Name: ""}, "name must not be empty"},
+		{"rule.match_target", interceptRuleReq{Name: "r", MatchTarget: "bad"},
+			"match_target must be either tool_name or tool_input"},
+		{"rule.match_type", interceptRuleReq{Name: "r", MatchTarget: "tool_name", MatchType: "bad"},
+			"match_type must be either string or regex"},
+		{"rule.pattern_empty", interceptRuleReq{Name: "r", MatchTarget: "tool_name", MatchType: "string", Pattern: ""},
+			"pattern must not be empty"},
+		{"rule.action", interceptRuleReq{Name: "r", MatchTarget: "tool_name", MatchType: "string", Pattern: "p", Action: "bad"},
+			"action must be one of allow, deny, ask"},
 	}
 	for _, tc := range ruleCases {
 		err := validateInterceptRuleReq(tc.req)
 		if err == nil {
-			t.Fatalf("%s: 검증이 통과해서는 안 됩니다", tc.label)
+			t.Fatalf("%s: validation must not pass", tc.label)
 		}
-		assertKoreanError(t, tc.label, err.Error())
+		assertEnglishMessage(t, tc.label, err.Error(), tc.want)
+	}
+	// The regex branch wraps the regexp package detail, so only the English
+	// source prefix is deterministic.
+	if err := validateInterceptRuleReq(interceptRuleReq{Name: "r", MatchTarget: "tool_name", MatchType: "regex", Pattern: "(", Action: "allow"}); err == nil {
+		t.Fatal("rule.regex: validation must not pass")
+	} else {
+		assertEnglishPrefix(t, "rule.regex", err.Error(), "pattern is not a valid regular expression: ")
 	}
 
 	// task_archives.go: normalizeArchiveIDs — batch id validation.
 	if _, err := normalizeArchiveIDs(nil); err == nil {
-		t.Fatal("빈 archive_ids 검증이 통과해서는 안 됩니다")
+		t.Fatal("empty archive_ids validation must not pass")
 	} else {
-		assertKoreanError(t, "archive_ids.empty", err.Error())
+		assertEnglishMessage(t, "archive_ids.empty", err.Error(), "archive_ids cannot be empty")
 	}
 	tooMany := make([]int64, 101)
 	for i := range tooMany {
 		tooMany[i] = int64(i + 1)
 	}
 	if _, err := normalizeArchiveIDs(tooMany); err == nil {
-		t.Fatal("101개 archive_ids 검증이 통과해서는 안 됩니다")
+		t.Fatal("validation of 101 archive_ids must not pass")
 	} else {
-		assertKoreanError(t, "archive_ids.too_many", err.Error())
+		assertEnglishMessage(t, "archive_ids.too_many", err.Error(),
+			"At most 100 archives can be processed at once")
 	}
 	if _, err := normalizeArchiveIDs([]int64{0}); err == nil {
-		t.Fatal("0 archive id 검증이 통과해서는 안 됩니다")
+		t.Fatal("validation of a 0 archive id must not pass")
 	} else {
-		assertKoreanError(t, "archive_ids.nonpositive", err.Error())
+		assertEnglishMessage(t, "archive_ids.nonpositive", err.Error(), "archive id 0 is invalid")
 	}
 
 	// task_archives.go: validateArchivePath — package path validation.
 	if err := validateArchivePath("/tmp/artex-data", ""); err == nil {
-		t.Fatal("빈 보관 경로 검증이 통과해서는 안 됩니다")
+		t.Fatal("empty archive path validation must not pass")
 	} else {
-		assertKoreanError(t, "archive_path.empty", err.Error())
+		assertEnglishMessage(t, "archive_path.empty", err.Error(), "The archive package path is empty")
 	}
 	if err := validateArchivePath("/tmp/artex-data", "/etc/passwd"); err == nil {
-		t.Fatal("관리 디렉터리 밖 경로 검증이 통과해서는 안 됩니다")
+		t.Fatal("validation of a path outside the managed directory must not pass")
 	} else {
-		assertKoreanError(t, "archive_path.outside", err.Error())
+		assertEnglishMessage(t, "archive_path.outside", err.Error(),
+			"The archive package path is not inside the managed directory")
 	}
 }

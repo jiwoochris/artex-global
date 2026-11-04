@@ -8,39 +8,40 @@ import (
 	"testing"
 )
 
-// intent_intervention.go 의 Worker 개입 API 에러 응답을 한국어로 유지하는 회귀 방어
-// 테스트다. 한국어 판정은 F3a 가 만든 assertKoreanError(한글 포함·중국어 한자 0)를 재사용한다.
+// Regression guard that keeps the Worker intervention API error responses of
+// intent_intervention.go as their exact English source text (assertEnglishMessage).
 
-// TestIntentInterventionErrorConstantsLocalized 는 응답 상수 11종이 전부 한국어임을 단언한다.
-// 수명주기·의도 상태 경로는 s.engine·Store 설정이 필요해 DB 없는 이 호스트에서 끝까지 못
-// 도므로, 그 문구들은 상수 자체를 단언한다(conversations.go 선례). 입력 검증 경로 4종은
-// 아래 HTTP 테스트가 응답 본문까지 확인한다.
+// TestIntentInterventionErrorConstantsLocalized asserts that all 11 response constants are their exact English source text.
+// The lifecycle and intent-state paths need s.engine and Store configuration and cannot run to
+// completion on this host without a DB, so the constants themselves are asserted (following
+// conversations.go). The four input-validation paths are checked down to the response body by the HTTP test below.
 func TestIntentInterventionErrorConstantsLocalized(t *testing.T) {
 	cases := []struct {
-		name string
-		msg  string
+		name        string
+		msg         string
+		wantEnglish string
 	}{
-		{"request_too_large", errIntentRequestTooLarge},
-		{"message_empty", errIntentMessageEmpty},
-		{"message_too_long", errIntentMessageTooLong},
-		{"bad_request_id", errIntentBadRequestID},
-		{"task_deleting", errIntentTaskDeleting},
-		{"task_paused", errIntentTaskPaused},
-		{"task_queued", errIntentTaskQueued},
-		{"task_terminal", errIntentTaskTerminal},
-		{"task_settling", errIntentTaskSettling},
-		{"inherited_readonly", errIntentInheritedReadonly},
-		{"not_paused", errIntentNotPaused},
+		{"request_too_large", errIntentRequestTooLarge, "The request body is too large"},
+		{"message_empty", errIntentMessageEmpty, "The message cannot be empty"},
+		{"message_too_long", errIntentMessageTooLong, "A message cannot exceed 4000 characters"},
+		{"bad_request_id", errIntentBadRequestID, "request_id may contain only 1–128 characters: letters, digits, -, _, ., and :"},
+		{"task_deleting", errIntentTaskDeleting, "The task is being deleted, so no message can be sent to the Worker"},
+		{"task_paused", errIntentTaskPaused, "The task is paused. Resume the task first, then send a message to the Worker"},
+		{"task_queued", errIntentTaskQueued, "Cannot send a message to the Worker for a pending task"},
+		{"task_terminal", errIntentTaskTerminal, "Messages cannot be sent to the Worker for a terminated task"},
+		{"task_settling", errIntentTaskSettling, "Cannot send a message to the Worker while the task is wrapping up"},
+		{"inherited_readonly", errIntentInheritedReadonly, "Inherited intents are read-only, so no message can be sent to the Worker"},
+		{"not_paused", errIntentNotPaused, "Messages can only be sent to a paused Worker. Pause it first"},
 	}
 	for _, c := range cases {
-		assertKoreanError(t, c.name, c.msg)
+		assertEnglishMessage(t, c.name, c.msg, c.wantEnglish)
 	}
 }
 
-// TestSendWorkerMessageInputValidationLocalized 는 입력 검증 경로 4종을 실제 HTTP 응답
-// 본문까지 검사한다. sendWorkerMessage 의 이 4경로는 s.m.Task(맵 조회)와 요청 본문만 보고
-// s.engine·Store·DB 를 거치지 않으므로, tasks 맵에 작업 하나만 넣으면 DB 없이 끝까지 돈다.
-// 상수가 응답에 실제로 실리는 연결까지 확인한다.
+// TestSendWorkerMessageInputValidationLocalized checks the four input-validation paths down to
+// the real HTTP response body. These four sendWorkerMessage paths only look at s.m.Task (map
+// lookup) and the request body, never s.engine, Store or the DB, so a single task in the tasks map is enough to run without a DB.
+// This also proves that the constant really lands in the response.
 func TestSendWorkerMessageInputValidationLocalized(t *testing.T) {
 	s := &Server{m: &Manager{tasks: map[string]*Task{"t1": {ID: "t1"}}}}
 
@@ -58,33 +59,34 @@ func TestSendWorkerMessageInputValidationLocalized(t *testing.T) {
 			Error string `json:"error"`
 		}
 		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
-			t.Fatalf("응답 JSON 파싱 실패: %v (본문 %q)", err, rec.Body.String())
+			t.Fatalf("failed to parse the response JSON: %v (body %q)", err, rec.Body.String())
 		}
 		return resp.Error
 	}
 
 	cases := []struct {
-		name string
-		body string
-		code int
-		want string
+		name        string
+		body        string
+		code        int
+		wantEnglish string
 	}{
-		// 64KB 한도를 넘기는 유효 JSON 본문. MaxBytesReader 가 읽기 도중 한도 초과를 돌려준다.
-		{"request_too_large", `{"message":"` + strings.Repeat("a", maxWorkerMessageBytes+1024) + `"}`, http.StatusRequestEntityTooLarge, errIntentRequestTooLarge},
-		{"message_empty", `{"message":"  "}`, http.StatusBadRequest, errIntentMessageEmpty},
-		{"message_too_long", `{"message":"` + strings.Repeat("가", 4001) + `"}`, http.StatusBadRequest, errIntentMessageTooLong},
-		{"bad_request_id", `{"message":"안녕","request_id":"공백 포함"}`, http.StatusBadRequest, errIntentBadRequestID},
+		// Valid JSON body exceeding the 64KB limit. MaxBytesReader reports the overflow while reading.
+		{"request_too_large", `{"message":"` + strings.Repeat("a", maxWorkerMessageBytes+1024) + `"}`, http.StatusRequestEntityTooLarge, "The request body is too large"},
+		{"message_empty", `{"message":"  "}`, http.StatusBadRequest, "The message cannot be empty"},
+		// 가 is a multi-byte rune, so 4001 of them prove the limit counts characters, not bytes.
+		{"message_too_long", `{"message":"` + strings.Repeat("가", 4001) + `"}`, http.StatusBadRequest, "A message cannot exceed 4000 characters"},
+		{"bad_request_id", `{"message":"hello","request_id":"contains space"}`, http.StatusBadRequest, "request_id may contain only 1–128 characters: letters, digits, -, _, ., and :"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			rec := call(c.body)
 			if rec.Code != c.code {
-				t.Fatalf("상태 코드 = %d, 기대 = %d (본문 %q)", rec.Code, c.code, rec.Body.String())
+				t.Fatalf("status = %d, want = %d (body %q)", rec.Code, c.code, rec.Body.String())
 			}
-			if got := errBody(t, rec); got != c.want {
-				t.Fatalf("응답 문구 = %q, 기대 = %q", got, c.want)
+			if got := errBody(t, rec); got != c.wantEnglish {
+				t.Fatalf("response message = %q, want = %q", got, c.wantEnglish)
 			}
-			assertKoreanError(t, c.name, errBody(t, rec))
+			assertEnglishMessage(t, c.name, errBody(t, rec), c.wantEnglish)
 		})
 	}
 }

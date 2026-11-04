@@ -15,30 +15,31 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Autumn-27/artex/agent"
-	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/llmrec"
-	"github.com/Autumn-27/artex/sidequestion"
 	"github.com/Autumn-27/norma/llm"
 	"github.com/Autumn-27/norma/transcript"
+	"github.com/yukiteruamano/artex-global/agent"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/llmrec"
+	"github.com/yukiteruamano/artex-global/sidequestion"
 )
 
-// User-facing side-question (곁질문) messages surfaced through the HTTP API and
-// the exchange status, localized to Korean (BRIEF 현지화 방침). "Worker" and
-// "메인 에이전트"/"메인 대화" match the UI terms; "[btw]" log lines stay as-is.
+// User-facing side-question messages surfaced through the HTTP API and the
+// exchange status; English is the source language and es comes from the error
+// catalog. "Worker", "main agent" and "main conversation" match the UI terms;
+// "[btw]" log lines stay as-is.
 const (
-	sideErrCtxNotSaved        = "곁질문 컨텍스트가 아직 저장되지 않았습니다. 다시 시도해 주세요."
-	sideErrModelConfigChanged = "모델 설정이 삭제되었거나 변경되었습니다. 먼저 메인 에이전트를 실행해 컨텍스트를 갱신해 주세요."
-	sideErrServiceUnavailable = "곁질문 서비스를 사용할 수 없습니다."
-	sideErrTaskArchived       = "작업이 보관되었거나 삭제되는 중입니다."
-	sideErrWorkerDeleted      = "Worker 가 삭제되었습니다."
-	sideErrBadQuestion        = "질문은 1–4000자여야 하며, 유효한 요청 ID 를 함께 보내야 합니다."
-	sideErrTaskArchiving      = "작업을 보관하거나 삭제하는 중입니다."
-	sideErrRequestIDReused    = "같은 요청 ID 를 서로 다른 질문에 사용할 수 없습니다."
-	sideErrNoSnapshot         = "아직 컨텍스트 스냅샷이 없습니다. 먼저 메인 에이전트를 실행해 주세요."
-	sideErrConcurrencyLimit   = "곁질문 요청이 동시 실행 상한에 도달했습니다. 잠시 후 다시 시도해 주세요."
-	sideErrAnswerStopped      = "답변이 중지되었습니다."
-	sideErrAnswerTimeout      = "곁질문 답변이 120초를 초과하여 중지되었습니다."
+	sideErrCtxNotSaved        = "The side-question context has not been saved yet. Please try again."
+	sideErrModelConfigChanged = "The model configuration was deleted or changed. Run the main agent first to refresh the context."
+	sideErrServiceUnavailable = "The side-question service is unavailable."
+	sideErrTaskArchived       = "The task has been archived or is being deleted."
+	sideErrWorkerDeleted      = "The Worker has been deleted."
+	sideErrBadQuestion        = "A question must be 1-4000 characters and must include a valid request ID."
+	sideErrTaskArchiving      = "The task is being archived or deleted."
+	sideErrRequestIDReused    = "The same request ID cannot be used for different questions."
+	sideErrNoSnapshot         = "There is no context snapshot yet. Run the main agent first."
+	sideErrConcurrencyLimit   = "Side-question requests have reached the concurrency limit. Please try again shortly."
+	sideErrAnswerStopped      = "The answer was stopped."
+	sideErrAnswerTimeout      = "The side-question answer was stopped after exceeding 120 seconds."
 )
 
 type sideRun struct {

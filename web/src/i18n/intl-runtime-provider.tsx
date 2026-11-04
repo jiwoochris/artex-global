@@ -7,39 +7,36 @@ import { NextIntlClientProvider } from "next-intl";
 
 import enMessages from "../../messages/en.json";
 import esMessages from "../../messages/es.json";
-import jaMessages from "../../messages/ja.json";
-import koMessages from "../../messages/ko.json";
-import zhMessages from "../../messages/zh.json";
 import type { Locale } from "./config";
 import { useActiveLocale } from "./locale-store";
 
-// 다섯 언어 메시지를 모두 정적으로 번들해 둔다. 그래야 사용자가 설정 화면에서 언어를
-// 바꿀 때 재빌드나 페이지 새로고침, 비동기 로딩 없이 그 자리에서 모든 문구가 선택한
-// 언어로 다시 렌더링된다(정적 내보내기 output: "export" 와도 호환된다).
+// Both locales are bundled statically so switching the language in the settings screen
+// re-renders every string on the spot — no rebuild, no page reload, no async load (which
+// also keeps it compatible with the static export, output: "export").
 const MESSAGES: Record<Locale, Record<string, unknown>> = {
   en: enMessages as Record<string, unknown>,
-  ko: koMessages as Record<string, unknown>,
-  zh: zhMessages as Record<string, unknown>,
   es: esMessages as Record<string, unknown>,
-  ja: jaMessages as Record<string, unknown>,
 };
 
-// 실행 환경(브라우저·프리렌더 서버)의 시간대.
+// Time zone of the runtime environment (browser or prerender server).
 const TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-// 실행 중 언어 전환을 담당하는 프로바이더. 루트 레이아웃의 NextIntlClientProvider 를
-// 대신해, 사용자가 고른 활성 locale(쿠키·localStorage)로 messages 를 골라 공급한다.
+// Provider that owns runtime language switching. It replaces the root layout's
+// NextIntlClientProvider and supplies the messages for the locale the user picked
+// (cookie + localStorage).
 export function IntlRuntimeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const locale = useActiveLocale();
 
-  // 언어가 바뀌면 <html lang> 도 맞춘다. 루트 레이아웃이 서버에서 심은 초기 lang 을
-  // 클라이언트 선택값으로 덮어, 스크린 리더·브라우저 번역이 올바른 언어로 동작하게 한다.
+  // Keep <html lang> in sync with the language. The root layout seeds it on the server from
+  // the build locale; overriding it with the client choice makes screen readers and browser
+  // translation pick the right language.
   React.useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
 
-  // 루트 레이아웃의 프로바이더와 달리 서버 요청 설정을 물려받지 않으므로 timeZone 을
-  // 직접 넘긴다. 빠지면 next-intl 이 프리렌더 중 ENVIRONMENT_FALLBACK 오류를 남긴다.
+  // Unlike the root layout's provider this one does not inherit the server request config, so
+  // timeZone must be passed explicitly. Without it next-intl logs ENVIRONMENT_FALLBACK during
+  // prerender.
   return (
     <NextIntlClientProvider locale={locale} messages={MESSAGES[locale]} timeZone={TIME_ZONE}>
       {children}

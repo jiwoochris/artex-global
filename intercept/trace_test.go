@@ -7,7 +7,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 func TestTraceExactCorrelationAndSnapshot(t *testing.T) {
@@ -95,6 +95,7 @@ func TestTraceSequentialIdenticalCallsAndRunIsolation(t *testing.T) {
 }
 
 func TestTraceBoundsAndMissingResult(t *testing.T) {
+	// CJK fixtures: multi-byte text makes a byte-sliced truncation produce invalid UTF-8.
 	ctx, trace := WithTrace(context.Background(), strings.Repeat("中文", promptLimit), nil)
 	for range contextLimit + 5 {
 		trace.Append(db.InterceptContextEntry{Kind: "text", Text: strings.Repeat("中", entryLimit)})

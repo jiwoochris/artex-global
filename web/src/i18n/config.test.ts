@@ -3,17 +3,20 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_LOCALE, isLocale, LOCALE_LABELS, LOCALES, resolveLocale } from "./config";
 
 describe("i18n config", () => {
-  it("exposes the supported locales with native labels", () => {
-    expect([...LOCALES]).toEqual(["en", "ko", "zh", "es", "ja"]);
+  it("exposes exactly the English/Spanish locales with native labels", () => {
+    expect([...LOCALES]).toEqual(["en", "es"]);
+    expect(DEFAULT_LOCALE).toBe("en");
     expect(Object.keys(LOCALE_LABELS).sort()).toEqual([...LOCALES].sort());
-    expect(LOCALE_LABELS.ko).toBe("한국어");
-    expect(LOCALE_LABELS.ja).toBe("日本語");
+    expect(LOCALE_LABELS.en).toBe("English");
+    expect(LOCALE_LABELS.es).toBe("Español");
   });
 
   it("isLocale narrows known locale strings only", () => {
-    expect(isLocale("ko")).toBe(true);
+    expect(isLocale("en")).toBe(true);
     expect(isLocale("es")).toBe(true);
-    expect(isLocale("ja")).toBe(true);
+    expect(isLocale("ko")).toBe(false);
+    expect(isLocale("zh")).toBe(false);
+    expect(isLocale("ja")).toBe(false);
     expect(isLocale("fr")).toBe(false);
     expect(isLocale("")).toBe(false);
     expect(isLocale(null)).toBe(false);
@@ -26,6 +29,9 @@ describe("i18n config", () => {
     try {
       process.env.NEXT_PUBLIC_LOCALE = "es";
       expect(resolveLocale()).toBe("es");
+
+      process.env.NEXT_PUBLIC_LOCALE = "ko";
+      expect(resolveLocale()).toBe(DEFAULT_LOCALE);
 
       process.env.NEXT_PUBLIC_LOCALE = "fr";
       expect(resolveLocale()).toBe(DEFAULT_LOCALE);

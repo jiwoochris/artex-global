@@ -10,14 +10,16 @@ import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 
 /**
- * 顶栏的"有新版本"提示：整页加载时查一次，有更新就在版本号旁边亮出来，
- * 点击直达系统配置页的「版本与更新」卡片。
+ * The "new version available" hint in the top bar: checked once per full page load and
+ * shown next to the version number when an update exists; clicking it goes straight to the
+ * "Version and updates" card in system settings.
  *
- * 后端对 GitHub 的查询结果有 30 分钟缓存，所以这里每次挂载都查一次是安全的
- * ——未认证的 GitHub API 只有 60 次/小时/IP，没有那层缓存的话，多开几个标签页
- * 就会把配额耗光，之后真想更新反而查不动。
+ * The backend caches its GitHub query for 30 minutes, which is why querying on every mount
+ * is safe here - an unauthenticated GitHub API allows only 60 requests/hour/IP, and without
+ * that cache a few open tabs would burn the quota so the real update check could not run.
  *
- * 查询失败一律静默：顶栏不是报错的地方，用户进设置页点「检查更新」会看到原因。
+ * Query failures stay silent: the top bar is not the place for errors; the user sees the
+ * reason after opening the settings page and pressing "check for updates".
  */
 export function UpdateBadge() {
   const t = useTranslations("header");
@@ -28,11 +30,12 @@ export function UpdateBadge() {
     api
       .checkUpdate()
       .then((r) => {
-        // has_update 已经包含了"版本号可比较"的判断，开发构建不会亮这个提示。
+        // has_update already includes the "version numbers are comparable" check, so a
+        // development build never shows this hint.
         if (alive && r.has_update && r.latest) setLatest(r.latest.replace(/^v(?=\d)/, ""));
       })
       .catch(() => {
-        // 静默：没网 / GitHub 限流都不该在顶栏弹错误。
+        // Silent: no network / GitHub rate limiting must not raise an error in the top bar.
       });
     return () => {
       alive = false;
@@ -47,7 +50,8 @@ export function UpdateBadge() {
       title={t("updateTitle", { latest })}
       className="inline-flex items-center gap-1.5 rounded-full bg-primary px-2.5 py-1 font-medium text-primary-foreground text-xs transition-opacity hover:opacity-90"
     >
-      {/* 呼吸点：顶栏元素很多，纯文字容易被忽略，动效让它一眼可见。 */}
+      {/* Breathing dot: the top bar is busy and plain text gets ignored, so the animation
+          makes it visible at a glance. */}
       <span className="relative flex size-1.5">
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary-foreground opacity-75" />
         <span className="relative inline-flex size-1.5 rounded-full bg-primary-foreground" />

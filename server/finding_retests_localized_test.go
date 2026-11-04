@@ -2,26 +2,25 @@ package server
 
 import "testing"
 
-// finding_retests.go 의 사용자 노출 HTTP 에러 응답 문구를 한국어로 유지하는 회귀 방어
-// 테스트다. 한국어 판정은 F3a 가 만든 assertKoreanError(한글 포함·중국어 한자 0)를
-// 재사용한다. 네 문구를 반환하는 startFindingRetest 핸들러는 맨 앞에서 s.pg(w)(DB)
-// 게이트를 지나므로 DB 없는 이 호스트에서 끝까지 돌 수 없어, 상수 자체를 핀 고정한다
-// (finding_traffic·goals_api·notify_api 의 DB 게이트 경로와 같은 방식). 누군가 이
-// 리터럴을 중국어로 되돌리면 이 테스트가 실패한다.
+// Regression defence test that keeps the user-facing HTTP error response messages of
+// finding_retests.go as their exact English source text (assertEnglishMessage). The startFindingRetest handler that returns the four messages
+// passes the s.pg(w) (DB) gate at the very start, so it cannot run to the end on this host without a DB,
+// hence the constants themselves are pinned (same approach as the DB-gated paths in finding_traffic,
+// goals_api and notify_api). If someone reverts these literals to another language, this test fails.
 //
-// 도구 설명(get_finding_retest_context·record_finding_retest_result)·파라미터 설명·
-// actool.Errorf(회차 미연결 안내)와 seedFindingRetester 의 DB 시드 에이전트 이름·
-// 프로필·note 는 에이전트가 읽는 두뇌 입력이거나 시드라 의도적으로 원문(중국어)을
-// 보존하며, 이 테스트의 단언 대상이 아니다(finding_retests.go 상수 블록 주석 참조).
+// Tool descriptions (get_finding_retest_context, record_finding_retest_result), parameter descriptions,
+// actool.Errorf (no run linked notice) and seedFindingRetester's DB seed agent name,
+// profile and note are brain input read by the agent or seed data, so their original wording is
+// deliberately preserved and is not asserted by this test (see the comment in the finding_retests.go constant block).
 func TestFindingRetestErrorsLocalized(t *testing.T) {
 	for _, c := range []struct {
-		label, msg string
+		label, msg, wantEnglish string
 	}{
-		{"notes_too_long", errFindingRetestNotesTooLong},
-		{"agent_missing", errFindingRetestAgentMissing},
-		{"tool_required", errFindingRetestToolRequired},
-		{"service_stopping", errFindingRetestServiceStopping},
+		{"notes_too_long", errFindingRetestNotesTooLong, "The re-validation note can be up to 4000 characters"},
+		{"agent_missing", errFindingRetestAgentMissing, "The vulnerability revalidation agent is missing or disabled. Configure retester in Agent Management"},
+		{"tool_required", errFindingRetestToolRequired, "Enable and connect tools to the revalidation agent: "},
+		{"service_stopping", errFindingRetestServiceStopping, "The service is shutting down"},
 	} {
-		assertKoreanError(t, c.label, c.msg)
+		assertEnglishMessage(t, c.label, c.msg, c.wantEnglish)
 	}
 }

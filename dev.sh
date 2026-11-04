@@ -1,20 +1,37 @@
 #!/usr/bin/env bash
-# 개발 모드: 백엔드(127.0.0.1:8787) + 트래픽 프록시(:8788) 를 프런트엔드 next dev(:5173) 와 함께 실행합니다.
-# 프런트엔드 /api 는 백엔드로 리버스 프록시됩니다. Ctrl-C 로 함께 종료합니다.
+# Development mode: runs the backend (127.0.0.1:8787) and the traffic proxy (:8788)
+# together with the frontend `next dev` server (:5173).
+# The frontend's /api is reverse-proxied to the backend. Ctrl-C stops both.
 #
-# 단일 바이너리(프런트엔드 내장) 방식은 README 의 "단일 바이너리" 절을 참고하세요. 이 스크립트를 쓰지 않습니다.
+# The single-binary (frontend embedded) setup is described in the "single binary" section
+# of the README; it does not use this script.
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(cd "$(dirname "$0")" && pwd)"
 
-# 종료 시 이 프로세스 그룹의 모든 자식 프로세스(백엔드 + 프런트엔드)를 끝냅니다.
-cleanup() { kill 0 2>/dev/null || true; }
+command -v go >/dev/null 2>&1 || { echo "[x] Go not found (>=1.26): https://go.dev/dl/" >&2; exit 1; }
+command -v pnpm >/dev/null 2>&1 || { echo "[x] pnpm not found: the frontend dev server needs pnpm" >&2; exit 1; }
+
+# Track the two children explicitly. `kill 0` would signal the whole process group, which
+# includes the invoking shell when this script is not started in its own group (CI, make).
+backend=0
+frontend=0
+cleanup() {
+  trap - EXIT INT TERM
+  [ "$backend" -ne 0 ] && kill -TERM "$backend" 2>/dev/null || true
+  [ "$frontend" -ne 0 ] && kill -TERM "$frontend" 2>/dev/null || true
+  wait 2>/dev/null || true
+}
 trap cleanup EXIT INT TERM
 
-# 백엔드(일반 go run, 프런트엔드 미내장). 동시 work agent 수는 "시스템 설정"에서 설정합니다.
+# Backend (plain go run, no embedded frontend). The number of concurrent work agents is
+# configured in "System settings".
 go run ./cmd/artex -addr 127.0.0.1:8787 -proxy 127.0.0.1:8788 &
+backend=$!
 
-# 프런트엔드 핫 리로드(Vite/Next dev server, /api 는 :8787 로 리버스 프록시).
-( cd web && npm run dev ) &
+# Frontend hot reload on the port the README and the default CORS allowlist name (Next's
+# own default is 3000, so the port is set here explicitly). /api is reverse-proxied to :8787.
+( cd web && pnpm run dev -- -p 5173 ) &
+frontend=$!
 
-echo "[dev] 백엔드 :8787 / 프록시 :8788 / 프런트엔드 http://localhost:5173  (Ctrl-C 로 종료)"
+echo "[dev] backend :8787 / proxy :8788 / frontend http://localhost:5173  (Ctrl-C to stop)"
 wait

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 type taskLLMResolution struct {
@@ -17,16 +17,18 @@ type taskLLMResolution struct {
 	Reason    string `json:"reason,omitempty"`
 }
 
-// 사용자 노출 사유·소스 이름(GET /api/tasks/{id}/llm/resolution 응답). 작업 LLM 설정 체인·
-// system/llm 화면에 그대로 렌더되므로 ko.json 의 taskDetail.llm 네임스페이스 표기(설정·전역·
-// 할당량·설정 체인)에 맞춘다. Source enum 값과 영어 오류 문구는 번역 대상이 아니다.
+// User-facing reason and source names (GET /api/tasks/{id}/llm/resolution response).
+// The task LLM settings chain and the system/llm page render them as-is, so the wording
+// matches the taskDetail.llm namespace of the UI message catalogue (settings / global /
+// quota / settings chain). Source enum values and English error strings are not
+// translated.
 const (
-	reasonLLMProfileMissing     = "LLM 설정을 찾을 수 없습니다"
-	reasonLLMProfileNoAPIKey    = "LLM 설정에 API Key 가 지정되지 않았습니다"
-	reasonLLMProfileInvalid     = "LLM 설정 형식 또는 매개변수가 올바르지 않습니다"
-	reasonTaskLLMChainExhausted = "작업 LLM 설정 체인의 할당량을 모두 소진했습니다"
-	reasonNoLLMAvailable        = "사용 가능한 LLM 설정이 없습니다"
-	sourceNameGlobalConfig      = "전역 설정"
+	reasonLLMProfileMissing     = "LLM profile not found"
+	reasonLLMProfileNoAPIKey    = "No API Key is set for the LLM profile"
+	reasonLLMProfileInvalid     = "The LLM profile format or parameters are invalid"
+	reasonTaskLLMChainExhausted = "All quotas in the task LLM profile chain are exhausted"
+	reasonNoLLMAvailable        = "No LLM profile is available"
+	sourceNameGlobalConfig      = "Global config"
 )
 
 func (s *Server) resolutionFromProfile(p *db.LLMProfile, source string) taskLLMResolution {

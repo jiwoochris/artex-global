@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Autumn-27/artex/agent"
-	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/traffic"
+	"github.com/yukiteruamano/artex-global/agent"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/traffic"
 )
 
 func trafficEvidenceServer(t *testing.T) (*Server, *db.RecordedFinding, func(string, string, string) *httptest.ResponseRecorder) {
@@ -352,7 +352,7 @@ func TestFindingTrafficArchiveV3RoundTripAndRetry(t *testing.T) {
 	}
 	// The read tool enforces task visibility too.
 	result, err := s.toolGetFindingTraffic().Call(agent.WithRunInfo(ctx, agent.RunInfo{TaskID: sid}), json.RawMessage(fmt.Sprintf(`{"finding_id":"%d"}`, f.FindingID)), nil)
-	if err != nil || !strings.Contains(result.Flatten(), "不可读取") {
+	if err != nil || !strings.Contains(result.Flatten(), "cannot read that finding") {
 		t.Fatal(result, err)
 	}
 }
@@ -389,6 +389,7 @@ func TestFindingTrafficFailedReportDoesNotTrigger(t *testing.T) {
 func TestFindingTrafficUTF8SegmentsAndInheritedWrites(t *testing.T) {
 	s, f, req := trafficEvidenceServer(t)
 	ctx := context.Background()
+	// Multi-byte runes plus an emoji: the evidence segments must split on UTF-8 boundaries.
 	text := strings.Repeat("中文证据🙂", 2000)
 	seedServerEvidenceFlow(t, s, "unicode", []byte(text))
 	list, err := s.evidenceStore().Bind(ctx, f.FindingID, []db.TrafficRef{{TrafficID: "unicode"}})
@@ -453,7 +454,7 @@ func TestFindingTrafficUTF8SegmentsAndInheritedWrites(t *testing.T) {
 	if _, err = s.m.traffic.DeleteHost("evidence.local"); err != nil {
 		t.Fatal(err)
 	}
-	result, err := s.toolUpdateFindingReport().Call(ctx, json.RawMessage(fmt.Sprintf(`{"finding_id":%d,"evidence_version":1,"report":"## 证据报告\n\n证据 #%d：已验证完整请求响应"}`, f.NodeID, list.Bindings[0].ID)), nil)
+	result, err := s.toolUpdateFindingReport().Call(ctx, json.RawMessage(fmt.Sprintf(`{"finding_id":%d,"evidence_version":1,"report":"## Evidence report\n\nEvidence #%d: verified the complete request and response"}`, f.NodeID, list.Bindings[0].ID)), nil)
 	if err != nil || result.IsError {
 		t.Fatal(result, err)
 	}

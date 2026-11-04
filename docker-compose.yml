@@ -1,23 +1,69 @@
+# ARTEX — single Docker stack (application + PostgreSQL).
+#
+#   cp .env.example .env      # set POSTGRES_PASSWORD and, optionally, an LLM key
+#   docker compose up -d      # pulls the published image and starts both services
+#   → http://127.0.0.1:8787   # first visit: create the admin password at /setup
+#
+# The same file builds from source when you want that instead of the published image:
+#   docker compose build && docker compose up -d
+#
+# Security posture: this stack runs unprivileged, with no capability except NET_RAW, with
+# a private database network, capped process counts, capped logs and no host access
+# beyond the two loopback ports. Every decision, its rationale and the optional stricter
+# overlay (read-only root filesystem) are documented in docs/docker.md. If you change this
+# file, keep scripts/check-docker-posture.py green — CI runs it.
+name: artex
+
 services:
   postgres:
-    image: postgres:16-alpine
+    # Digest-pinned (multi-arch index) so an upstream retag cannot change what runs.
+    image: postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-artex}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?.env 파일에 POSTGRES_PASSWORD 를 설정하세요}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the .env file}
       POSTGRES_DB: ${POSTGRES_DB:-artex}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    # Internal network only: the database can talk to artex and nothing else, so a
+    # compromised database cannot reach the internet or the host's LAN.
+    networks:
+      - db_net
+    # The official entrypoint starts as root only to chown the data directory and then
+    # drops to the postgres user; these five capabilities are exactly what that needs.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    # No shell inside a runaway database: cap the process count.
+    pids_limit: 512
+    # Docker's default logging driver grows without limit and fills the host disk.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    stop_grace_period: 30s
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-artex} -d ${POSTGRES_DB:-artex}"]
       interval: 5s
       timeout: 3s
       retries: 10
-    restart: unless-stopped
 
   artex:
-    # 이 포크가 릴리스 태그(v*)마다 GitHub Container Registry 에 발행하는 이미지입니다
-    # (.github/workflows/release.yml 의 docker 잡). 상류 autumn27/artex 는 Docker Hub 에서 내려갔습니다.
-    image: ghcr.io/jiwoochris/artex-global:${ARTEX_TAG:-latest}
+    # Image this fork publishes to GitHub Container Registry on every release tag (v*)
+    # (the docker job in .github/workflows/release.yml). `build:` is here so the same
+    # compose file can build from source (`docker compose build`); `up` uses the image.
+    image: ghcr.io/yukiteruamano/artex-global:${ARTEX_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
     depends_on:
       postgres:
         condition: service_healthy
@@ -29,30 +75,105 @@ services:
       ARTEX_LLM_MODEL: ${ARTEX_LLM_MODEL:-}
       ARTEX_LLM_BASE_URL: ${ARTEX_LLM_BASE_URL:-}
       ARTEX_LLM_PROXY: ${ARTEX_LLM_PROXY:-}
-      # 첫 실행 보호. 비워 두면 기동 로그에 무작위 설정 토큰이 찍히고, /setup 에서 그 값을
-      # 입력해야 관리자 비밀번호를 만들 수 있습니다(docker compose logs artex 로 확인).
-      # ARTEX_ADMIN_PASSWORD 를 주면 /setup 없이 그 값으로 바로 초기화합니다(8자 이상).
+      # First-run protection. If left empty, a random setup token is printed in the startup log, and you must
+      # enter that value at /setup to create the admin password (check with docker compose logs artex).
+      # If ARTEX_ADMIN_PASSWORD is given, initialization uses it directly without /setup (8+ characters).
       ARTEX_SETUP_TOKEN: ${ARTEX_SETUP_TOKEN:-}
       ARTEX_ADMIN_PASSWORD: ${ARTEX_ADMIN_PASSWORD:-}
-      # 브라우저 교차 출처 허용 목록(쉼표 구분). 내장 UI 는 동일 출처라 보통 비워 둡니다.
+      # Browser cross-origin allow list (comma-separated). The built-in UI is same-origin, so this is usually left empty.
       ARTEX_CORS_ORIGINS: ${ARTEX_CORS_ORIGINS:-}
-      # 서버 쪽 기본 출력 언어(ko·en·zh·es). 비우면 한국어입니다. 에이전트 출력·오류 메시지는 설정 화면의
-      # "표시 언어"가 우선하고, 서버 콘솔 로그는 이 값만 따릅니다.
+      # Server-side default output language (en or es). Empty means English.
       ARTEX_LANG: ${ARTEX_LANG:-}
     ports:
-      # 기본값은 호스트의 127.0.0.1 에만 게시합니다. 다른 기기에서 직접 접속하려면 .env 에
-      # ARTEX_BIND=0.0.0.0 을 두되, 그 전에 반드시 초기 설정(관리자 비밀번호)을 마치고
-      # 가능하면 README 의 리버스 프록시(HTTPS) 구성을 쓰십시오.
+      # Both ports are published on the host's loopback only. To reach the UI from another
+      # device set ARTEX_BIND=0.0.0.0 in .env — but finish the initial setup first, and
+      # prefer the reverse-proxy (HTTPS) layout described in the README.
       - "${ARTEX_BIND:-127.0.0.1}:8787:8787"
+      # Only useful once the proxy really listens on a non-loopback address — see the
+      # ARTEX_PROXY_ADDR opt-in under `command:` below.
       - "127.0.0.1:8788:8788"
-    volumes:
-      # 데이터 디렉터리(jwt.key, SQLite 등 포함)를 프로젝트 루트의 data/ 에 바인드합니다.
-      # 호스트에서 바로 확인·백업할 수 있고, 컨테이너를 다시 만들어도 사라지지 않습니다.
-      - ./data:/app/data
-      # 프로젝트 루트의 skills 를 컨테이너에 마운트합니다(이미지에 내장된 /app/skills 를 덮어씁니다).
-      # skill 을 고치면 이미지를 다시 빌드할 필요 없이, 컨테이너가 호스트의 이 파일을 그대로 읽습니다.
-      - ./skills:/app/skills
+    # The image's CMD already pins the recording proxy to container loopback: it has no
+    # authentication, so leaving it on 0.0.0.0 turns the container into an open,
+    # TLS-terminating forward proxy for every peer on the Docker network. Publishing the
+    # port is not enough to use it from the host; routing a browser through it is an
+    # explicit opt-in, on a host you control, by binding the proxy wider:
+    #   ARTEX_PROXY_ADDR=0.0.0.0:8788   (default 127.0.0.1:8788)
+    # -addr stays :8787: the UI/API port is authenticated and published per ARTEX_BIND.
+    command: ["-addr", ":8787", "-proxy", "${ARTEX_PROXY_ADDR:-127.0.0.1:8788}"]
+    # The image runs as the unprivileged uid/gid 10001 (`artex`). Override ARTEX_UID/ARTEX_GID
+    # with your own ids (`ARTEX_UID=$(id -u) ARTEX_GID=$(id -g)`) to use the bind mounts below
+    # without any ownership change: a directory the invoking user owns is writable by the same
+    # uid inside the container. The default keeps a fixed, documented identity.
+    user: "${ARTEX_UID:-10001}:${ARTEX_GID:-10001}"
+    # tini as PID 1 reaps the processes the agent spawns; start.sh still forwards SIGTERM,
+    # so `docker stop` remains graceful.
+    init: true
+    # No capability except NET_RAW, which is what raw-socket port scanning needs. ICMP
+    # (`ping`) additionally works through the ping_group_range sysctl below, so it does not
+    # depend on the capability being effective for the unprivileged user. Whether the
+    # unprivileged user can use NET_RAW depends on the runtime; docs/docker.md has a one-line
+    # probe, and connect-scan (`-sT`) always works without it.
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
+    security_opt:
+      - no-new-privileges:true
+    sysctls:
+      net.ipv4.ping_group_range: "0 2147483647"
+    # The agent runs downloaded tools and shells out from /tmp; keep it writable and
+    # executable, but block setuid tricks and cap its size so a runaway tool eats RAM
+    # instead of the host disk.
+    tmpfs:
+      - /tmp:rw,exec,nosuid,nodev,size=${ARTEX_TMP_SIZE:-2g},mode=1777
+    # Capped process count (Chromium/Playwright needs a few hundred). Raise with
+    # ARTEX_PIDS_LIMIT if you run very wide parallel scans.
+    pids_limit: ${ARTEX_PIDS_LIMIT:-4096}
+    # No core dumps on the host, and enough file descriptors for wide scans.
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 16384
+      core: 0
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+    stop_grace_period: 60s
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8787/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    volumes:
+      # Bind mounts keep data and skills inspectable, backable up and editable from the host.
+      # The container writes as the uid/gid above (default 10001), so these two directories
+      # must be writable by it. Two ways to get there, neither involving the image:
+      #   a) run as yourself (recommended on a single-user host):
+      #      mkdir -p data skills && ARTEX_UID=$(id -u) ARTEX_GID=$(id -g) docker compose up -d
+      #   b) keep the fixed uid 10001 and give it the directories once, as root:
+      #      mkdir -p data skills && chown -R 10001:10001 data skills
+      # Docker creates a missing bind-mount source as root, which the container cannot write,
+      # so the directories must exist first. ./install.sh does (a) for you. Prefer named
+      # volumes instead? Use the overlay:
+      #   docker compose -f docker-compose.yml -f docker-compose.volumes.yml up -d
+      - ./data:/app/data
+      - ./skills:/app/skills
+    networks:
+      - app_net
+      - db_net
 
 volumes:
   pgdata:
+
+networks:
+  # Egress bridge: outbound internet is required (LLM APIs, scan targets, tooling).
+  app_net:
+    driver: bridge
+  # No egress at all: private bridge for postgres <-> artex.
+  db_net:
+    driver: bridge
+    internal: true

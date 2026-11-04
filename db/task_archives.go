@@ -361,7 +361,7 @@ func (d *DB) RecoverTaskArchiveJobs() error {
 	                  WHEN 'restoring' THEN 'restore_queued'
 	                  WHEN 'deleting' THEN 'delete_queued' ELSE state END,
 	 phase='interrupted',
-	 error=CASE WHEN state='archiving' THEN '上次归档进程异常退出，请手动重试' ELSE '' END
+	 error=CASE WHEN state='archiving' THEN 'the previous archive run exited abnormally, please retry manually' ELSE '' END
 	WHERE state IN ('archiving','restoring','deleting')`)
 	return err
 }

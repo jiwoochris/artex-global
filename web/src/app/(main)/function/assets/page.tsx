@@ -352,7 +352,7 @@ export default function AssetsPage() {
           </TabsList>
         </div>
 
-        {/* 기업 */}
+        {/* Companies */}
         <TabsContent value="company" className="mt-0 flex min-h-0 flex-1 flex-col">
           <Card className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
             <div className="min-h-0 flex-1 overflow-auto">
@@ -421,7 +421,7 @@ export default function AssetsPage() {
           </Card>
         </TabsContent>
 
-        {/* 루트 도메인 */}
+        {/* Root domains */}
         <TabsContent value="root_domain" className="mt-0 flex min-h-0 flex-1 flex-col gap-2">
           {searchBox}
           <AssetCard
@@ -509,7 +509,7 @@ export default function AssetsPage() {
           </AssetCard>
         </TabsContent>
 
-        {/* 서브도메인 */}
+        {/* Subdomains */}
         <TabsContent value="subdomain" className="mt-0 flex min-h-0 flex-1 flex-col gap-2">
           {searchBox}
           <AssetCard
@@ -551,7 +551,7 @@ export default function AssetsPage() {
           </AssetCard>
         </TabsContent>
 
-        {/* 애플리케이션 */}
+        {/* Applications */}
         <TabsContent value="app" className="mt-0 flex min-h-0 flex-1 flex-col gap-2">
           {searchBox}
           <AssetCard
@@ -591,7 +591,7 @@ export default function AssetsPage() {
           </AssetCard>
         </TabsContent>
 
-        {/* 서비스 */}
+        {/* Services */}
         <TabsContent value="service" className="mt-0 flex min-h-0 flex-1 flex-col gap-2">
           {searchBox}
           <AssetCard
@@ -698,7 +698,7 @@ export default function AssetsPage() {
           </AssetCard>
         </TabsContent>
 
-        {/* 엔드포인트 */}
+        {/* Endpoints */}
         <TabsContent value="endpoint" className="mt-0 flex min-h-0 flex-1 flex-col gap-2">
           {searchBox}
           <AssetCard
@@ -976,8 +976,8 @@ function CompanyAvatar({ name, logo }: { name: string; logo?: string }) {
   );
 }
 
-// 백엔드가 돌려주는 warnings 는 기존 데이터의 문제를 가리키며(이번에 제출한 행이 잘못된 것이 아니다), 저장 자체는 이미
-// 성공한 상태다. 사용자가 구체적인 자산을 직접 처리해야 하므로, 제목만 훑어서는 부족해 더 긴 노출 시간을 준다.
+// The warnings the backend returns point at problems in existing data (not at the rows just submitted); the save itself already
+// succeeded. The user has to deal with the specific assets themselves, so skimming a title is not enough and they get a longer display time.
 function showScopeWarnings(warnings?: string[]) {
   for (const warning of warnings ?? []) {
     toast.warning(warning, { duration: 15000 });
@@ -996,7 +996,7 @@ function savedScopeText(company: Company): string {
     .join("\n");
 }
 
-// 기업 추가는 작업·LLM 편집과 같은 오른쪽 서랍(drawer)을 사용한다.
+// Adding a company uses the same right-side drawer as task/LLM editing.
 function CompanyDialog({ onSaved }: { onSaved: () => void }) {
   const t = useTranslations("assets");
   const [open, setOpen] = React.useState(false);
@@ -1077,7 +1077,7 @@ function CompanyDialog({ onSaved }: { onSaved: () => void }) {
   );
 }
 
-// 자산 범위 편집(덮어쓰기) 팝업
+// Asset scope edit (overwrite) dialog
 function EditScopeDialog({ company, onSaved }: { company: Company; onSaved: () => void }) {
   const t = useTranslations("assets");
   const [open, setOpen] = React.useState(false);
@@ -1159,7 +1159,7 @@ function EditScopeDialog({ company, onSaved }: { company: Company; onSaved: () =
   );
 }
 
-// 자산 범위 추가 팝업
+// Asset scope append dialog
 function AppendScopeDialog({ company, onSaved }: { company: Company; onSaved: () => void }) {
   const t = useTranslations("assets");
   const [open, setOpen] = React.useState(false);

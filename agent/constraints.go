@@ -3,7 +3,7 @@ package agent
 import (
 	"strings"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // constraintBlock renders this task's operation constraints (task_constraints) as a
@@ -35,15 +35,15 @@ func constraintBlock(ts *db.ExplorationStore) string {
 		return ""
 	}
 	var b strings.Builder
-	b.WriteString("\n\n【操作约束（最高优先级，凌驾于下方一切探索/拓面启发式；每生成一条意图、每执行一个动作前都必须先自检是否违反，违反即不得进行）】：")
+	b.WriteString("\n\n[Operating constraints (highest priority; they override every exploration/surface-expansion heuristic below; before generating any intent and before executing any action you must self-check for a violation, and if it violates them you must not proceed)]:")
 	if len(allow) > 0 {
-		b.WriteString("\n允许的操作：\n")
+		b.WriteString("\nAllowed operations:\n")
 		b.WriteString(strings.Join(allow, "\n"))
 	}
 	if len(deny) > 0 {
-		b.WriteString("\n禁止的操作：\n")
+		b.WriteString("\nForbidden operations:\n")
 		b.WriteString(strings.Join(deny, "\n"))
 	}
-	b.WriteString("\n（发现约束之外的新目标/新端口/新主机，不等于获得授权：除非它落在上述允许范围内，否则记为 out-of-scope 事实并跳过，不得为其派生意图或执行动作。）")
+	b.WriteString("\n(Finding a new target/port/host outside the constraints does not mean you are authorized: unless it falls inside the allowed scope above, record it as an out-of-scope fact and skip it — do not derive intents or execute actions for it.)")
 	return b.String()
 }

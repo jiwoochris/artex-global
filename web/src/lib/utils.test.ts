@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCurrency, getInitials } from "./utils";
+import { firstNonEmpty, formatCurrency, getInitials } from "./utils";
 
 describe("getInitials", () => {
   it("takes the first letter of each word, uppercased", () => {
@@ -13,6 +13,14 @@ describe("getInitials", () => {
     expect(getInitials("")).toBe("?");
     expect(getInitials("   ")).toBe("?");
     expect(getInitials(undefined as unknown as string)).toBe("?");
+  });
+});
+
+describe("firstNonEmpty", () => {
+  it("skips empty strings and missing values", () => {
+    expect(firstNonEmpty("", null, undefined, "vulnclass")).toBe("vulnclass");
+    expect(firstNonEmpty("name", "vulnclass")).toBe("name");
+    expect(firstNonEmpty("", undefined)).toBe("");
   });
 });
 

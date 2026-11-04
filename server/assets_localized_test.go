@@ -8,36 +8,35 @@ import (
 )
 
 // TestAssetErrorConstantsLocalized pins that every user-facing writeErr literal
-// in task_assets.go and assets.go is Korean (Hangul present, no Chinese Han). If
-// anyone reverts one to Chinese, this fails.
+// in task_assets.go and assets.go is its exact English source message. If anyone
+// reverts one to Korean or Chinese, this fails.
 func TestAssetErrorConstantsLocalized(t *testing.T) {
-	cases := map[string]string{
-		"errTaskAssetRequestTooLarge": errTaskAssetRequestTooLarge,
-		"errTaskAssetScopeConflict":   errTaskAssetScopeConflict,
-		"errCompanyRequestTooLarge":   errCompanyRequestTooLarge,
-		"errCompanyNameConflict":      errCompanyNameConflict,
-	}
-	for label, msg := range cases {
-		assertKoreanError(t, label, msg)
+	for _, c := range []struct{ label, msg, wantEnglish string }{
+		{"errTaskAssetRequestTooLarge", errTaskAssetRequestTooLarge, "The request body is too large"},
+		{"errTaskAssetScopeConflict", errTaskAssetScopeConflict, "scope and asset_ids cannot be submitted at the same time"},
+		{"errCompanyRequestTooLarge", errCompanyRequestTooLarge, "The request body is too large"},
+		{"errCompanyNameConflict", errCompanyNameConflict, "The company name already exists"},
+	} {
+		assertEnglishMessage(t, c.label, c.msg, c.wantEnglish)
 	}
 }
 
 // TestTaskAssetProvenanceLocalized pins the asset-provenance summary labels that
 // get stored in task_asset_links.source_summary and rendered verbatim on the task
-// detail sessions/assets tabs. Reverting either to Chinese fails here. The manual
-// variant lives in the db package (db.manualTaskScopeSummary) and is pinned there.
+// detail sessions/assets tabs. Reverting either to another language fails here.
+// The manual variant lives in the db package (db.manualTaskScopeSummary) and is
+// pinned there.
 func TestTaskAssetProvenanceLocalized(t *testing.T) {
-	cases := map[string]string{
-		"taskAssetSourceAPISummary":  taskAssetSourceAPISummary,
-		"taskAssetSourceTaskSummary": taskAssetSourceTaskSummary,
-	}
-	for label, msg := range cases {
-		assertKoreanError(t, label, msg)
+	for _, c := range []struct{ label, msg, wantEnglish string }{
+		{"taskAssetSourceAPISummary", taskAssetSourceAPISummary, "Registered through the asset API"},
+		{"taskAssetSourceTaskSummary", taskAssetSourceTaskSummary, "Initialized from the task description or goal"},
+	} {
+		assertEnglishMessage(t, c.label, c.msg, c.wantEnglish)
 	}
 }
 
 // TestAssetResponsesLocalized drives the request validators that return before
-// any database access and confirms the Korean message actually lands in the HTTP
+// any database access and confirms the English message actually lands in the HTTP
 // body. The scope/asset_ids conflict guard returns before s.m.Assets() is read,
 // MaxBytesReader trips mid-decode, and decodeCompanyMutationRequest works on the
 // body alone, so a Manager holding only the task map reaches every path.
@@ -53,7 +52,8 @@ func TestAssetResponsesLocalized(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("scope+asset_ids status=%d, want 400 (body %s)", rec.Code, rec.Body.String())
 	}
-	assertKoreanError(t, "scope-conflict", decodeErrorField(t, rec.Body.Bytes()))
+	assertEnglishMessage(t, "scope-conflict", decodeErrorField(t, rec.Body.Bytes()),
+		"scope and asset_ids cannot be submitted at the same time")
 
 	// attachTaskAssets — an oversized body trips MaxBytesReader during decode.
 	bigReq := httptest.NewRequest(http.MethodPost, "/api/tasks/1/assets",
@@ -64,7 +64,8 @@ func TestAssetResponsesLocalized(t *testing.T) {
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("task asset too-large status=%d, want 413 (body %s)", rec.Code, rec.Body.String())
 	}
-	assertKoreanError(t, "task-asset-too-large", decodeErrorField(t, rec.Body.Bytes()))
+	assertEnglishMessage(t, "task-asset-too-large", decodeErrorField(t, rec.Body.Bytes()),
+		"The request body is too large")
 
 	// decodeCompanyMutationRequest — a body-only helper, no DB or Server state.
 	compReq := httptest.NewRequest(http.MethodPost, "/api/companies",
@@ -77,5 +78,6 @@ func TestAssetResponsesLocalized(t *testing.T) {
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("company too-large status=%d, want 413 (body %s)", rec.Code, rec.Body.String())
 	}
-	assertKoreanError(t, "company-too-large", decodeErrorField(t, rec.Body.Bytes()))
+	assertEnglishMessage(t, "company-too-large", decodeErrorField(t, rec.Body.Bytes()),
+		"The request body is too large")
 }

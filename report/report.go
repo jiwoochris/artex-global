@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // Input bundles what the report needs.
@@ -48,14 +48,14 @@ var sevRank = map[string]int{"critical": 0, "high": 1, "medium": 2, "low": 3, ""
 // Markdown renders the report.
 func Markdown(in Input) string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# 침투 테스트 보고서: %s\n\n", nz(in.Title, "이름 없는 작업"))
-	fmt.Fprintf(&b, "- **작업 목표**: %s\n", nz(in.Goal, "(지정되지 않음)"))
-	fmt.Fprintf(&b, "- **생성 시각**: %s\n\n", in.GeneratedAt.Format("2006-01-02 15:04:05"))
+	fmt.Fprintf(&b, "# Penetration Test Report: %s\n\n", nz(in.Title, "Untitled task"))
+	fmt.Fprintf(&b, "- **Task goal**: %s\n", nz(in.Goal, "(not specified)"))
+	fmt.Fprintf(&b, "- **Generated at**: %s\n\n", in.GeneratedAt.Format("2006-01-02 15:04:05"))
 
 	// summary
-	fmt.Fprintf(&b, "## 요약\n\n")
-	fmt.Fprintf(&b, "- 확인된 취약점: **%d**건\n", len(in.Findings))
-	fmt.Fprintf(&b, "- 자산: ")
+	fmt.Fprintf(&b, "## Summary\n\n")
+	fmt.Fprintf(&b, "- Confirmed findings: **%d**\n", len(in.Findings))
+	fmt.Fprintf(&b, "- Assets: ")
 	var types []string
 	for t := range in.AssetCounts {
 		types = append(types, t)
@@ -70,9 +70,9 @@ func Markdown(in Input) string {
 	b.WriteString("\n\n")
 
 	// findings
-	fmt.Fprintf(&b, "## 취약점\n\n")
+	fmt.Fprintf(&b, "## Findings\n\n")
 	if len(in.Findings) == 0 {
-		b.WriteString("_이번에 확인된 취약점이 없습니다._\n\n")
+		b.WriteString("_No findings were confirmed in this run._\n\n")
 	} else {
 		fs := make([]findingView, 0, len(in.Findings))
 		for _, n := range in.Findings {
@@ -80,10 +80,10 @@ func Markdown(in Input) string {
 		}
 		sort.SliceStable(fs, func(i, j int) bool { return sevRank[fs[i].Severity] < sevRank[fs[j].Severity] })
 		for i, f := range fs {
-			fmt.Fprintf(&b, "### %d. [%s] %s\n\n", i+1, strings.ToUpper(nz(f.Severity, "info")), nz(f.Name, nz(f.VulnClass, "미분류")))
+			fmt.Fprintf(&b, "### %d. [%s] %s\n\n", i+1, strings.ToUpper(nz(f.Severity, "info")), nz(f.Name, nz(f.VulnClass, "Unclassified")))
 			fmt.Fprintf(&b, "%s\n\n", nz(f.Summary, ""))
 			if f.PoC != "" {
-				fmt.Fprintf(&b, "**PoC / 증거:**\n\n```\n%s\n```\n\n", f.PoC)
+				fmt.Fprintf(&b, "**PoC / Evidence:**\n\n```\n%s\n```\n\n", f.PoC)
 			}
 		}
 	}

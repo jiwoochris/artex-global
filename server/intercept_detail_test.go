@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/intercept"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/intercept"
 )
 
 func TestInterceptDetailHTTP(t *testing.T) {
@@ -31,7 +31,9 @@ func TestInterceptDetailHTTP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	id, err := m.pg.CreateInterceptPending(0, 0, "approval-http", "test", "Write", []byte(`{}`), "[模型] 确认", &db.InterceptAudit{InitialAction: "ask", UserMessage: "snapshot", ExecutionStatus: "not_started"})
+	// "[模型]" is the stable judge-decision sentinel db/intercept.go classifies on (it is
+	// legacy wire data, not display text), so the fixture keeps the CJK marker.
+	id, err := m.pg.CreateInterceptPending(0, 0, "approval-http", "test", "Write", []byte(`{}`), "[模型] Confirm", &db.InterceptAudit{InitialAction: "ask", UserMessage: "snapshot", ExecutionStatus: "not_started"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +95,7 @@ func TestInterceptDetailHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 	deletedReply := do(http.MethodGet, fmt.Sprintf("/api/intercept/history/%d/execution?conversation=%d", sourceID, conv.ID), "", true)
-	if deletedReply.Code != 410 || !strings.Contains(deletedReply.Body.String(), "대화가 이미 삭제되었습니다") {
+	if deletedReply.Code != 410 || !strings.Contains(deletedReply.Body.String(), "The conversation has already been deleted") {
 		t.Fatalf("deleted conversation: %d %s", deletedReply.Code, deletedReply.Body.String())
 	}
 

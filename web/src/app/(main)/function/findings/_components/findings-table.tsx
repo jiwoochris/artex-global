@@ -57,7 +57,7 @@ export const FINDING_STATUSES: FindingStatus[] = [
 
 export const UNASSIGNED_TASK = "__unassigned__";
 
-// 行内编辑缓冲:当前展开行的名称/类别/严重等级。
+// Inline edit buffer: name/category/severity of the currently expanded row.
 export interface FindingEdit {
   name: string;
   vulnclass: string;
@@ -94,7 +94,7 @@ interface FindingsTableProps {
   selectedIds: Set<string>;
   onToggleSelected: (id: string, checked: boolean) => void;
   onToggleSelectedPage: (ids: string[], checked: boolean) => void;
-  /** 当前展开行的 findingRowKey;null = 全部收起。 */
+  /** findingRowKey of the currently expanded row; null = all collapsed. */
   expandedKey: string | null;
   onToggleRow: (finding: Finding) => void;
   reports: Record<string, FindingReport>;
@@ -107,12 +107,12 @@ interface FindingsTableProps {
   activeRetests: Record<string, ActiveFindingRetest>;
   onDeepen: (finding: Finding) => void;
   onDelete: (finding: Finding) => void;
-  /** 全选框的无障碍标签,平铺视图与分组视图措辞不同。 */
+  /** Accessible label for the select-all checkbox; the flat and grouped views word it differently. */
   selectAllLabel?: string;
 }
 
-// FindingsTable 是发现列表的表格主体,平铺视图与按任务分组视图共用同一份行渲染
-// (勾选 / 行内展开 / 行内改名与改状态 / 复测 / 深入 / 删除),差异只在外层容器与分页。
+// FindingsTable is the table body of the findings list; the flat view and the by-task grouped view share the same row rendering
+// (select / inline expand / inline rename and status change / retest / deepen / delete); only the outer container and pagination differ.
 export function FindingsTable({
   items,
   selectedIds,
@@ -145,7 +145,7 @@ export function FindingsTable({
   }
 
   return (
-    /* 固定列宽保证展开内容不撑开表格；窄屏只在表格内部横向滚动。 */
+    /* Fixed column widths keep expanded content from stretching the table; on narrow screens only the table scrolls horizontally. */
     <Table className="min-w-[60rem] table-fixed">
       <TableHeader>
         <TableRow>
@@ -331,11 +331,11 @@ export function FindingsTable({
               </TableRow>
               {open && (
                 <TableRow className="hover:bg-transparent">
-                  {/* whitespace-normal 覆盖 TableCell 默认的 nowrap,否则展开区文字
-                      被强制单行、直接溢出单元格。 */}
+                  {/* whitespace-normal overrides TableCell's default nowrap, otherwise text in the expanded area
+                      is forced onto a single line and overflows the cell. */}
                   <TableCell colSpan={COLUMN_COUNT} className="bg-muted/30 whitespace-normal">
                     <div className="flex flex-col gap-2 px-2 py-1">
-                      {/* 行内编辑:名称/类别/严重等级,可改并保存(仅独立 finding 行)。 */}
+                      {/* Inline edit: name/category/severity, editable and saved (standalone finding rows only). */}
                       {f.finding_id && edit && (
                         <div className="flex flex-wrap items-end gap-3 rounded-md border bg-background px-3 py-2.5">
                           <div className="flex min-w-[12rem] flex-1 flex-col gap-1">
@@ -402,7 +402,7 @@ export function FindingsTable({
                         {f.evidence}
                       </pre>
 
-                      {/* 详细报告(Markdown):展开时按 finding_id 懒加载,免进详情页即可查看。 */}
+                      {/* Detailed report (Markdown): lazily loaded by finding_id on expand, viewable without opening the detail page. */}
                       {f.finding_id && (
                         <div className="flex flex-col gap-1.5">
                           <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
@@ -428,9 +428,9 @@ export function FindingsTable({
                             if (!rep.text.trim())
                               return <p className="text-xs text-muted-foreground">{t("table.reportEmpty")}</p>;
                             return (
-                              // break-words 会继承到段落/列表,pre 另加
-                              // whitespace-pre-wrap 让代码块也换行——否则长代码行/长 URL
-                              // 会撑宽 colSpan 单元格,把整张表挤出横向滚动条。
+                              // break-words is inherited by paragraphs/lists; pre additionally gets
+                              // whitespace-pre-wrap so code blocks wrap too — otherwise long code lines / long URLs
+                              // widen the colSpan cell and push the whole table into a horizontal scrollbar.
                               <div className="min-w-0 break-words rounded-md border bg-background px-3 py-2 [&_pre]:whitespace-pre-wrap">
                                 <Markdown text={rep.text} />
                               </div>

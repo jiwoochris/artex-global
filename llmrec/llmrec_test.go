@@ -6,10 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/norma/llm"
 	"github.com/Autumn-27/norma/transcript"
 	"github.com/google/uuid"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 type completeProvider struct{}
@@ -92,10 +92,10 @@ func TestSideUsageRecordedOnceOnConsumerCancellation(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pg.Close()
-	// llm_usage 는 db.Open 의 기본 스키마에 들어 있지 않고 EnsureLLMUsageTable 로만
-	// 만들어진다(운영에서는 server/manager.go 가 호출한다). 격리된 빈 데이터베이스에서
-	// 이 테스트를 단독으로 돌릴 때 다른 패키지가 같은 데이터베이스에 테이블을 먼저
-	// 만들어 주기를 기대하지 않도록, 여기서 직접 테이블 존재를 보장한다.
+	// llm_usage is not in the default schema created by db.Open; it is created only by
+	// EnsureLLMUsageTable (server/manager.go calls it in production). So that running this
+	// test on its own against an isolated empty database does not depend on another package
+	// creating the table first, the table existence is ensured here.
 	if err := pg.EnsureLLMUsageTable(); err != nil {
 		t.Fatal(err)
 	}

@@ -1,54 +1,118 @@
-# 곁질문 장문 대화와 컨텍스트 예산
+# Side-question long conversations and the context budget
 
-한국어 · [中文](CONTEXT_BUDGET.zh.md)
+Revised 2026-09-11. The earlier implementation treated the character count of the request JSON as
+the token count and inherited the main task's 32K output reservation as is, so when there was a lot of
+HTML, JS, and tool output it rejected legitimate side questions up front.
 
-2026-09-11 수정. 이전 구현은 요청 JSON 의 글자 수를 그대로 토큰 수로 간주했고 메인 작업의 32K 출력 예약량을 그대로 물려받았기 때문에, HTML·JS·도구 결과가 많을 때 정상적인 곁질문을 미리 거부하는 문제가 있었습니다.
+> This document was translated from the original Chinese document. The upstream text stays available
+> in the upstream repository for comparison.
 
-> 이 문서는 원본 중국어 문서(`CONTEXT_BUDGET.zh.md`)를 한국어로 옮긴 것입니다. 상류(upstream) 저장소의 변경을 대조하기 쉽도록 원본은 그대로 보존합니다.
+## Comparison with open-source implementations
 
-## 오픈소스 구현 대조
+- [Grok CLI side-question context](https://github.com/superagent-ai/grok-cli/blob/fb97af83f06dca873281d60168430f06c8de6324/src/agent/agent.ts#L739):
+  it excerpts some fragments from the most recent user and assistant text, with a character budget of
+  about 2000 characters and at most 400 characters per item. This path keeps no running
+  question-and-answer history.
+- [Grok CLI independent request](https://github.com/superagent-ai/grok-cli/blob/fb97af83f06dca873281d60168430f06c8de6324/src/utils/side-question.ts):
+  it keeps a separate cancellation signal. Where the model supports it, the output cap is 2048
+  tokens. No tools are provided.
+- [Grok CLI main-session compaction](https://github.com/superagent-ai/grok-cli/blob/fb97af83f06dca873281d60168430f06c8de6324/src/agent/compaction.ts):
+  it estimates tokens, keeps recent content, folds new content into the previous summary, and handles
+  cuts that cross a turn boundary.
+- [OpenCode session compaction](https://github.com/anomalyco/opencode/blob/b3f1a96c6dd7adeb28b36dd11add1998fc84d67b/packages/core/src/session/compaction.ts):
+  it estimates the whole request, reserves output and buffer, adds a rolling summary to recent
+  content, and sends a tool-less summarization request. By default this implementation uses a recent
+  budget of 8000 and a summary output cap of 4096 tokens.
+- [OpenCode overflow recovery](https://github.com/anomalyco/opencode/blob/b3f1a96c6dd7adeb28b36dd11add1998fc84d67b/packages/core/src/session/runner/llm.ts):
+  it attempts overflow recovery only while the assistant output has not started yet, and the
+  recovered call does not enter the same overflow-recovery path again.
 
-- [Grok CLI 곁질문 컨텍스트](https://github.com/superagent-ai/grok-cli/blob/fb97af83f06dca873281d60168430f06c8de6324/src/agent/agent.ts#L739): 가장 최근의 사용자·어시스턴트 텍스트에서 일부 조각을 발췌하며, 글자 예산은 약 2000 자이고 한 건당 최대 400 자까지 잘라냅니다. 이 경로에서는 연속된 곁질문 문답 기록을 유지하지 않습니다.
-- [Grok CLI 독립 요청](https://github.com/superagent-ai/grok-cli/blob/fb97af83f06dca873281d60168430f06c8de6324/src/utils/side-question.ts): 취소 신호를 따로 둡니다. 모델이 지원하면 출력 상한은 2048 토큰입니다. 도구는 제공하지 않습니다.
-- [Grok CLI 메인 세션 압축](https://github.com/superagent-ai/grok-cli/blob/fb97af83f06dca873281d60168430f06c8de6324/src/agent/compaction.ts): 토큰을 추정하고, 최근 내용을 남기고, 새 내용을 이전 요약에 반영하며, 턴 경계를 넘는 잘림을 처리합니다.
-- [OpenCode 세션 압축](https://github.com/anomalyco/opencode/blob/b3f1a96c6dd7adeb28b36dd11add1998fc84d67b/packages/core/src/session/compaction.ts): 요청 전체를 추정하고, 출력·버퍼를 예약하며, 최근 내용에 롤링 요약을 더하고, 도구 없는 요약 요청을 보냅니다. 이 구현은 기본적으로 최근 예산 8000, 요약 출력 상한 4096 토큰을 씁니다.
-- [OpenCode 오버플로 복구](https://github.com/anomalyco/opencode/blob/b3f1a96c6dd7adeb28b36dd11add1998fc84d67b/packages/core/src/session/runner/llm.ts): 어시스턴트 출력이 아직 시작되지 않았을 때만 오버플로 복구를 시도하고, 복구한 뒤의 호출은 같은 오버플로 복구 경로로 다시 들어가지 않습니다.
+ARTEX drew on the independent output budget, the recent content plus rolling summary, and the limited
+recovery. It keeps norma v0.3.6's structured messages and tool pairing as they are, does not adopt
+Grok's text-excerpt approach as is, and does not record OpenCode's main-session compaction events in
+the ARTEX main transcript.
 
-ARTEX 는 독립 출력 예산, 최근 내용과 롤링 요약, 제한된 복구라는 방식을 참고했습니다. norma v0.3.6 의 구조화 메시지와 도구 짝 맞추기는 그대로 유지하되 Grok 의 텍스트 발췌 방식은 그대로 가져오지 않았고, OpenCode 의 메인 세션 압축 이벤트를 ARTEX 메인 transcript 에 기록하지도 않습니다.
+## Request budget and execution
 
-## 요청 예산과 실행
+- Messages use norma's approach as is: estimate UTF-8 bytes per content block and add a 4/3 margin.
+  The system prompt, the tool schema, and message-wrapping overhead are counted on top. This estimate
+  is not the model's exact token count.
+- A side-question output is at most 8192 tokens by default, and never exceeds the output cap already
+  set in the main configuration. The service environment variable `ARTEX_BTW_MAX_OUTPUT_TOKENS` sets
+  a cap in the 256–32768 range; the product's default model and the main task's parameters are not
+  changed.
+- The input budget is the context window minus the output cap and a safety margin; when the window
+  size is unknown, the platform default of 200K is used. The safety margin is 5% of the window, at
+  least 128 tokens and at most 8192 tokens.
+- Successful exchanges are loaded by increasing sequence number, up to 20 bundles at a time. At most
+  20 bundles of verbatim text are kept, and their token budget stays within 1/4 of the input budget
+  and never above 16K.
+- Exchanges that exceed the budget are folded into a rolling summary. The summary carries the source
+  records and the context timestamp along with it. Past assistant answers are not the same as new
+  tool evidence, so on a conflict the most recent main snapshot wins.
+- If the main context is still too long, only the oldest messages of the copy are summarized and the
+  recent content is kept up to 8K tokens. The cut point never splits a tool call from its result. If a
+  single bundle is too large, the whole bundle goes into the summary.
+- The summary input is split safely on UTF-8 boundaries to fit the window size actually left, and the
+  output cap is 2048 tokens. An empty summary, a truncated response, a tool call, and a summary over
+  budget are all kept out of the cache. One side question makes at most 12 summarization calls, which
+  share the same 120-second timeout. On reaching the cap it fails clearly instead of repeating
+  forever.
+- If the model returns a context-overflow error for the first time and has not emitted any text or
+  tool call yet, it reduces the context further and retries at most once. If the estimated size does
+  not shrink, recovery stops immediately. Other model errors, and output that was only partially
+  streamed, do not trigger this recovery.
+- Every usage already accumulated is summed onto the same side-question request, including
+  summarization, failed attempts, and usage at the moment of cancellation. If the Provider returns no
+  usage, only 0 is recorded; an estimate is not dressed up as real usage.
 
-- 메시지는 norma 의 방식을 그대로 써서 내용 블록 단위로 UTF-8 바이트를 추정하고 4/3 여유분을 더합니다. 여기에 시스템 프롬프트, 도구 schema, 메시지 포장 오버헤드를 추가로 셈합니다. 이 추정값은 모델의 정확한 토큰 수가 아닙니다.
-- 곁질문 출력은 기본적으로 최대 8192 토큰이며, 메인 설정에 이미 정해진 출력 상한도 넘지 않습니다. 서비스 환경 변수 `ARTEX_BTW_MAX_OUTPUT_TOKENS` 로 256–32768 범위의 상한을 설정할 수 있고, 제품 기본 모델이나 메인 작업 파라미터는 바꾸지 않습니다.
-- 입력 예산은 컨텍스트 창에서 출력 상한과 안전 여유분을 뺀 값이며, 창 크기를 모를 때는 플랫폼 기본값인 200K 를 씁니다. 안전 여유분은 창의 5% 이고, 최소 128 토큰, 최대 8192 토큰입니다.
-- 성공한 문답은 증가하는 순번에 따라 한 번에 최대 20 묶음까지 불러옵니다. 원문은 최대 20 묶음까지 남기며, 그 토큰 예산은 입력 예산의 1/4 이내이고 16K 를 넘지 않습니다.
-- 예산을 넘긴 문답은 롤링 요약으로 반영합니다. 요약에는 출처 기록과 컨텍스트 시점을 함께 담습니다. 과거의 어시스턴트 답변은 새로운 도구 증거와 같지 않으므로, 충돌이 생기면 가장 최신 메인 스냅샷을 우선합니다.
-- 메인 컨텍스트가 그래도 너무 길면 사본의 오래된 메시지만 요약하고 최근 내용은 최대 8K 토큰까지 남깁니다. 자르는 지점은 도구 호출과 그 결과를 쪼개지 않습니다. 하나의 묶음이 너무 크면 그 묶음 전체를 요약에 넣습니다.
-- 요약 입력은 실제로 남은 창 크기에 맞춰 UTF-8 기준으로 안전하게 나누며, 출력 상한은 2048 토큰입니다. 빈 요약, 잘린 응답, 도구 호출, 요약 예산 초과는 모두 캐시에 쓰지 않습니다. 한 번의 곁질문에서 요약 호출은 최대 12 회이며 동일한 120 초 제한 시간을 함께 적용받습니다. 상한에 이르면 무한히 반복하지 않고 명확히 실패로 끝냅니다.
-- 모델이 처음으로 컨텍스트 초과를 반환하고 아직 텍스트나 도구 호출을 내보내지 않았다면, 더 줄인 뒤 최대 한 번만 다시 시도합니다. 추정 크기가 줄지 않으면 복구를 즉시 멈춥니다. 그 밖의 모델 오류나 일부만 스트리밍된 출력은 이 복구를 일으키지 않습니다.
-- 요약, 실패한 시도, 취소 시점의 사용량을 포함해 이미 집계된 모든 사용량은 같은 곁질문 요청에 누적합니다. Provider 가 사용량을 돌려주지 않으면 0 으로만 기록하며, 추정값을 실제 사용량인 것처럼 꾸미지 않습니다.
+## Persistence and the screen
 
-## 영속화와 화면
+`side_question_sessions.memory` stores the summaries of older exchanges, the ordinal they were folded
+up to, and the main-context summaries cached per snapshot identity. `side_question_requests.context_info`
+stores the preparation stage, the number of bundles actually replayed, the summary usage, and the
+budget estimate.
 
-`side_question_sessions.memory` 에는 오래된 문답 요약, 반영된 순번(ordinal), 그리고 스냅샷 신원별로 캐시한 메인 컨텍스트 요약을 저장합니다. `side_question_requests.context_info` 에는 준비 단계, 실제로 다시 실은 묶음 수, 요약 사용 내역, 예산 추정값을 저장합니다.
+A summary is stored only while the original request is still running and the cleanup version matches.
+Clear wipes the cache as well, so a late-arriving write cannot resurrect already-cleared data. A new
+snapshot does not reuse the previous snapshot's summary. Summary fields are stored together with the
+v3 task archive; restoring an older v3 that lacks the fields fills them with an empty object, and v1
+and v2 stay compatible.
 
-요약은 원래 요청이 아직 실행 중이고 정리 버전이 일치할 때만 저장합니다. 비우기는 캐시도 함께 지우며, 뒤늦게 도착한 쓰기가 이미 정리된 데이터를 되살리지 않습니다. 새 스냅샷은 이전 스냅샷의 요약을 재사용하지 않습니다. 요약 필드는 v3 작업 아카이브와 함께 저장하며, 필드가 빠진 오래된 v3 를 복원할 때는 빈 객체로 채우고 v1·v2 는 계속 호환합니다.
+POST accepts and returns the request first, and preparation and compaction run in the background
+without holding the admission lock or a database transaction. SSE and the history screen show the
+preparation, exchange-folding, copy-compaction, and response stages. A compaction failure is stored as
+the failure terminal state of that side-question request. The frontend keeps the error and restores
+the draft of the question that failed, and the floating notification does not cover the input box.
+History polling no longer clears a submission error either.
 
-POST 는 요청을 먼저 받아들여 돌려주고, 준비와 압축은 백그라운드에서 실행하며 수용 잠금(admission lock)이나 데이터베이스 트랜잭션을 쥐지 않습니다. SSE 와 기록 화면은 준비, 문답 정리, 사본 압축, 응답 단계를 표시합니다. 압축 실패는 해당 곁질문 요청의 실패 종료 상태로 저장합니다. 프런트엔드는 오류를 남기고 이번에 실패한 질문의 초안을 복구하며, 떠 있는 알림으로 입력창을 가리지 않습니다. 기록 폴링도 더 이상 제출 오류를 지우지 않습니다.
+## Verification record
 
-## 검증 기록
+- Replaying 19, 20, 21, and 50 bundles, keeping older conclusions beyond 20 bundles, and reusing the
+  summary cache after a restart: automated pass.
+- Very long Chinese answers plus code context, request-budget splitting, tool pairing, snapshot
+  immutability, and cache invalidation on a new snapshot: automated pass.
+- Summary failure, cancellation, truncation, over-length, and a tool return, the clear race, the call
+  cap, and the single overflow recovery with no partial-stream retry: automated pass.
+- Paging against an independent PostgreSQL, restart, v1/v2/v3 archives, archive restore of the summary
+  cache and budget metadata, an older v3 without the new fields, and 20 parent sessions sharing four
+  concurrency slots: pass.
+- Building the candidate Go service, the frontend TypeScript check, the Biome check of the changed
+  components, and the Next.js production build in an isolated directory: pass.
+- With the built-in browser and an isolated UI fixture, at 1280×720 and 390×844 resolutions, verified
+  the exchange-folding stage, the summary-scope notice, draft recovery after a failure, the absence of
+  a floating error notification, the absence of horizontal overflow, and the absence of console
+  errors. The temporary fixture was removed.
+- Replaying, read-only, a Worker snapshot already present locally passed the new budget check. For
+  example, Worker #3's 293,085-character snapshot is no longer wrongly rejected because of a local
+  character count. This item made no external model call.
+- The real-conversation test that was going to send a private Worker snapshot to Grok was rejected by
+  the automatic-approval review and therefore did not run, so it is not counted as a pass.
+- At 00:37 on 2026-09-11 the local backend was restarted at the user's request, using the original
+  database, data directory, and login settings. The SHA-256 of the executable and of the candidate
+  binary matched, and `/api/health` on both the backend and the frontend proxy returned healthy.
 
-- 19·20·21·50 묶음 재생, 20 묶음을 넘는 오래된 결론 보존, 요약 캐시의 재시작 후 재사용: 자동화 통과.
-- 아주 긴 중국어 답변과 코드 컨텍스트, 요청 예산 분할, 도구 짝 맞추기, 스냅샷 불변, 새 스냅샷의 캐시 무효화: 자동화 통과.
-- 요약 실패·취소·잘림·초과 길이·도구 반환, 비우기 경쟁, 호출 상한, 단 한 번의 오버플로 복구와 일부 스트림 재시도 안 함: 자동화 통과.
-- 독립 PostgreSQL 에서의 페이지 나누기, 재시작, v1·v2·v3 아카이브, 요약 캐시와 예산 메타데이터의 아카이브 복원, 새 필드가 없는 오래된 v3, 20 개 부모 세션이 네 개의 동시 실행 자리를 공유하는 경우: 통과.
-- Go 후보 서비스 빌드, 프런트엔드 TypeScript 검사, 수정한 컴포넌트의 Biome 검사, 그리고 독립 디렉터리에서의 Next.js 프로덕션 빌드: 통과.
-- 내장 브라우저로 독립 UI 픽스처를 써서 1280×720 과 390×844 해상도에서 문답 정리 단계, 요약 범위 안내, 실패 후 초안 복구, 떠 있는 오류 알림이 없는지, 가로 넘침이 없는지, 콘솔 오류가 없는지를 검증했습니다. 임시 픽스처는 제거했습니다.
-- 로컬에 이미 있는 Worker 스냅샷을 읽기 전용으로 재생했을 때 새 예산 검사가 통과했습니다. 예를 들어 Worker #3 의 293085 자 스냅샷은 더 이상 로컬 글자 수 계산 때문에 잘못 거부되지 않습니다. 이 항목에는 외부 모델 호출이 없었습니다.
-- 이번에 비공개 Worker 스냅샷을 Grok 으로 보내려던 실제 대화 테스트는 자동 승인 심사에서 거부되어 실행되지 않았으므로, 통과 항목으로 치지 않습니다.
-- 2026-09-11 00:37 에 사용자 요청으로 로컬 백엔드를 재시작했고, 원래의 데이터베이스·데이터 디렉터리·로그인 설정을 그대로 썼습니다. 실행 파일과 후보 바이너리의 SHA-256 이 일치했고, 백엔드와 프런트엔드 프록시의 `/api/health` 가 모두 정상을 반환했습니다.
-
-검증 명령(독립 테스트 DB 만 사용):
+Verification commands (isolated test database only):
 
 ```sh
 go test -race ./sidequestion ./db ./server -run 'TestSide|TestCheckpoint|TestSnapshot|TestBuildRequest|TestService|TestMainSide|TestTaskArchive' -count=1
@@ -57,4 +121,7 @@ npx tsc --noEmit
 npm run build -- --webpack
 ```
 
-프런트엔드 프로덕션 빌드는 독립 사본을 써서 현재 미리 보기의 `.next` 를 덮어쓰지 않도록 했습니다. 후보 서비스는 `/private/tmp/artex-btw-budget-candidate` 에 있고, `/private/tmp/artex-btw-preview/artex` 로 복사해 실행했습니다. 원래 바이너리는 같은 디렉터리의 `artex.before-context-budget` 로 백업했습니다.
+The frontend production build used an isolated copy so that it did not overwrite the current preview's
+`.next`. The candidate service was at `/private/tmp/artex-btw-budget-candidate` and was copied to
+`/private/tmp/artex-btw-preview/artex` to run. The original binary was backed up as
+`artex.before-context-budget` in the same directory.

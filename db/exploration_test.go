@@ -12,7 +12,7 @@ func TestExplorationFlow(t *testing.T) {
 	}
 	defer d.Close()
 
-	expID, err := d.CreateExploration("test", "拿下测试目标")
+	expID, err := d.CreateExploration("test", "take down the test target")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,7 +247,7 @@ func TestIntentPauseResumeAndCancelCleanup(t *testing.T) {
 	assertCount(`SELECT COUNT(*) FROM assets WHERE id=$1`, 1, assetID)
 }
 
-// TestNodesPageQueryMatchesID verifies the 播报板 search filters on node id (both
+// TestNodesPageQueryMatchesID verifies the broadcast-board search filters on node id (both
 // the bare number and the「#id」form the UI shows) in addition to payload/origin.
 func TestNodesPageQueryMatchesID(t *testing.T) {
 	d, err := Open(testDSN(t))
@@ -256,7 +256,7 @@ func TestNodesPageQueryMatchesID(t *testing.T) {
 	}
 	defer d.Close()
 
-	expID, err := d.CreateExploration("test", "id 搜索")
+	expID, err := d.CreateExploration("test", "id search")
 	if err != nil {
 		t.Fatal(err)
 	}

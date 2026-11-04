@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/intercept"
 	"github.com/Autumn-27/norma/llm"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/intercept"
 )
 
 type reviewCaptureProvider struct{ request llm.CompletionRequest }
@@ -17,7 +17,7 @@ type reviewCaptureProvider struct{ request llm.CompletionRequest }
 func (p *reviewCaptureProvider) Stream(_ context.Context, request llm.CompletionRequest) iter.Seq2[llm.StreamEvent, error] {
 	p.request = request
 	return func(yield func(llm.StreamEvent, error) bool) {
-		yield(llm.StreamEvent{Type: llm.SETextDelta, Text: `{"decision":"ask","comment":"实际操作：删除文件；成功后的后果：文件会丢失，归属尚未确认；命中规则：ASK（归属不明）"}`}, nil)
+		yield(llm.StreamEvent{Type: llm.SETextDelta, Text: `{"decision":"ask","comment":"Actual operation: delete a file; Consequence on success: the file is lost and its ownership is unconfirmed; Rule matched: ASK (unknown ownership)"}`}, nil)
 	}
 }
 func (p *reviewCaptureProvider) Complete(ctx context.Context, req llm.CompletionRequest) (llm.Message, string, llm.Usage, error) {
@@ -26,7 +26,7 @@ func (p *reviewCaptureProvider) Complete(ctx context.Context, req llm.Completion
 
 // Assert the actual model request, rather than merely the envelope helper.
 func TestReviewCompletionSendsCurrentCallWithoutHistory(t *testing.T) {
-	ctx := intercept.WithReviewContext(t.Context(), "/tmp/review-fixture", intercept.ReviewBackground{Source: intercept.BackgroundUserMessage, Text: "清理本次测试文件"})
+	ctx := intercept.WithReviewContext(t.Context(), "/tmp/review-fixture", intercept.ReviewBackground{Source: intercept.BackgroundUserMessage, Text: "clean up this test file"})
 	ctx, trace := intercept.WithTrace(ctx, "GLOBAL_OVERVIEW_SENTINEL", []db.InterceptContextEntry{
 		{Kind: "tool_use", Tool: "Write", ToolUseID: "created", Text: `{"path":"probe.txt"}`},
 		{Kind: "tool_result", ToolUseID: "created", Text: "file created"},
@@ -70,7 +70,7 @@ func TestReviewCompletionSendsCurrentCallWithoutHistory(t *testing.T) {
 	if strings.Contains(body, "file created") || strings.Contains(body, `"path"`) {
 		t.Fatal("history leaked into actual model request")
 	}
-	if got.Version != 4 || got.Background == nil || got.Background.Source != intercept.BackgroundUserMessage || got.Background.Text != "清理本次测试文件" || got.WorkingDir != "/tmp/review-fixture" || string(got.Arguments) != string(args) || strings.Contains(body, "worker speculation") || strings.Contains(body, "GLOBAL_OVERVIEW_SENTINEL") {
+	if got.Version != 4 || got.Background == nil || got.Background.Source != intercept.BackgroundUserMessage || got.Background.Text != "clean up this test file" || got.WorkingDir != "/tmp/review-fixture" || string(got.Arguments) != string(args) || strings.Contains(body, "worker speculation") || strings.Contains(body, "GLOBAL_OVERVIEW_SENTINEL") {
 		t.Fatalf("wrong model input: %s", body)
 	}
 }

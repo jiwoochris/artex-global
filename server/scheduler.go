@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // Scheduler drives P3 triggers: on each tick it fires due interval triggers and
@@ -50,7 +50,7 @@ func (sc *Scheduler) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			sc.s.reconcileConcurrency() // 并发上限:有空位就把排队任务补位启动
+			sc.s.reconcileConcurrency() // concurrency cap: when a slot frees up, start a queued task in it
 			sc.step()
 		}
 	}
@@ -142,15 +142,16 @@ func (sc *Scheduler) fireIntervals(triggers []*db.AgentTrigger) {
 			continue
 		}
 		_ = sc.pg.TouchTriggerFire(tr.ID)
-		// [F10/F19 경계 판정 · 두뇌 입력 보존] 이 파일의 트리거 합성부(정기·finding·목표·초과·
-		// 생성·도구 fire* 메서드)가 만드는 `【本次…触发】…` 컨텍스트 블록과 trunc 의 `…(已截断…)`
-		// 절단 표시는 번역하지 않는다. StartTriggeredRun 의 message 인자로 들어가
-		// finalTriggerMessage → ca.Chat 의 에이전트 입력(두뇌)이자 전사에 노출되는 이중 용도
-		// 문자열이다(BRIEF 경계 #1·F16 동형, conversations.go taskContextHeader 보존 주석 참조).
-		// title 인자(`定时触发 · …` 등)는 ca.Chat 에 안 가는 표시 전용이나, 본문이 중국어로
-		// 고정되어 제목만 바꾸면 대화 안에서 언어가 섞이므로(F7·F8·F12) 함께 보존한다.
-		ctx := "\n\n【本次为定时触发】" + now.Format(" 2006-01-02 15:04:05 MST")
-		sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("定时触发 · %s", now.Format("15:04")), tr.IntervalMessage+ctx, 0, false, "", "")
+		// [F10/F19 boundary · brain input preserved] The trigger context blocks this file's
+		// trigger composers (interval/finding/goal/timeout/create/tool fire* methods) build —
+		// `[This run was triggered by…]` — and trunc's `…(truncated…)` marker are English source
+		// text and are never localized at runtime. They are passed as StartTriggeredRun's message
+		// argument, so they end up both in finalTriggerMessage → ca.Chat as agent input (the
+		// brain) and in the transcript (see the taskContextHeader comment in conversations.go).
+		// The title argument (`Scheduled trigger · …`) never reaches ca.Chat and is display-only,
+		// but it is kept in the same language as the body so a conversation never mixes languages.
+		ctx := "\n\n[This run was triggered by a schedule]" + now.Format(" 2006-01-02 15:04:05 MST")
+		sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("Scheduled trigger · %s", now.Format("15:04")), tr.IntervalMessage+ctx, 0, false, "", "")
 	}
 }
 
@@ -179,10 +180,10 @@ func (sc *Scheduler) fireFindings(triggers []*db.AgentTrigger) {
 		if len(want) == 0 {
 			continue
 		}
-		msgCtx := fmt.Sprintf("\n\n【本次由任务发现 finding 触发】\n发现: [%s/%s] %s",
+		msgCtx := fmt.Sprintf("\n\n[This run was triggered by a finding the task discovered]\nFinding: [%s/%s] %s",
 			e.VulnClass, e.Severity, e.Summary)
 		for _, tr := range want {
-			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("finding 触发 · task#%d", e.TaskID), tr.FindingMessage+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal)
+			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("Finding trigger · task#%d", e.TaskID), tr.FindingMessage+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal)
 		}
 	}
 	_ = sc.pg.SetSchedState(schedKeyLastFinding, strconv.FormatInt(maxID, 10))
@@ -213,9 +214,9 @@ func (sc *Scheduler) fireGoals(triggers []*db.AgentTrigger) {
 		if len(want) == 0 {
 			continue
 		}
-		msgCtx := fmt.Sprintf("\n\n【本次由任务完成目标触发】\n达成目标: %s", e.Summary)
+		msgCtx := fmt.Sprintf("\n\n[This run was triggered by the task meeting a goal]\nGoal met: %s", e.Summary)
 		for _, tr := range want {
-			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("目标触发 · task#%d", e.TaskID), tr.GoalMessage+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal)
+			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("Goal trigger · task#%d", e.TaskID), tr.GoalMessage+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal)
 		}
 	}
 	if changed {
@@ -246,9 +247,9 @@ func (sc *Scheduler) fireTaskTimeouts(triggers []*db.AgentTrigger) {
 		if len(want) == 0 {
 			continue
 		}
-		msgCtx := "\n\n【本次由任务超时触发】"
+		msgCtx := "\n\n[This run was triggered by a task timeout]"
 		for _, tr := range want {
-			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("超时触发 · task#%d", e.TaskID), tr.TaskTimeoutMessage+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal)
+			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("Timeout trigger · task#%d", e.TaskID), tr.TaskTimeoutMessage+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal)
 		}
 	}
 	_ = sc.pg.SetSchedState(schedKeyLastTimeout, strconv.FormatInt(maxID, 10))
@@ -277,9 +278,9 @@ func (sc *Scheduler) fireTaskCreates(triggers []*db.AgentTrigger) {
 		if len(want) == 0 {
 			continue
 		}
-		msgCtx := "\n\n【本次由任务创建触发】"
+		msgCtx := "\n\n[This run was triggered by task creation]"
 		for _, tr := range want {
-			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("任务创建触发 · task#%d", e.TaskID), tr.TaskCreateMessage+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal)
+			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("Task-create trigger · task#%d", e.TaskID), tr.TaskCreateMessage+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal)
 		}
 	}
 	_ = sc.pg.SetSchedState(schedKeyLastTaskCreate, strconv.FormatInt(maxID, 10))
@@ -318,13 +319,13 @@ func (sc *Scheduler) fireToolCalls(triggers []*db.AgentTrigger) {
 		if e.ToolIsErr {
 			errTag = "[error] "
 		}
-		msgCtx := fmt.Sprintf("\n\n【本次由工具调用触发】\n工具: %s\n入参: %s\n返回: %s%s",
+		msgCtx := fmt.Sprintf("\n\n[This run was triggered by a tool call]\nTool: %s\nInput: %s\nResult: %s%s",
 			e.Tool, trunc(e.ToolInput, 1500), errTag, trunc(e.ToolOutput, 1500))
 		for _, tr := range want {
 			if !containsFold(tr.ToolNames, e.Tool) {
 				continue
 			}
-			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("工具触发 · %s · task#%d", e.Tool, e.TaskID), tr.ToolCallMessage+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal)
+			sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("Tool trigger · %s · task#%d", e.Tool, e.TaskID), tr.ToolCallMessage+msgCtx, e.TaskID, true, e.TaskDesc, e.TaskGoal)
 		}
 	}
 	_ = sc.pg.SetSchedState(schedKeyLastToolCall, strconv.FormatInt(maxID, 10))
@@ -346,7 +347,7 @@ func trunc(s string, max int) string {
 	if len(r) <= max {
 		return s
 	}
-	return string(r[:max]) + fmt.Sprintf("…(已截断,共 %d 字)", len(r))
+	return string(r[:max]) + fmt.Sprintf("…(truncated, %d characters total)", len(r))
 }
 
 func (sc *Scheduler) mustState(key string) string {

@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Autumn-27/artex/config"
+	"github.com/yukiteruamano/artex-global/config"
 )
 
 // TestOutputLanguageCacheFollowsSettings pins that the cached output language
@@ -61,21 +61,24 @@ func TestOutputLanguageCacheFollowsSettings(t *testing.T) {
 	if got := s.outputLanguage(); got != "en" {
 		t.Fatalf("default output language = %q, want en", got)
 	}
-	if got := errOf(do(http.MethodPut, "/api/settings", map[string]any{"output_language": "fr"})); got == errOutputLanguageInvalid || got == "" {
-		t.Fatalf("at the en default the error should be translated out of Korean, got %q", got)
+	// At the English default the response is the English source constant itself.
+	if got := errOf(do(http.MethodPut, "/api/settings", map[string]any{"output_language": "fr"})); got != errOutputLanguageInvalid {
+		t.Fatalf("at the en default the error should be the English source %q, got %q", errOutputLanguageInvalid, got)
 	}
 
-	if rec := do(http.MethodPut, "/api/settings", map[string]any{"output_language": "ko"}); rec.Code != http.StatusOK {
-		t.Fatalf("set ko status=%d body=%s", rec.Code, rec.Body.String())
+	// Switch to the only non-default language and check the very next response.
+	if rec := do(http.MethodPut, "/api/settings", map[string]any{"output_language": "es"}); rec.Code != http.StatusOK {
+		t.Fatalf("set es status=%d body=%s", rec.Code, rec.Body.String())
 	}
-	if got := errOf(do(http.MethodPut, "/api/settings", map[string]any{"output_language": "fr"})); got != errOutputLanguageInvalid {
-		t.Fatalf("after switching to ko the error should be the Korean source %q, got %q", errOutputLanguageInvalid, got)
+	const esInvalid = "idioma no admitido (se espera uno de en, es)"
+	if got := errOf(do(http.MethodPut, "/api/settings", map[string]any{"output_language": "fr"})); got != esInvalid {
+		t.Fatalf("after switching to es the error should be the Spanish overlay %q, got %q", esInvalid, got)
 	}
 	var settings struct {
 		OutputLanguage string `json:"output_language"`
 	}
 	_ = json.Unmarshal(do(http.MethodGet, "/api/settings", nil).Body.Bytes(), &settings)
-	if settings.OutputLanguage != "ko" {
-		t.Fatalf("GET /api/settings output_language = %q, want ko", settings.OutputLanguage)
+	if settings.OutputLanguage != "es" {
+		t.Fatalf("GET /api/settings output_language = %q, want es", settings.OutputLanguage)
 	}
 }

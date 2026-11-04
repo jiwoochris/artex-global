@@ -39,6 +39,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { api } from "@/lib/api";
 import type { LLMProfile, Task } from "@/lib/types";
+import { firstNonEmpty } from "@/lib/utils";
 
 import { AssetsTab } from "./_tabs/assets-tab";
 import { BroadcastTab } from "./_tabs/broadcast-tab";
@@ -83,8 +84,8 @@ function TaskLLMControl({ task, profiles, onUpdated }: { task: Task; profiles: L
 
   const chain = taskProfileIDs(task);
   const exhausted = task.llm_failover_state === "chain_exhausted";
-  // 任何状态都可以改链,终态也不例外:任务结束后主 Agent 对话仍走这条链,
-  // 链上模型出问题时必须能换掉,否则已完成任务就没法继续交互。
+  // The chain can be changed in any status, terminal ones included: after a task finishes the main Agent conversation still uses this chain,
+  // so a failing model on the chain must be replaceable, otherwise a completed task can no longer be interacted with.
   const terminal = ["done", "failed", "timeout"].includes(task.status);
   // A null active profile on an exhausted, non-empty chain is a persisted end
   // cursor. Keep the status display honest; choosing the first profile is only
@@ -361,8 +362,11 @@ function TaskDetailInner() {
               <ArrowLeftIcon />
             </Link>
           </Button>
-          <h1 className="min-w-0 flex-1 truncate text-sm font-semibold" title={task.name || task.description}>
-            {task.name || task.description}
+          <h1
+            className="min-w-0 flex-1 truncate text-sm font-semibold"
+            title={firstNonEmpty(task.name, task.description)}
+          >
+            {firstNonEmpty(task.name, task.description)}
           </h1>
           <code className="hidden rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground sm:inline">
             {task.id}

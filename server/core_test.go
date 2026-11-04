@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // TestCoreTaskLifecyclePG exercises the migrated core (tasks/exploration on PG)
@@ -62,7 +62,7 @@ func TestCoreTaskLifecyclePG(t *testing.T) {
 	}
 
 	// create a task → 201, returns PG task (string id + exploration_id)
-	code, out := doRetry("POST", "/api/tasks", map[string]string{"description": "smoke", "goal": "测试 SQLi/XSS"})
+	code, out := doRetry("POST", "/api/tasks", map[string]string{"description": "smoke", "goal": "test SQLi/XSS"})
 	if code != 201 {
 		t.Fatalf("create task: %d (%v)", code, out)
 	}

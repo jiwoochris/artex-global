@@ -11,10 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Autumn-27/artex/agent"
-	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/norma/harness"
 	"github.com/Autumn-27/norma/llm"
+	"github.com/yukiteruamano/artex-global/agent"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 type scriptedLLMProvider struct {
@@ -117,7 +117,9 @@ func TestIsQuotaExhaustedError(t *testing.T) {
 		`billing_hard_limit_reached`,
 		`billing_not_active`,
 		`HTTP status 402 Payment Required`,
-		`账户余额不足，请充值`,
+		// The quota classifiers are English markers; an arrears notice is a newer spelling of
+		// an exhausted account balance that must keep rotating providers.
+		`openai: billing error: account in arrears`,
 		`credit balance is too low`,
 	}
 	for _, message := range positive {

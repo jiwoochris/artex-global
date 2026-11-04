@@ -1,0 +1,86 @@
+name: security
+# Dependency-vulnerability gate (SPEC.md REQ-SEC-11). Two independent scans:
+#
+#   * govulncheck — reachable vulnerabilities in the Go module graph. It fails only when
+#     the code actually reaches a vulnerable symbol; package- and module-level findings are
+#     printed without failing, which is how the known x/crypto/openpgp advisory
+#     (GO-2026-5932, nothing in this repository calls it) stays visible without blocking.
+#   * pnpm audit --prod — production npm dependencies, failing at high/critical. Low and
+#     moderate findings are reported so they cannot age silently; the remaining ones at the
+#     time of writing are a transitive `deepmerge` advisory with no patched release and a
+#     minimatch advisory that `web/pnpm-workspace.yaml` forces to a patched version.
+#
+# It runs on a schedule as well as on dependency changes, so an advisory disclosed later is
+# caught without waiting for somebody to touch a lockfile. The one flaky failure mode is a
+# registry or vulnerability-database hiccup; keeping the schedule separate from the push
+# gate means that never blocks a PR that does not touch dependencies.
+on:
+  schedule:
+    - cron: "47 0 * * 1" # every Monday at 00:47 UTC (an hour after external-links)
+  workflow_dispatch:
+  push:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "web/package.json"
+      - "web/pnpm-lock.yaml"
+      - "web/pnpm-workspace.yaml"
+      - ".github/workflows/security.yml"
+  pull_request:
+    paths:
+      - "go.mod"
+      - "go.sum"
+      - "web/package.json"
+      - "web/pnpm-lock.yaml"
+      - "web/pnpm-workspace.yaml"
+      - ".github/workflows/security.yml"
+
+permissions:
+  contents: read
+
+# A new push to the same branch cancels the previous run.
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  govulncheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      # Pinned tool version: an unpinned scanner makes a red/green change depend on when the
+      # job ran. Bump it deliberately, together with this comment.
+      - name: govulncheck (vulnerabilities reached by this code)
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
+  pnpm-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+      # --prod: only what ships in the image. --audit-level=high: moderate findings are
+      # printed but do not fail the gate (see the note at the top of this file).
+      - name: pnpm audit (production dependencies, high and critical)
+        run: pnpm audit --prod --audit-level=high

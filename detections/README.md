@@ -1,14 +1,7 @@
 # ARTEX detection rules
 
-English · [한국어](README.ko.md)
-
-> 한국어: 이 디렉터리는 [방어·탐지 가이드(docs/defense-ko.md)](../docs/defense-ko.md)의 4절 "탐지 규칙"을
-> 실제로 배포 가능한 [Sigma](https://sigmahq.io) 규칙으로 옮긴 것입니다. 모든 규칙은 자신이 소유하거나 서면
-> 허가를 받은 시스템을 지키는 **방어·탐지 목적에만** 사용하십시오. 한국어 전체 문서는
-> **[detections/README.ko.md](README.ko.md)** 를 보십시오.
-
 Deployable [Sigma](https://sigmahq.io) rules that formalize the pseudo-rules in the defense guide
-([Korean](../docs/defense-ko.md) · [English](../docs/defense-en.md), section 4) into a vendor-neutral
+([defense guide](../docs/defense.md), section 4) into a vendor-neutral
 format you can convert to your own SIEM or EDR query language. Every indicator here is grounded in a
 string or behaviour verified in this repository's source, not inferred.
 
@@ -50,7 +43,7 @@ Static strings can be changed; behaviour is harder to hide. These Sigma **correl
 Thresholds and windows are conservative defaults — tune them to your baseline. The pure web multi-stage
 case in §4.2 (enumerate → probe → authenticate) still needs base rules specific to your environment,
 because that pattern does not reduce to a single ARTEX-unique User-Agent. A generic behavioral Sigma base
-template to start from is provided in [defense guide §4.2](../docs/defense-en.md#42-siem-correlation-rules);
+template to start from is provided in [defense guide §4.2](../docs/defense.md#42-siem-correlation-rules);
 it is kept out of this tested rule tree because it cannot be grounded in ARTEX source.
 
 ## Network rules (Suricata)
@@ -173,9 +166,8 @@ directories name the same suites in the same order); the [host-triage tool](tria
 triage check fires on it while a clean host produces zero findings; and a defense-template consistency
 check ([`tests/check-defense-template.sh`](tests/check-defense-template.sh)) that re-runs the facts the
 defense guide states about its inline Sigma correlation template — `sigma check` passes, it converts on
-splunk/eql/loki, lucene and kusto reject the correlation, and the Korean and English copies carry a
-byte-identical rule body — since that template lives as prose outside this rule tree and no suite would
-otherwise catch it going stale against an upstream sigma-cli.
+splunk/eql/loki, and lucene and kusto reject the correlation — since that template lives as prose outside
+this rule tree and no suite would otherwise catch it going stale against an upstream sigma-cli.
 
 Each script exits non-zero on any failed assertion. See [`tests/README.md`](tests/README.md).
 
@@ -269,4 +261,4 @@ destination table to your environment before deploying.
 Detection and hardening contributions are welcome. New rules should keep every indicator grounded in an
 observable fact, state limitations in the `description`, pass the SigmaHQ validator baseline cleanly
 (`sigma check --validation-config tests/sigma_lint/validators.yml`), and avoid any content that reads as
-attack guidance. See [`../CONTRIBUTING.en.md`](../CONTRIBUTING.en.md).
+attack guidance. See [`../CONTRIBUTING.md`](../CONTRIBUTING.md).

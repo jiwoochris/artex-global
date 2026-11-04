@@ -1,21 +1,11 @@
 # ARTEX indicators (machine-readable)
 
-English · [한국어](README.ko.md)
-
-> 한국어: [`artex_indicators.csv`](artex_indicators.csv) 는 ARTEX 가 실제로 내보내는 고유 지문(침해지표,
-> IoC)을 한 파일로 모은 것입니다. 위협 인텔리전스 플랫폼·SIEM 조회 테이블·호스트 분류 작업에 바로
-> 넣을 수 있게 기계가 읽는 CSV 로 둡니다. 모든 값은 이 저장소 소스에서 확인한 문자열이며, 각 행의
-> 출처 파일과 탐지 규칙을 함께 적습니다. 배경 설명은 [방어·탐지 가이드(docs/defense-ko.md)](../../docs/defense-ko.md)
-> 2절 "방어자가 관측할 수 있는 지문"에 있습니다. 자신이 소유하거나 서면 허가를 받은 시스템을 지키는
-> **방어·탐지 목적에만** 사용하십시오. 한국어 전체 문서는 **[README.ko.md](README.ko.md)** 를
-> 보십시오.
-
 A single, machine-readable list of the unique fingerprints ARTEX itself emits, for defenders who want the
 atomic indicators rather than the detection logic: drop [`artex_indicators.csv`](artex_indicators.csv)
 into a threat-intelligence platform, a SIEM lookup table, or a host-triage checklist. Every value is a
 string verified in this repository's source — the same grounding the
 [detection rules](../README.md) and the defense guide
-([Korean](../../docs/defense-ko.md) · [English](../../docs/defense-en.md), section 2) rely on — and each
+([defense guide](../../docs/defense.md), section 2) rely on — and each
 row records where it comes from and which rule (if any) is built on it.
 
 ## Columns

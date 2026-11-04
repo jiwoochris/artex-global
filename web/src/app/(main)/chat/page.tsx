@@ -134,7 +134,7 @@ function groupByAgent(conversations: Conversation[], nameOf: (agentKey: string) 
   return [...groups.values()];
 }
 
-// LiveBadge is the small pulsing "실시간" chip reused from the task's main-agent
+// LiveBadge is the small pulsing "live" chip reused from the task's main-agent
 // console — shown while a turn is streaming.
 function LiveBadge() {
   const t = useTranslations("chat");
@@ -173,7 +173,7 @@ function Composer({
   running?: boolean;
   onStop?: () => void;
   stopDisabled?: boolean;
-  // 방식1 파일 업로드: onPickFiles 를 넘겨야 클립 버튼 + 첨부 chip 미리 보기를 표시한다.
+  // File upload, variant 1: onPickFiles must be passed for the clip button + attachment preview chips to show.
   attachments?: ChatAttachment[];
   onPickFiles?: (files: File[]) => void;
   onRemoveAttachment?: (path: string) => void;
@@ -183,7 +183,7 @@ function Composer({
   const t = useTranslations("chat");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const atts = attachments ?? [];
-  // 전송 키는 시스템 설정(localStorage)으로 결정하며, 기본값은 Enter 전송이다.
+  // The send key comes from system settings (localStorage); the default is Enter to send.
   const sendMode = useChatSendMode();
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (!shouldSubmitOnKey(e, sendMode)) return;
@@ -227,8 +227,9 @@ function Composer({
               multiple
               className="hidden"
               onChange={(e) => {
-                // FileList 는 input 요소에 live 바인딩되어 있어, 먼저 배열로 스냅샷한 뒤 value 를 비워야 한다.
-                // 그러지 않으면 비동기 onPickFiles(예: 초안 상태에서 먼저 대화를 생성)가 재개될 때 빈 목록을 받는다.
+                // FileList is live-bound to the input element, so snapshot it into an array before
+                // clearing value. Otherwise an async onPickFiles (e.g. one that first creates a
+                // conversation in draft state) resumes with an empty list.
                 const picked = Array.from(e.target.files ?? []);
                 e.target.value = ""; // allow re-picking the same file
                 if (picked.length > 0) onPickFiles(picked);
@@ -473,7 +474,7 @@ function DraftChat({
           <Bot className="text-primary size-6" />
         </div>
         <div className="text-sm font-medium">
-          {t("emptyStart", { agent: agent ? draftLabels.name(agent) : "에이전트" })}
+          {t("emptyStart", { agent: agent ? draftLabels.name(agent) : "agent" })}
         </div>
         {agent && draftLabels.description(agent) && (
           <p className="text-muted-foreground max-w-md text-xs">{draftLabels.description(agent)}</p>
@@ -528,7 +529,7 @@ function ChatView({
   const [input, setInput] = React.useState(initial?.input ?? "");
   const [sending, setSending] = React.useState(false);
   const [stopping, setStopping] = React.useState(false);
-  // 방식1 파일 업로드: 이미 업로드한 첨부(sessions/conv-<id>/uploads/ 에 저장)를 다음 메시지와 함께 보낸다.
+  // File upload, variant 1: send already-uploaded attachments (stored under sessions/conv-<id>/uploads/) with the next message.
   const [attachments, setAttachments] = React.useState<ChatAttachment[]>(initial?.attachments ?? []);
   const [uploading, setUploading] = React.useState(false);
   const cursorRef = React.useRef(0); // newest loaded id — incremental-tail anchor
@@ -724,7 +725,7 @@ function ChatView({
     let li = 0,
       lo = 0,
       lcr = 0;
-    let turns = 0; // 에이전트 반복 횟수 = 모델 호출 횟수(usage 종류 1건당 1회)
+    let turns = 0; // Agent iterations = model calls (one per usage record)
     for (const a of messages) {
       if (a.kind === "result") {
         i += a.input_tokens ?? 0;
@@ -1117,7 +1118,7 @@ export default function ChatPage() {
   const [renameText, setRenameText] = React.useState("");
   const [selectedConversationIds, setSelectedConversationIds] = React.useState<Set<number>>(() => new Set());
   // selectionMode gates the multi-select UI: off by default (clean list, no
-  // checkboxes); the header "다중 선택" button turns it on, "완료" turns it off and
+  // checkboxes); the header "multi-select" button turns it on, "done" turns it off and
   // clears the selection.
   const [selectionMode, setSelectionMode] = React.useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = React.useState(false);
@@ -1232,7 +1233,7 @@ export default function ChatPage() {
   const selected = React.useMemo(() => convs.find((c) => c.id === selectedId) ?? null, [convs, selectedId]);
   const agentByKey = React.useMemo(() => new Map(agents.map((agent) => [agent.key, agent])), [agents]);
   const pageLabels = useAgentLabels();
-  // 대화 그룹·필터 라벨용: key → 표시 이름(기본 에이전트는 번역, 없으면 key).
+  // For conversation group/filter labels: key → display name (built-in agents are translated, otherwise the key).
   const agentNameOf = React.useCallback(
     (key: string) => pageLabels.nameByKey(key, (k) => agentByKey.get(k)),
     [agentByKey, pageLabels],
@@ -1260,7 +1261,7 @@ export default function ChatPage() {
     [visibleConversations, agentNameOf],
   );
   // conversation agents: custom agents + conversational built-ins (role=assistant,
-  // e.g. Auto / 침투 테스트). The orchestration built-ins (goals/planner/mainagent/worker)
+  // e.g. Auto / penetration test). The orchestration built-ins (goals/planner/mainagent/worker)
   // are task-specific and stay hidden from the chat page.
   const chatAgents = React.useMemo(() => agents.filter((a) => !a.builtin || a.role === "assistant"), [agents]);
   const agentFilterOptions = React.useMemo(() => {

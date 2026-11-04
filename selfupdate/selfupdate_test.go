@@ -5,13 +5,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
 
-// testPaths 造一个隔离的升级目录。不能直接用 ResolvePaths()——那会指向测试
-// 二进制本身，一跑就把 go test 的可执行文件改名了。
+// testPaths creates an isolated upgrade directory. ResolvePaths() cannot be used directly — it would point at the test
+// binary itself, and a single run renames the go test executable.
 func testPaths(t *testing.T) Paths {
 	t.Helper()
 	dir := t.TempDir()
@@ -25,13 +24,13 @@ func testPaths(t *testing.T) Paths {
 	}
 }
 
-// fakeBin 写一个可执行的壳脚本冒充 artex。smokeTest 只是用 -h 拉起它看退出码，
-// 脚本完全够用，而且比编译一个真二进制快得多。
+// fakeBin writes an executable shell script that stands in for artex. smokeTest only launches it with -h to check the exit code,
+// so a script is plenty, and far faster than compiling a real binary.
 func fakeBin(t *testing.T, path, marker string, exitCode int) {
 	t.Helper()
 	script := "#!/bin/sh\necho " + marker + "\nexit " + itoa(exitCode) + "\n"
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
-		t.Fatalf("写入假二进制 %s: %v", path, err)
+		t.Fatalf("write fake binary %s: %v", path, err)
 	}
 }
 
@@ -42,16 +41,16 @@ func itoa(n int) string {
 	return string(rune('0' + n))
 }
 
-// stage 把 bin 布置成"已暂存待换装"的样子：写好 artex.new 和它的校验和。
+// stage puts bin into the "staged, waiting to be swapped in" shape: it writes artex.new and its checksum.
 func stage(t *testing.T, p Paths, marker string, exitCode int) {
 	t.Helper()
 	fakeBin(t, p.New, marker, exitCode)
 	sum, err := fileSHA256(p.New)
 	if err != nil {
-		t.Fatalf("计算校验和: %v", err)
+		t.Fatalf("compute checksum: %v", err)
 	}
 	if err := os.WriteFile(p.Sum, []byte(sum), 0o644); err != nil {
-		t.Fatalf("写入校验和: %v", err)
+		t.Fatalf("write checksum: %v", err)
 	}
 }
 
@@ -59,16 +58,9 @@ func readAll(t *testing.T, path string) string {
 	t.Helper()
 	b, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("读取 %s: %v", path, err)
+		t.Fatalf("read %s: %v", path, err)
 	}
 	return string(b)
-}
-
-func requireUnix(t *testing.T) {
-	t.Helper()
-	if runtime.GOOS == "windows" {
-		t.Skip("假二进制用的是 sh 脚本，Windows 上跑不了")
-	}
 }
 
 func TestCompareVersions(t *testing.T) {
@@ -80,11 +72,11 @@ func TestCompareVersions(t *testing.T) {
 		{"0.3.7", "0.3.8", -1, true},
 		{"0.3.8", "0.3.7", 1, true},
 		{"0.3.7", "0.3.7", 0, true},
-		{"v0.3.7", "0.3.8", -1, true}, // build.sh 去掉 v，tag 带 v，两边都要认
+		{"v0.3.7", "0.3.8", -1, true}, // build.sh strips the v, the tag keeps it, both must be accepted
 		{"0.3.7", "v0.3.7", 0, true},
-		{"0.9.0", "0.10.0", -1, true}, // 按数字比而不是字典序
+		{"0.9.0", "0.10.0", -1, true}, // compared numerically, not lexicographically
 		{"1.0.0", "0.99.99", 1, true},
-		// 开发构建必须判为不可比较，否则会被正式版覆盖掉未提交的改动。
+		// a dev build must be judged incomparable, otherwise a release would overwrite the uncommitted changes.
 		{"dev", "0.3.8", 0, false},
 		{"0.3.7-2-gabc1234", "0.3.8", 0, false},
 		{"0.3.7-dirty", "0.3.8", 0, false},
@@ -94,11 +86,11 @@ func TestCompareVersions(t *testing.T) {
 	for _, c := range cases {
 		got, ok := CompareVersions(c.a, c.b)
 		if ok != c.comparable {
-			t.Errorf("CompareVersions(%q,%q) comparable=%v, 期望 %v", c.a, c.b, ok, c.comparable)
+			t.Errorf("CompareVersions(%q,%q) comparable=%v, want %v", c.a, c.b, ok, c.comparable)
 			continue
 		}
 		if ok && got != c.want {
-			t.Errorf("CompareVersions(%q,%q)=%d, 期望 %d", c.a, c.b, got, c.want)
+			t.Errorf("CompareVersions(%q,%q)=%d, want %d", c.a, c.b, got, c.want)
 		}
 	}
 }
@@ -108,167 +100,154 @@ func TestResolvePathsNaming(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolvePaths: %v", err)
 	}
-	// 关键不变量：所有升级文件都和可执行文件同目录。落到 CWD 会让服务化运行
-	// （工作目录可能是 /）时的换装彻底失效。
+	// key invariant: every update file sits in the same directory as the executable. Landing in the CWD breaks the swap
+	// for service deployments (the working directory may be /) outright.
 	for name, path := range map[string]string{"New": p.New, "Sum": p.Sum, "Old": p.Old, "Marker": p.Marker} {
 		if filepath.Dir(path) != p.Dir {
-			t.Errorf("%s 不在可执行文件目录下: %s (期望 %s)", name, path, p.Dir)
-		}
-	}
-	// Windows 上 .new/.old 必须保留 .exe，否则冒烟测试和换装后的执行都会失败。
-	if runtime.GOOS == "windows" {
-		if !strings.HasSuffix(p.New, ".exe") || !strings.HasSuffix(p.Old, ".exe") {
-			t.Errorf("Windows 上 .new/.old 必须以 .exe 结尾: new=%s old=%s", p.New, p.Old)
+			t.Errorf("%s is not in the executable directory: %s (want %s)", name, path, p.Dir)
 		}
 	}
 }
 
 func TestVerifyStagedRejectsTamperedBinary(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	stage(t, p, "new", 0)
 
-	// 校验和写好之后再改动文件，模拟下载损坏 / 被掉包。
+	// modify the file after the checksum is written, simulating a corrupt download / tampering.
 	fakeBin(t, p.New, "tampered", 0)
 	if err := verifyStaged(p); err == nil {
-		t.Fatal("期望 SHA256 不匹配被拒绝，却通过了")
+		t.Fatal("expected the SHA256 mismatch to be rejected, but it passed")
 	}
 }
 
 func TestVerifyStagedRejectsUnrunnableBinary(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
-	stage(t, p, "broken", 1) // 能执行但退出码非 0
+	stage(t, p, "broken", 1) // runnable but exits with a non-zero code
 
 	if err := verifyStaged(p); err == nil {
-		t.Fatal("期望冒烟测试失败被拒绝，却通过了")
+		t.Fatal("expected the smoke test failure to be rejected, but it passed")
 	}
 }
 
 func TestApplyStagedHappyPath(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "old", 0)
 	stage(t, p, "new", 0)
 	if err := writeMarker(p.Marker, marker{From: "0.3.7", To: "0.3.8"}); err != nil {
-		t.Fatalf("写标记: %v", err)
+		t.Fatalf("write marker: %v", err)
 	}
 
 	action, st := applyStaged(p)
 	if action != Restart {
-		t.Fatalf("期望 Restart，得到 %v", action)
+		t.Fatalf("expected Restart, got %v", action)
 	}
 	if !st.Pending {
-		t.Error("换装后状态应为 Pending")
+		t.Error("the state should be Pending after the swap")
 	}
 	if !strings.Contains(readAll(t, p.Current), "new") {
-		t.Error("artex 应已被替换为新版本")
+		t.Error("artex should have been replaced with the new version")
 	}
 	if !strings.Contains(readAll(t, p.Old), "old") {
-		t.Error("旧版本应备份到 artex.old")
+		t.Error("the old version should be backed up to artex.old")
 	}
 	if _, err := os.Stat(p.New); !os.IsNotExist(err) {
-		t.Error("换装后 artex.new 应已消失")
+		t.Error("artex.new should be gone after the swap")
 	}
 	if _, err := os.Stat(p.Sum); !os.IsNotExist(err) {
-		t.Error("换装后校验和文件应已清理")
+		t.Error("the checksum file should be cleaned up after the swap")
 	}
-	// 标记必须留着，下一次启动（跑的是新版）靠它计数、必要时回滚。
+	// the marker must stay: the next start (running the new version) counts on it and rolls back if needed.
 	if _, ok := readMarker(p.Marker); !ok {
-		t.Error("换装后升级标记应保留")
+		t.Error("the update marker should be kept after the swap")
 	}
 }
 
 func TestApplyStagedKeepsCurrentWhenVerifyFails(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "old", 0)
 	stage(t, p, "new", 0)
-	fakeBin(t, p.New, "tampered", 0) // 破坏校验和
+	fakeBin(t, p.New, "tampered", 0) // break the checksum
 
 	action, st := applyStaged(p)
 	if action != Continue {
-		t.Fatalf("校验失败时期望 Continue，得到 %v", action)
+		t.Fatalf("expected Continue on checksum failure, got %v", action)
 	}
 	if !st.FailedStage {
-		t.Error("状态应标记为 FailedStage")
+		t.Error("the state should be marked FailedStage")
 	}
 	if !strings.Contains(readAll(t, p.Current), "old") {
-		t.Fatal("校验失败时绝不能动当前版本")
+		t.Fatal("the current version must never be touched when the checksum fails")
 	}
 	if _, err := os.Stat(p.New); !os.IsNotExist(err) {
-		t.Error("校验失败的暂存件应被清理，否则下次启动会再试一遍")
+		t.Error("the staged file that failed verification should be cleaned up, otherwise the next start retries it")
 	}
 }
 
 func TestSwapOverwritesPreviousBackup(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "v2", 0)
-	fakeBin(t, p.Old, "v1", 0) // 上一轮升级留下的备份
+	fakeBin(t, p.Old, "v1", 0) // backup left over from the previous update
 	stage(t, p, "v3", 0)
 
 	if err := swap(p); err != nil {
 		t.Fatalf("swap: %v", err)
 	}
 	if !strings.Contains(readAll(t, p.Current), "v3") {
-		t.Error("应换装到 v3")
+		t.Error("should have swapped in v3")
 	}
 	if !strings.Contains(readAll(t, p.Old), "v2") {
-		t.Error("备份应更新为刚被换下的 v2")
+		t.Error("the backup should be updated to the v2 that was just swapped out")
 	}
 }
 
 func TestConfirmCountsAttemptsThenRollsBack(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "broken-new", 0)
 	fakeBin(t, p.Old, "good-old", 0)
 	m := marker{From: "0.3.7", To: "0.3.8"}
 
-	// 前 maxAttempts 次启动只累计计数，让新版有机会自己站稳。
+	// the first maxAttempts starts only count attempts, giving the new version a chance to prove itself.
 	for i := 1; i <= maxAttempts; i++ {
 		action, st := confirmOrRollback(p, m)
 		if action != Continue {
-			t.Fatalf("第 %d 次尝试期望 Continue，得到 %v", i, action)
+			t.Fatalf("expected Continue on attempt %d, got %v", i, action)
 		}
 		if !st.Pending {
-			t.Errorf("第 %d 次尝试状态应为 Pending", i)
+			t.Errorf("the state on attempt %d should be Pending", i)
 		}
 		got, ok := readMarker(p.Marker)
 		if !ok || got.Attempts != i {
-			t.Fatalf("第 %d 次尝试后 attempts=%d（ok=%v），期望 %d", i, got.Attempts, ok, i)
+			t.Fatalf("after attempt %d attempts=%d (ok=%v), want %d", i, got.Attempts, ok, i)
 		}
 		m = got
 	}
 
-	// 再崩一次就超限，自动把旧版换回来。
+	// one more crash exceeds the limit and automatically swaps the old version back.
 	action, st := confirmOrRollback(p, m)
 	if action != Restart {
-		t.Fatalf("超过尝试上限时期望 Restart，得到 %v", action)
+		t.Fatalf("expected Restart once the attempt limit is exceeded, got %v", action)
 	}
 	if !st.RolledBack {
-		t.Error("状态应标记为 RolledBack")
+		t.Error("the state should be marked RolledBack")
 	}
 	if !strings.Contains(readAll(t, p.Current), "good-old") {
-		t.Fatal("应已回滚到旧版本")
+		t.Fatal("should have rolled back to the old version")
 	}
 	if _, err := os.Stat(p.Marker); !os.IsNotExist(err) {
-		t.Error("回滚后标记应清除，否则会无限回滚")
+		t.Error("the marker should be cleared after a rollback, otherwise it rolls back forever")
 	}
-	// 起不来的那个版本留作排查，不直接删。
+	// the version that would not start is kept for investigation, not deleted.
 	if _, err := os.Stat(p.Current + ".failed"); err != nil {
-		t.Error("失败的版本应保留为 .failed 供排查")
+		t.Error("the failed version should be kept as .failed for investigation")
 	}
 }
 
 func TestManualRollbackIsReversible(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "v2", 0)
 	fakeBin(t, p.Old, "v1", 0)
 
-	// Rollback() 走 ResolvePaths()，这里直接测底层的交换语义。
+	// Rollback() goes through ResolvePaths(), so the low-level swap semantics are tested directly here.
 	tmp := p.Current + ".swap"
 	if err := os.Rename(p.Current, tmp); err != nil {
 		t.Fatal(err)
@@ -280,42 +259,39 @@ func TestManualRollbackIsReversible(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(readAll(t, p.Current), "v1") {
-		t.Error("回滚后当前版本应是 v1")
+		t.Error("the current version should be v1 after the rollback")
 	}
 	if !strings.Contains(readAll(t, p.Old), "v2") {
-		t.Error("回滚后备份应变成 v2，这样还能再滚回去")
+		t.Error("the backup should become v2 after the rollback, so it can still roll back again")
 	}
 }
 
 func TestParseSums(t *testing.T) {
 	const (
-		linuxSum = "1111111111111111111111111111111111111111111111111111111111111111"
-		winSum   = "ABCDEF0000000000000000000000000000000000000000000000000000000000"
+		amd64Sum = "1111111111111111111111111111111111111111111111111111111111111111"
+		arm64Sum = "ABCDEF0000000000000000000000000000000000000000000000000000000000"
 	)
-	// sha256sum 输出是双空格分隔；shasum -a 256 在二进制模式下会给文件名加 *。
-	raw := linuxSum + "  artex-0.3.8-linux-amd64.zip\n" +
-		winSum + " *artex-0.3.8-windows-amd64.zip\n" +
+	// sha256sum output is separated by two spaces; shasum -a 256 prefixes the filename with * in binary mode.
+	raw := amd64Sum + "  artex-0.3.8-linux-amd64.zip\n" +
+		arm64Sum + " *artex-0.3.8-linux-arm64.zip\n" +
 		"\n" +
-		"garbage line\n" + // 恰好两个字段，但第一个不是摘要
-		"deadbeef  artex-0.3.8-darwin-arm64.zip\n" // 摘要长度不对
+		"garbage line\n" + // exactly two fields, but the first is not a digest
+		"deadbeef  artex-0.3.8-linux-riscv64.zip\n" // digest length is wrong
 
 	out := parseSums(raw)
-	if out["artex-0.3.8-linux-amd64.zip"] != linuxSum {
-		t.Errorf("linux 条目解析错误: %v", out)
+	if out["artex-0.3.8-linux-amd64.zip"] != amd64Sum {
+		t.Errorf("wrong parse for the amd64 entry: %v", out)
 	}
-	// 摘要统一小写，比对时才不会因大小写误判为不匹配。
-	if got := out["artex-0.3.8-windows-amd64.zip"]; got != strings.ToLower(winSum) {
-		t.Errorf("windows 条目错误（* 前缀应剥离、摘要应转小写）: %q", got)
+	// digests are lowercased so comparison never reports a case-only mismatch.
+	if got := out["artex-0.3.8-linux-arm64.zip"]; got != strings.ToLower(arm64Sum) {
+		t.Errorf("wrong arm64 entry (the * prefix should be stripped, the digest lowercased): %q", got)
 	}
 	if len(out) != 2 {
-		t.Errorf("应忽略空行、非摘要行和长度不对的行，得到 %v", out)
+		t.Errorf("empty lines, non-digest lines and wrong-length lines should be ignored, got %v", out)
 	}
 }
 
 func TestExtractBinaryFindsNestedEntry(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("包内基名在 Windows 上是 artex.exe，此用例按 Unix 命名构造")
-	}
 	dir := t.TempDir()
 	zipPath := filepath.Join(dir, "release.zip")
 
@@ -324,7 +300,7 @@ func TestExtractBinaryFindsNestedEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 	zw := zip.NewWriter(f)
-	// 真实发布包的结构：artex-<版本>-<os>-<arch>/artex，外加若干干扰文件。
+	// layout of a real release archive: artex-<version>-<os>-<arch>/artex plus a few decoy files.
 	for name, body := range map[string]string{
 		"artex-0.3.8-linux-amd64/README.md":           "readme",
 		"artex-0.3.8-linux-amd64/skills/a.md":         "skill",
@@ -349,14 +325,14 @@ func TestExtractBinaryFindsNestedEntry(t *testing.T) {
 		t.Fatalf("extractBinary: %v", err)
 	}
 	if got := readAll(t, dst); !strings.Contains(got, "exit 0") {
-		t.Errorf("解压出来的不是 artex 可执行文件: %q", got)
+		t.Errorf("what was extracted is not the artex executable: %q", got)
 	}
 	info, err := os.Stat(dst)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if info.Mode().Perm()&0o111 == 0 {
-		t.Error("解压出的二进制必须带执行位")
+		t.Error("the extracted binary must carry the execute bit")
 	}
 }
 
@@ -374,43 +350,43 @@ func TestExtractBinaryMissingEntry(t *testing.T) {
 	f.Close()
 
 	if err := extractBinary(zipPath, filepath.Join(dir, "out")); err == nil {
-		t.Fatal("包内没有可执行文件时应报错")
+		t.Fatal("it should error when the archive holds no executable")
 	}
 }
 
 func TestCheckURLRejectsNonGitHub(t *testing.T) {
 	bad := []string{
-		"http://github.com/x",           // 非 HTTPS
-		"https://evil.com/artex.zip",    // 域名不在白名单
-		"https://github.com.evil.com/x", // 后缀伪装
+		"http://github.com/x",           // not HTTPS
+		"https://evil.com/artex.zip",    // domain not in the allowlist
+		"https://github.com.evil.com/x", // suffix spoofing
 		"https://raw.githubusercontent.com.evil.com/x",
 	}
 	for _, raw := range bad {
 		u := mustParse(t, raw)
 		if err := checkURL(u); err == nil {
-			t.Errorf("checkURL(%q) 应当拒绝", raw)
+			t.Errorf("checkURL(%q) should be rejected", raw)
 		}
 	}
 	good := []string{
 		"https://api.github.com/repos/x/releases/latest",
 		"https://objects.githubusercontent.com/blah",
-		"https://GitHub.com/x", // 域名大小写不敏感
+		"https://GitHub.com/x", // domain matching is case-insensitive
 	}
 	for _, raw := range good {
 		u := mustParse(t, raw)
 		if err := checkURL(u); err != nil {
-			t.Errorf("checkURL(%q) 应当放行，却报错: %v", raw, err)
+			t.Errorf("checkURL(%q) should pass, but it errored: %v", raw, err)
 		}
 	}
 }
 
 func TestAssetNameMatchesBuildScript(t *testing.T) {
-	// build.sh 的 package_binary 用的是 artex-<版本>-<os>-<arch>.zip，且版本号
-	// 去掉了 v 前缀。这里对错一个字符，所有平台的一键更新都会找不到资产。
+	// build.sh's package_binary uses artex-<version>-<os>-<arch>.zip, and the version number
+	// drops the v prefix. One wrong character here and one-click update finds no asset.
 	if got := AssetName("v0.3.8", "linux", "amd64"); got != "artex-0.3.8-linux-amd64.zip" {
 		t.Errorf("AssetName = %q", got)
 	}
-	if got := AssetName("0.3.8", "windows", "amd64"); got != "artex-0.3.8-windows-amd64.zip" {
+	if got := AssetName("0.3.8", "linux", "arm64"); got != "artex-0.3.8-linux-arm64.zip" {
 		t.Errorf("AssetName = %q", got)
 	}
 }
@@ -419,13 +395,12 @@ func mustParse(t *testing.T, raw string) *url.URL {
 	t.Helper()
 	u, err := url.Parse(raw)
 	if err != nil {
-		t.Fatalf("解析 %q: %v", raw, err)
+		t.Fatalf("parse %q: %v", raw, err)
 	}
 	return u
 }
 
 func TestSettleClearsMarkerAndStopsRollback(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "new", 0)
 	fakeBin(t, p.Old, "old", 0)
@@ -436,24 +411,23 @@ func TestSettleClearsMarkerAndStopsRollback(t *testing.T) {
 	settle(p)
 
 	if _, err := os.Stat(p.Marker); !os.IsNotExist(err) {
-		t.Fatal("确认稳定后升级标记必须清除")
+		t.Fatal("the update marker must be cleared once the build is confirmed stable")
 	}
-	// 标记没了，后续正常重启就不会再累计次数、也不会误触发回滚。
+	// with the marker gone, later normal restarts no longer count attempts and cannot trigger a spurious rollback.
 	if _, ok := readMarker(p.Marker); ok {
-		t.Error("标记读取应失败")
+		t.Error("reading the marker should fail")
 	}
-	// 备份要留着，用户还能手动回滚。
+	// the backup is kept so the user can still roll back by hand.
 	if _, err := os.Stat(p.Old); err != nil {
-		t.Error("确认稳定后仍应保留上一版本备份")
+		t.Error("the previous version backup should be kept after being confirmed stable")
 	}
 }
 
 func TestSettleIsNoopWithoutMarker(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "cur", 0)
-	settle(p) // 普通启动路径，不该 panic 也不该动任何文件
+	settle(p) // normal start path: must not panic and must not touch any file
 	if _, err := os.Stat(p.Current); err != nil {
-		t.Error("无标记时 settle 不应影响任何文件")
+		t.Error("settle should not affect any file when there is no marker")
 	}
 }

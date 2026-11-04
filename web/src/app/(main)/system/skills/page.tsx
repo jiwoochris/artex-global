@@ -200,7 +200,7 @@ function SkillsOverview({
         <p className="text-muted-foreground text-sm">{t("overviewDesc")}</p>
       </div>
 
-      {/* 指标卡 */}
+      {/* Metric cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map((s) => (
           <div key={s.label} className="rounded-lg border p-3">
@@ -211,7 +211,7 @@ function SkillsOverview({
         ))}
       </div>
 
-      {/* 调用排行 */}
+      {/* Invocation ranking */}
       <div className="space-y-2">
         <Label className="text-xs text-muted-foreground">{t("ranking")}</Label>
         {agg.ranked.length === 0 ? (
@@ -246,7 +246,7 @@ function SkillsOverview({
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2">
-        {/* 最近调用 */}
+        {/* Recent invocations */}
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">{t("recent")}</Label>
           {agg.recent.length === 0 ? (
@@ -272,7 +272,7 @@ function SkillsOverview({
           )}
         </div>
 
-        {/* 未使用（可清理 / 需曝光） */}
+        {/* Unused (safe to prune / needs exposure) */}
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">
             {t("unusedSkills")}
@@ -343,8 +343,9 @@ export default function SkillsPage() {
   const [pendingDelete, setPendingDelete] = React.useState<PendingDelete>(null);
   const [deleting, setDeleting] = React.useState(false);
 
-  // 调用统计：列表页的次数/最近调用随 api.skills() 一起回来；选中某个 skill 时再拉它的
-  // 最近调用明细。missing = 被点名但不存在的 skill（想用但没有）。
+  // Invocation stats: the list page's counts/last-used come back with api.skills(); selecting a
+  // skill then loads its recent invocation detail. missing = skills that were requested but do
+  // not exist (wanted, but absent).
   const [usageCalls, setUsageCalls] = React.useState<SkillCall[]>([]);
   const [usageLoading, setUsageLoading] = React.useState(false);
   const [missing, setMissing] = React.useState<MissingSkill[]>([]);
@@ -355,19 +356,19 @@ export default function SkillsPage() {
       .agents()
       .then(setAgents)
       .catch(() => {
-        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+        /* Ignore the fetch failure and keep the default state */
       });
     api
       .mcpServers()
       .then(setMcpOptions)
       .catch(() => {
-        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+        /* Ignore the fetch failure and keep the default state */
       });
     api
       .missingSkills()
       .then(setMissing)
       .catch(() => {
-        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+        /* Ignore the fetch failure and keep the default state */
       });
     api
       .skills()
@@ -378,12 +379,12 @@ export default function SkillsPage() {
             .skillVisibility(s.name)
             .then((ids) => setVisibility((v) => ({ ...v, [s.name]: ids })))
             .catch(() => {
-              /* 가시성 조회 실패는 무시한다 */
+              /* Ignore the visibility fetch failure */
             });
         });
       })
       .catch(() => {
-        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+        /* Ignore the fetch failure and keep the default state */
       });
   }, []);
 
@@ -400,8 +401,8 @@ export default function SkillsPage() {
       load();
     } catch (e) {
       const msg = (e as Error).message;
-      // offer overwrite when the skill already exists (server_mgmt.go 가 409 로 응답).
-      // 문구는 표시 언어에 따라 달라지므로 status 로 판정한다.
+      // offer overwrite when the skill already exists (server_mgmt.go answers 409).
+      // The message depends on the display language, so decide on status instead.
       if (!overwrite && e instanceof ApiError && e.status === 409) {
         if (window.confirm(t("overwriteConfirm", { msg }))) {
           await uploadZip(file, true);
@@ -831,7 +832,7 @@ export default function SkillsPage() {
           <h1 className="text-sm font-semibold leading-tight">{t("title")}</h1>
           <p className="text-muted-foreground text-xs">{t("subtitle")}</p>
         </div>
-        {/* 缺口清单：agent 点名调用、但库里没有的 skill —— 直接是该补什么的依据。 */}
+        {/* Gap list: skills agents asked for that are not in the library — a direct list of what to add. */}
         {missing.length > 0 && (
           <Popover>
             <PopoverTrigger asChild>
@@ -862,7 +863,7 @@ export default function SkillsPage() {
         )}
       </div>
       <div className="flex flex-1 overflow-hidden">
-        {/* ── 左侧文件树 ── */}
+        {/* ── Left: file tree ── */}
         <div className="flex w-64 shrink-0 flex-col border-r">
           <div className="flex flex-col gap-2 border-b p-2">
             <Button size="sm" variant="outline" className="w-full" onClick={() => setNewOpen(true)}>
@@ -899,7 +900,7 @@ export default function SkillsPage() {
                 const isSkillSelected = selected?.skill === s.name && selected.path === null;
                 return (
                   <div key={s.name}>
-                    {/* skill 根节点 */}
+                    {/* skill root node */}
                     <div
                       role="treeitem"
                       tabIndex={0}
@@ -985,7 +986,7 @@ export default function SkillsPage() {
                       </span>
                     </div>
 
-                    {/* 展开：递归文件树 */}
+                    {/* Expanded: recursive file tree */}
                     {isOpen && (
                       <>
                         {renderTree(tree, s.name, 0)}
@@ -1001,7 +1002,7 @@ export default function SkillsPage() {
           </ScrollArea>
         </div>
 
-        {/* ── 右侧面板 ── */}
+        {/* ── Right panel ── */}
         <div className="flex flex-1 flex-col overflow-auto p-4">
           {!selected && (
             <SkillsOverview
@@ -1032,11 +1033,12 @@ export default function SkillsPage() {
                 </div>
               </div>
 
-              {/* 左右分栏：配置（MCP/可见性）在左为主，调用统计在右为辅。
-                  lg 以下放不下时用 flex-row-reverse 回落到单列——统计因 DOM 顺序在前，
-                  窄屏时自然落到配置上方（与改版前的上下顺序一致）。 */}
+              {/* Two columns: configuration (MCP/visibility) on the left as primary, invocation
+                  stats on the right as secondary. Below lg it falls back to one column via
+                  flex-row-reverse — stats come first in DOM order, so on narrow screens they
+                  land above configuration (same top/bottom order as before the redesign). */}
               <div className="flex flex-col gap-6 lg:flex-row-reverse lg:items-start">
-                {/* ── 右侧：调用统计 ── */}
+                {/* ── Right: invocation stats ── */}
                 <div className="space-y-2 lg:w-80 lg:shrink-0">
                   <Label className="text-xs text-muted-foreground">{t("callStats")}</Label>
                   <div className="grid grid-cols-3 gap-2">
@@ -1099,7 +1101,7 @@ export default function SkillsPage() {
                   )}
                 </div>
 
-                {/* ── 左侧：关联 MCP + 可见性 ── */}
+                {/* ── Left: linked MCP + visibility ── */}
                 <div className="space-y-5 lg:min-w-0 lg:flex-1">
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">
@@ -1170,7 +1172,7 @@ export default function SkillsPage() {
         </div>
       </div>
 
-      {/* ── 删除二次确认 ── */}
+      {/* ── Delete confirmation ── */}
       <AlertDialog
         open={!!pendingDelete}
         onOpenChange={(o) => {
@@ -1207,7 +1209,7 @@ export default function SkillsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── 新建 Skill 对话框 ── */}
+      {/* ── New skill dialog ── */}
       <Sheet open={newOpen} onOpenChange={setNewOpen}>
         <SheetContent side="right" className="flex w-full flex-col gap-0 data-[side=right]:sm:max-w-xl">
           <SheetHeader className="px-4 pt-4">
@@ -1234,7 +1236,7 @@ export default function SkillsPage() {
               </TabsTrigger>
             </TabsList>
 
-            {/* 基本信息 */}
+            {/* Basic information */}
             <TabsContent
               value="basic"
               className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4 pt-4 data-[state=inactive]:hidden"
@@ -1296,7 +1298,7 @@ export default function SkillsPage() {
               </div>
             </TabsContent>
 
-            {/* 关联 MCP */}
+            {/* Linked MCP */}
             <TabsContent value="mcp" className="overflow-y-auto px-4 pb-4 pt-4 data-[state=inactive]:hidden">
               <p className="mb-3 text-xs text-muted-foreground">{t("mcpSheetHint")}</p>
               {mcpOptions.length === 0 ? (
@@ -1318,7 +1320,7 @@ export default function SkillsPage() {
               )}
             </TabsContent>
 
-            {/* 可见性 */}
+            {/* Visibility */}
             <TabsContent value="visibility" className="overflow-y-auto px-4 pb-4 pt-4 data-[state=inactive]:hidden">
               <p className="mb-3 text-xs text-muted-foreground">{t("visSheetHint")}</p>
               {agents.length === 0 ? (

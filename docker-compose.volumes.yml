@@ -1,0 +1,24 @@
+# Opt-in overlay: keep data and skills in named Docker volumes instead of the
+# host bind mounts used by the default stack.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.volumes.yml up -d
+#
+# What changes: nothing on the host is writable by the agent, and no ownership step is
+# needed. What you lose: direct access from the host — inspect or copy with
+# `docker compose cp` / `docker run --rm`.
+#
+# docs/docker.md §5 explains the tradeoff between the two storage modes.
+services:
+  artex:
+    # The named volumes are seeded from the image, whose /app/data and /app/skills belong to
+    # uid 10001. Pin that id here: the ARTEX_UID override in docker-compose.yml exists only so
+    # host bind mounts can be owned by the invoking user, and combining it with volumes would
+    # leave the container unable to write its own volume.
+    user: "10001:10001"
+    volumes:
+      - artex_data:/app/data
+      - artex_skills:/app/skills
+
+volumes:
+  artex_data:
+  artex_skills:

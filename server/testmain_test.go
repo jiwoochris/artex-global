@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Autumn-27/artex/db"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // TestMain acquires a PostgreSQL advisory lock (7337741002) for the entire
@@ -22,16 +22,15 @@ func TestMain(m *testing.M) {
 	// when it fires inside a later test's window it claims that test's
 	// deliveries out of band and corrupts the exact per-delivery attempt
 	// accounting. That is what made TestNotifyDeliveriesHistoryAndRetry flake
-	// intermittently ("重试耗尽后应为 failed，得到 pending"). No test asserts on the
+	// intermittently ("should be failed after retries are exhausted, got pending"). No test asserts on the
 	// background loop itself, so disable it suite-wide for determinism; the
 	// loop's dispatch is covered through direct stepRealtime/stepDigest calls.
 	os.Setenv(notifyBackgroundDisabledEnv, "1")
-	// The server suite verifies the Korean localization of user-facing output,
-	// so pin the default output language to Korean for the whole test binary.
-	// Production defaults to English (config.DefaultLanguage); individual tests
-	// that need another language set it explicitly (t.Setenv / the settings table).
-	os.Setenv("ARTEX_LANG", "ko")
-
+	// The server suite verifies the English source text of user-facing output, so pin
+	// the default output language to English (config.DefaultLanguage) for the whole test
+	// binary. Individual tests that need the Spanish overlay set it explicitly
+	// (t.Setenv / config.CurrentLanguage / the settings table).
+	os.Setenv("ARTEX_LANG", "en")
 
 	dsn, _, err := db.DSN()
 	if err != nil {

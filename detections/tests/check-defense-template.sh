@@ -2,11 +2,10 @@
 #
 # Documentation-claim consistency gate for the inline Sigma correlation template
 # in the defense guide (see check-defense-template.py for the assertions). It
-# proves the four present-tense facts docs/defense-{ko,en}.md state about their
-# base template — `sigma check` passes with zero errors, the correlation converts
-# on splunk/eql/loki, and lucene/kusto reject it with "Backend does not support
-# correlation rules" — and that the two languages carry a byte-identical Sigma rule
-# body. The template lives as prose outside detections/sigma/ on purpose (it is a
+# proves the three present-tense facts docs/defense.md states about its base
+# template — `sigma check` passes with zero errors, the correlation converts on
+# splunk/eql/loki, and lucene/kusto reject it with "Backend does not support
+# correlation rules". The template lives as prose outside detections/sigma/ on purpose (it is a
 # generic behavioural rule, not grounded in ARTEX source), so no suite re-ran those
 # claims; an upstream sigma-cli or backend change could make the prose silently
 # false. This gate closes that gap.
@@ -18,7 +17,7 @@
 # counts it.
 #
 # No host dependency beyond Docker: the pinned sigma-cli and its four backends are
-# installed inside the container, the two defense guides are mounted read-only, and
+# installed inside the container, the defense guide is mounted read-only, and
 # the extracted YAML is written only under the container's /tmp — nothing is
 # installed on the host and nothing is written to the repo tree. The version and
 # image overrides are inherited from the environment, matching the detection

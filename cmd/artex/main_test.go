@@ -3,13 +3,14 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
-	"strings"
+	"runtime"
 	"testing"
 	"unicode"
 
-	"github.com/Autumn-27/artex/agent"
+	"github.com/yukiteruamano/artex-global/agent"
 )
 
 func TestShutdownContextPreservesNamedCause(t *testing.T) {
@@ -23,31 +24,24 @@ func TestShutdownContextPreservesNamedCause(t *testing.T) {
 	}
 }
 
-// TestPrintBannerLocalized verifies that the startup banner printed to stdout is
-// Korean and carries no leftover CJK Han characters. This is the first thing a
-// user sees when running ARTEX, so it must not stay in Chinese (backlog F11).
-// The "[config] ..." log lines in run() are intentionally out of scope — they
-// are logs, which the localization brief ranks lowest (backlog Z2).
+// TestPrintBannerLocalized pins the startup banner printed to stdout to its exact
+// English text. This is the first thing a user sees when running ARTEX, so its
+// wording and layout must not drift, and no stale Korean or Chinese translation may
+// come back (backlog F11). The "[config] ..." log lines in run() are intentionally
+// out of scope — they are logs, which the localization brief ranks lowest (backlog Z2).
 func TestPrintBannerLocalized(t *testing.T) {
 	out := captureStdout(t, func() { printBanner(":8787") })
-	t.Logf("배너 샘플:\n%s", out)
+	t.Logf("banner sample:\n%s", out)
 
-	hasHangul := strings.ContainsFunc(out, func(r rune) bool {
-		return unicode.Is(unicode.Hangul, r)
-	})
-	if !hasHangul {
-		t.Fatalf("배너에 한글이 없다: %q", out)
-	}
-
-	for _, want := range []string{"자율 침투 테스트 시스템", "버전", "수신 대기", ":8787"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("배너에 %q 가 없다: %q", want, out)
-		}
+	want := banner + fmt.Sprintf("  AI Autonomous Penetration Testing System\n  version %s  ·  %s/%s  ·  %s  ·  listening on %s\n\n",
+		version, runtime.GOOS, runtime.GOARCH, runtime.Version(), ":8787")
+	if out != want {
+		t.Errorf("banner text drifted:\nwant %q\n got %q", want, out)
 	}
 
 	for _, r := range out {
-		if unicode.Is(unicode.Han, r) {
-			t.Errorf("배너에 CJK 한자 잔재(%q): %q", r, out)
+		if unicode.Is(unicode.Hangul, r) || unicode.Is(unicode.Han, r) {
+			t.Errorf("banner has leftover %q (a stale translation leaked back): %q", r, out)
 		}
 	}
 }

@@ -10,23 +10,23 @@ import (
 )
 
 // TestWorkspaceErrorConstantsLocalized guards F3b (workspace.go): every user-facing
-// error string the workspace file manager hands back must be Korean (Hangul present,
-// no Chinese Han). Reverting any literal to Chinese fails this test. The constants
-// are DB-independent, so this always runs (no postgres needed).
+// error string the workspace file manager hands back is its exact English source text.
+// Reverting any literal to another language fails this test. The constants are
+// DB-independent, so this always runs (no postgres needed).
 func TestWorkspaceErrorConstantsLocalized(t *testing.T) {
-	for label, msg := range map[string]string{
-		"illegalPath":      errWsIllegalPath,
-		"pathNotFound":     errWsPathNotFound,
-		"notDir":           errWsNotDir,
-		"fileNotFound":     errWsFileNotFound,
-		"isDir":            errWsIsDir,
-		"targetIsDir":      errWsTargetIsDir,
-		"cannotDeleteRoot": errWsCannotDeleteRoot,
-		"uploadDirMissing": errWsUploadDirMissing,
-		"uploadParse":      errWsUploadParse,
-		"noUploadFile":     errWsNoUploadFile,
+	for _, c := range []struct{ label, msg, wantEnglish string }{
+		{"illegalPath", errWsIllegalPath, "Invalid path"},
+		{"pathNotFound", errWsPathNotFound, "The path does not exist"},
+		{"notDir", errWsNotDir, "Not a directory"},
+		{"fileNotFound", errWsFileNotFound, "The file does not exist"},
+		{"isDir", errWsIsDir, "It is a directory, so it cannot be read as a file"},
+		{"targetIsDir", errWsTargetIsDir, "The target path is a directory"},
+		{"cannotDeleteRoot", errWsCannotDeleteRoot, "The workspace root directory cannot be deleted"},
+		{"uploadDirMissing", errWsUploadDirMissing, "The target directory does not exist"},
+		{"uploadParse", errWsUploadParse, "Failed to parse the upload, or it exceeded the size limit: "},
+		{"noUploadFile", errWsNoUploadFile, "There is no file to upload (form field file)"},
 	} {
-		assertKoreanError(t, label, msg)
+		assertEnglishMessage(t, c.label, c.msg, c.wantEnglish)
 	}
 }
 
@@ -37,15 +37,15 @@ func wsErrBody(t *testing.T, rec *httptest.ResponseRecorder) string {
 		Error string `json:"error"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
-		t.Fatalf("응답 JSON 파싱 실패: %v (본문 %q)", err, rec.Body.String())
+		t.Fatalf("failed to parse the response JSON: %v (body %q)", err, rec.Body.String())
 	}
 	return out.Error
 }
 
 // TestWorkspaceHandlerResponsesLocalized drives the workspace file-manager handlers
 // over real HTTP. They only touch s.m.dir and the filesystem (never s.m.pg), so a
-// temp-dir Manager is enough — no DB. This proves the Korean constants actually land
-// in the HTTP response body, not just that the constants are Korean.
+// temp-dir Manager is enough — no DB. This proves the English constants actually land
+// in the HTTP response body, not just that the constants are English.
 func TestWorkspaceHandlerResponsesLocalized(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "sub"), 0o755); err != nil {
@@ -54,17 +54,17 @@ func TestWorkspaceHandlerResponsesLocalized(t *testing.T) {
 	s := &Server{m: &Manager{dir: dir}}
 
 	cases := []struct {
-		name    string
-		handler http.HandlerFunc
-		req     *http.Request
-		code    int
-		want    string
+		name        string
+		handler     http.HandlerFunc
+		req         *http.Request
+		code        int
+		wantEnglish string
 	}{
-		{"read-missing", s.wsRead, httptest.NewRequest(http.MethodGet, "/api/workspace/read?path=nope.txt", nil), 404, errWsFileNotFound},
-		{"read-dir", s.wsRead, httptest.NewRequest(http.MethodGet, "/api/workspace/read?path=sub", nil), 400, errWsIsDir},
-		{"list-missing", s.wsList, httptest.NewRequest(http.MethodGet, "/api/workspace/list?path=nope", nil), 404, errWsPathNotFound},
-		{"list-not-dir", s.wsList, nil, 400, errWsNotDir}, // req built below (needs a real file)
-		{"delete-root", s.wsDelete, httptest.NewRequest(http.MethodDelete, "/api/workspace/delete?path=", nil), 400, errWsCannotDeleteRoot},
+		{"read-missing", s.wsRead, httptest.NewRequest(http.MethodGet, "/api/workspace/read?path=nope.txt", nil), 404, "The file does not exist"},
+		{"read-dir", s.wsRead, httptest.NewRequest(http.MethodGet, "/api/workspace/read?path=sub", nil), 400, "It is a directory, so it cannot be read as a file"},
+		{"list-missing", s.wsList, httptest.NewRequest(http.MethodGet, "/api/workspace/list?path=nope", nil), 404, "The path does not exist"},
+		{"list-not-dir", s.wsList, nil, 400, "Not a directory"}, // req built below (needs a real file)
+		{"delete-root", s.wsDelete, httptest.NewRequest(http.MethodDelete, "/api/workspace/delete?path=", nil), 400, "The workspace root directory cannot be deleted"},
 	}
 
 	// list-not-dir needs an actual file to point at.
@@ -78,13 +78,13 @@ func TestWorkspaceHandlerResponsesLocalized(t *testing.T) {
 			rec := httptest.NewRecorder()
 			c.handler(rec, c.req)
 			if rec.Code != c.code {
-				t.Fatalf("status = %d, want %d (본문 %q)", rec.Code, c.code, rec.Body.String())
+				t.Fatalf("status = %d, want %d (body %q)", rec.Code, c.code, rec.Body.String())
 			}
 			got := wsErrBody(t, rec)
-			if got != c.want {
-				t.Fatalf("error = %q, want %q", got, c.want)
+			if got != c.wantEnglish {
+				t.Fatalf("error = %q, want %q", got, c.wantEnglish)
 			}
-			assertKoreanError(t, c.name, got)
+			assertEnglishMessage(t, c.name, got, c.wantEnglish)
 		})
 	}
 }

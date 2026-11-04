@@ -61,9 +61,8 @@ fi
 # check. That template is prose outside detections/sigma/ (a generic behavioural
 # rule, not grounded in ARTEX source), so no per-suite test re-runs the facts the
 # guide states about it. This gate does — sigma check, the splunk/eql/loki
-# conversions, the lucene/kusto rejection, and ko/en rule-body parity — so it stays
-# out of SUITES and the harness-sync registry like the two gates above (see
-# check-defense-template.sh).
+# conversions, and the lucene/kusto rejection — so it stays out of SUITES and the
+# harness-sync registry like the two gates above (see check-defense-template.sh).
 printf '\n===== defense template consistency =====\n'
 if ! "$HERE/check-defense-template.sh"; then
   template_fail=1

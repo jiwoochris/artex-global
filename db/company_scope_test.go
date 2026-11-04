@@ -56,12 +56,14 @@ func TestParseAutoScopeLine(t *testing.T) {
 		{name: "ipv4", input: "203.0.113.10", kind: "ip", normalized: "203.0.113.10/32"},
 		{name: "ipv6", input: "2001:db8::10", kind: "ip", normalized: "2001:db8::10/128"},
 		{name: "cidr", input: "198.51.100.0/24", kind: "cidr", normalized: "198.51.100.0/24"},
+		// The Chinese ICP fixtures keep their Han characters on purpose: filing numbers already stored in the
+		// scope table are Chinese text, and the parser must keep recognizing them.
 		{name: "icp latin", input: "京 ICP备 123号", kind: "icp", normalized: "京icp备123号"},
 		{name: "icp chinese", input: "沪网备案 9988", kind: "icp", normalized: "沪网备案9988"},
 		{name: "icp domain", input: "icp.example.com", kind: "domain", normalized: "icp.example.com"},
 		{name: "icp url query", input: "https://example.com/path?icp=1", kind: "domain", normalized: "example.com"},
-		// 备案号不含点号：掺了域名/版本号的描述性文字归关键词，否则会存成一条
-		// 永远匹配不上的死 ICP 规则。
+		// A filing number has no dot: descriptive text mixed with a domain/version number becomes a keyword, otherwise it is stored as a
+		// dead ICP rule that never matches anything.
 		{name: "icp with domain text", input: "备案 www.example.com", kind: "keyword", normalized: "备案 www.example.com"},
 		{name: "icp with version text", input: "某公司 ICP v1.0", kind: "keyword", normalized: "某公司 icp v1.0"},
 		{name: "icp fullwidth dot", input: "备案 例．com", kind: "keyword", normalized: "备案 例．com"},
@@ -233,14 +235,14 @@ func TestCompanyICPAttribution(t *testing.T) {
 	if err != nil {
 		t.Skipf("postgres unavailable (%v) — skipping", err)
 	}
-	// 关连接必须走 t.Cleanup 且**注册在清理之前**：t.Cleanup 是后进先出，
-	// 先注册关闭 → 关闭最后执行，下面的数据清理才连得上库。
-	// 原先这里是 `defer d.Close()`：defer 在函数返回时先跑，t.Cleanup 在那之后
-	// 才执行，于是清理语句全落在**已关闭的连接**上、错误又被 `_, _ =` 丢弃，
-	// 资产与公司就永久残留在库里。残留本身不会立刻报错，但本用例用
-	// `MAX(companies.id)+1` 当假 TaskID 给资产打标（见下方 suffix），
-	// 一旦这个数字与别的用例的任务 id 撞上，那个用例按「恰好 N 个资产」的断言
-	// 就会莫名失败——排查成本极高。
+	// Closing the connection must go through t.Cleanup and be **registered before the cleanup**: t.Cleanup is LIFO,
+	// so registering the close first means it runs last and the data cleanup below can still reach the database.
+	// This used to be `defer d.Close()`: defer runs first when the function returns, and t.Cleanup only runs after that,
+	// so every cleanup statement landed on an **already closed connection** and the errors were dropped by `_, _ =`,
+	// leaving the assets and company in the database for good. The leftovers do not fail anything immediately, but this test uses
+	// `MAX(companies.id)+1` as a fake TaskID to tag assets (see suffix below),
+	// so once that number collides with another test's task id, that test's "exactly N assets" assertion
+	// fails for no apparent reason — extremely costly to debug.
 	t.Cleanup(func() { d.Close() })
 
 	var suffix int64
@@ -254,12 +256,12 @@ func TestCompanyICPAttribution(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		// 不吞错误：清理失败会污染后续用例，必须让它在本次运行里显形。
+		// Do not swallow errors: a failed cleanup pollutes later tests, so it must surface in this run.
 		if _, err := d.Exec(`DELETE FROM assets WHERE task_ids @> ARRAY[$1]::bigint[]`, suffix); err != nil {
-			t.Errorf("清理测试资产失败: %v", err)
+			t.Errorf("failed to clean up test assets: %v", err)
 		}
 		if _, err := d.Exec(`DELETE FROM companies WHERE id=$1`, companyID); err != nil {
-			t.Errorf("清理测试公司失败: %v", err)
+			t.Errorf("failed to clean up test company: %v", err)
 		}
 	})
 

@@ -1,14 +1,5 @@
 # ARTEX host triage
 
-English · [한국어](README.ko.md)
-
-> 한국어: [`artex_host_triage.py`](artex_host_triage.py) 는 ARTEX 가 돌았다고 의심되는 **호스트 한 대에서 직접**
-> 돌리는 읽기 전용 분류(triage) 스크립트입니다. SIEM(Sigma)·네트워크 센서(Suricata)·위협 인텔리전스
-> 플랫폼(지표 CSV·MISP)을 쓰는 방어자 말고, SIEM 없이 의심 호스트의 셸 앞에 선 대응자를 위한 것입니다.
-> 리슨 포트·기록 프록시 아티팩트·로그 마커·PostgreSQL 스키마를 저장소 소스에 근거해 점검하고, 각 발견에
-> 같은 한계(포트는 바꿀 수 있음, CA 파일명은 단독 mitmproxy 와 공유됨 등)를 함께 적습니다. 자신이 소유하거나
-> 서면 허가를 받은 호스트에만 사용하십시오. 한국어 전체 문서는 **[README.ko.md](README.ko.md)** 를 보십시오.
-
 A read-only triage helper you run **on a single suspected host** to answer "did ARTEX run here?" from
 local state. The rest of this directory serves defenders who run a SIEM ([Sigma](../sigma/)), a network
 sensor ([Suricata](../suricata/)), or a threat-intelligence platform (the [indicators](../indicators/)).

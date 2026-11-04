@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // TestChatUnavailableReasonDistinguishesStates pins the operator-facing message
@@ -59,7 +59,7 @@ func TestChatUnavailableReasonDistinguishesStates(t *testing.T) {
 // TestResolveChatAgentHonoursConversationProfile is the regression guard for the
 // reported bug: a conversation that picked a valid profile must resolve a chat
 // agent even when NO global profile is active, so the send precheck stops
-// rejecting it with "LLM 未配置".
+// rejecting it with "LLM not configured".
 func TestResolveChatAgentHonoursConversationProfile(t *testing.T) {
 	m, err := NewManager(t.TempDir(), "")
 	if err != nil {
