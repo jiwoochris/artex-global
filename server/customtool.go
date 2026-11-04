@@ -412,6 +412,11 @@ func execPython(ctx context.Context, interp, key, code string, params map[string
 
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+	// Running the tool body is the feature, not an injection path: `interp` is an
+	// administrator-configured absolute path that is verified with LookPath, `tmp` is a
+	// server-created file inside the tools directory, the call is argv-form so no shell
+	// parses the code, and parameters travel over stdin/env rather than the command line.
+	// nosemgrep: go.lang.security.audit.dangerous-exec-command.dangerous-exec-command
 	c := exec.CommandContext(runCtx, interp, tmp)
 	c.Dir = workDir
 	c.Env = append(os.Environ(), sessionEnv...) // session proxy env
