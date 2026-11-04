@@ -175,6 +175,8 @@ SSE holds a long-lived connection and keeps pushing events, so you **must disabl
 
 ARTEX is an **autonomous penetration system driven by LLM multi-agents.** It uses a single Go backend (with the Next.js frontend embedded) over PostgreSQL, and the agent capabilities are provided by the [`norma`](https://github.com/Autumn-27/norma) (currently unreachable, checked 2026-10) SDK. At its core is a **dual-graph structure** and the two autonomy mechanisms around it: process-level information exchange between workers, and the planner's multi-round shared todolist.
 
+> For the full implementation map — startup sequence, every Go package, the agent engine, the data model, the HTTP surface, the frontend and how the parts connect — start at [`docs/architecture.md`](docs/architecture.md); each area is a separate document under [`docs/architecture/`](docs/architecture/).
+
 ### Overall layers
 
 ```mermaid

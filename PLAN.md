@@ -20,7 +20,7 @@ Branch: `chore/i18n-en-es-hardening`. Baseline (`fdfb7a1`, before any change):
 ## 1. Decisions taken (owner-approved)
 
 | # | Decision | Rationale |
-|---|----------|-----------|
+| --- | --- | --- |
 | D1 | Non-English documents are **deleted**; the English variant becomes the canonical file name. | "Any other language is prohibited." |
 | D2 | **Full English source language**: Chinese agent prompt bodies and the Korean error-message *keys* are rewritten in English. Spanish remains as a translation overlay. | Owner chose "Full inglés: prompts y claves" over the lower-risk hybrid. |
 | D3 | Dependency policy: latest **minor/patch** applied; **major** bumps only when the changelog does not break the API and build+tests stay green. | Least risk of behavioural regression in an autonomous pentest agent. |
@@ -53,7 +53,7 @@ assertions are translated, never deleted for convenience.
 ## 2. Language model after this change (target state)
 
 | Layer | Before | After |
-|-------|--------|-------|
+| --- | --- | --- |
 | UI locales (`web/src/i18n/config.ts`) | `en, ko, zh, es, ja` | `en, es` (default `en`) |
 | UI messages (`web/messages/*.json`) | 5 files | `en.json`, `es.json` |
 | Agent output language (`agent/outputlang.go`) | `en, ko, zh, es, ja` | `en, es` (default `en`) |
@@ -95,9 +95,10 @@ File ownership is exclusive per wave so parallel agents never edit the same file
 - Translate `sidequestion/README.md`, `sidequestion/VALIDATION.md`, `skills/**` to English.
 - Fix every reference/link; `python3 scripts/check-doc-links.py` must be clean.
 
-**W1b — `docs/architecture.md`** (new): system overview, startup sequence, per-package
-map with file:line references, agent engine + one-run sequence diagram, data model,
-HTTP surface, frontend architecture, cross-cutting concerns, integration-point table.
+**W1b — `docs/architecture.md` + `docs/architecture/*.md`** (new): an index with the system
+overview, plus one document per area — runtime/startup, backend packages, agent engine
+(with a one-run sequence diagram), data model, HTTP surface, frontend, cross-cutting
+concerns, integration-point table. Section numbers are preserved across the split.
 
 **W1c — `SPEC.md`** (owner-written, links everything): product scope, language contract,
 architecture references, functional specs per subsystem, security requirements,
@@ -162,7 +163,7 @@ dependency/image policy, test strategy, acceptance criteria.
 ## 4. Test plan — every functional change has a test
 
 | Change | Test |
-|--------|------|
+| --- | --- |
 | Locale list is `en`,`es`; default `en` | `web/src/i18n/config.test.ts` |
 | Message files in sync for 2 locales | `web/src/scripts/i18n-keys.test.ts`, `pnpm run check:i18n` |
 | Runtime language switch still re-renders | existing `intl-runtime-provider` consumers + manual build check (`build:static`) |
@@ -195,7 +196,7 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 ## 6. Risks and mitigations
 
 | Risk | Mitigation |
-|------|------------|
+| --- | --- |
 | Translating agent prompts degrades the benchmarked reasoning (D2 accepted by owner) | Prompts translated 1:1 with identical structure/ordering/tool vocabulary; `agent/prompt_test.go` assertions updated only where they pin language, not semantics. |
 | Korean-keyed catalog rewrite breaks error text silently | Mechanical mapping (old `en` value becomes new key) + test asserting no lookup misses for every call-site literal. |
 | Dependency major bump changes behaviour | Policy D3; build+vet+full test suite after each step; deltas reported. |
@@ -208,11 +209,11 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 ## 7. Status
 
 | Wave | Item | Status |
-|------|------|--------|
+| --- | --- | --- |
 | W0a | pnpm + Trixie image | done — `pnpm@12.16.1` pinned, `package-lock.json` removed, `web/pnpm-workspace.yaml` carries `allowBuilds`, both Dockerfiles on `python:3.12-slim-trixie` |
 | W0b | Go dependency update | done — 34 modules upgraded (x/net 0.62.0, x/crypto 0.58.0, pgx 5.12.0, mitmproxy 1.9.4, dnsx 1.3.1, sqlite 1.61.1 …), `go 1.26.10` directive, 11 govulncheck findings fixed, 1 residual (GO-2026-5932, unreachable) |
 | W1a | English-only docs | done — 4 README translations, `CHANGELOG.zh.md`, Korean canonical docs and all `*.ko.md` deleted; `*.en.md` promoted to canonical; `docs/docker-seguro.es.md` → `docs/docker-hardened.md`; `check-doc-links.py` clean (34 docs, 284 refs) |
-| W1b | `docs/architecture.md` | done — 2111 lines, sections 0–9 with file:line evidence, Mermaid diagrams, integration table |
+| W1b | `docs/architecture.md` + `docs/architecture/` | done — index (186 lines) plus eight documents (2 023 lines, 2 209 with headers) covering §2–§9 with file:line evidence, Mermaid diagrams, per-document contents lists and an integration table |
 | W1c | `SPEC.md` + `PLAN.md` | done |
 | W2 | UI en/es purge | done — `LOCALES = ["en","es"]`, `ko/zh/ja` message files and every locale branch removed, `tsc`, vitest, `check:i18n` (2996 keys), biome and `build:static` (31 pages) green |
 | W3a | Backend language plumbing | done — `config.SupportedLanguages` / `agent.SupportedOutputLangs` = {en,es}, `ActiveLanguage()` fallback `en`, notify/intercept label maps reduced, `server/testmain_test.go` pins `ARTEX_LANG=en` |
@@ -222,7 +223,7 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 ### 7.1 Verification snapshot (this machine, no PostgreSQL)
 
-```
+```text
 go build ./...                     PASS
 go vet ./...                       PASS
 go test ./... -count=1             PASS  (all packages; DB-backed tests skip as in CI's no-DB job)

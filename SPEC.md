@@ -5,10 +5,10 @@ change starts here: state the requirement, find the owning specification section
 update the spec, then implement with a test that proves the behavior.
 
 | Document | Purpose |
-|----------|---------|
+| --- | --- |
 | `SPEC.md` (this file) | Normative specification: scope, contracts, requirements, quality gates |
 | [`PLAN.md`](PLAN.md) | Execution plan for the current change set, wave by wave, with the test for every change |
-| [`docs/architecture.md`](docs/architecture.md) | Implementation map: every package, its responsibility, and how the parts connect (file:line evidence) |
+| [`docs/architecture.md`](docs/architecture.md) | Architecture index: system overview and a map of the eight per-area documents under [`docs/architecture/`](docs/architecture/) (file:line evidence) |
 | [`README.md`](README.md) | Orientation, quick start, configuration |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Contribution workflow |
 | [`SECURITY.md`](SECURITY.md) | Vulnerability reporting |
@@ -63,7 +63,7 @@ honored by the agent tool layer.
 Precedence MUST be: **environment variable > config file > built-in default.**
 
 | Setting | Environment | Config file key |
-|---------|-------------|-----------------|
+| --- | --- | --- |
 | Config path | `ARTEX_CONFIG` | — |
 | Database DSN | `ARTEX_PG_DSN` | `database.dsn` (or `host`/`user`/`dbname`/…) |
 | Skill directory | `ARTEX_SKILL_DIR` | `skill_dir` |
@@ -127,7 +127,7 @@ same fields as the UI list.
 The product supports exactly two locales.
 
 | Locale | Role | Default |
-|--------|------|---------|
+| --- | --- | --- |
 | `en` | Source language: every string originates here | Yes |
 | `es` | Translation overlay of `en` | No |
 
@@ -188,7 +188,7 @@ produced by other components, or text emitted by third-party APIs. Translating
 them would silently break a matcher. The complete allow-list:
 
 | Sentinel | Where | Why it cannot be translated |
-|----------|-------|-----------------------------|
+| --- | --- | --- |
 | `[模型]` | `intercept/intercept.go` decision-source prefix, `server/errmsg_*`, `web/src/components/approval-records.tsx`, `web/src/lib/mock/*`, `db/schema.sql` (`reason LIKE '[模型]%'`) | Stored in `intercept_rules`/audit rows and stripped before display; the SQL `LIKE` and the UI prefix strip must keep matching historical rows |
 | `【ARTEX 平台管控·非目标防御】` | `guard/guard.go` control marker, `detections/**` rules, `docs/defense.md` | Written into audit records and detection signatures; defenders match the literal |
 | Chat-mention wire tokens (`漏洞`, `资产`, `企业`, `接口`, `IP`, `应用`, `域名`, `子域名`, `服务`) | `web/src/lib/chat-mentions.ts`, `server/chat_mentions.go` | `@[kind#id label]` is a persisted wire format in stored transcripts; the visible category is localized from `mentionTextarea.kind` |
@@ -214,7 +214,7 @@ new row here and a test that proves why it is needed.
 ## 4. Security requirements (REQ-SEC-*)
 
 | ID | Requirement |
-|----|-------------|
+| --- | --- |
 | REQ-SEC-1 | Authorized-use boundary documented and respected by scope enforcement |
 | REQ-SEC-2 | Passwords hashed with bcrypt cost ≥ 10; ≥ 8 chars, ≤ 72 bytes; rotation supported (`reset-password.sh`) |
 | REQ-SEC-3 | JWT secret never stored inside the workspace; key file moved outside discoverable paths, 0600 |
@@ -233,7 +233,7 @@ new row here and a test that proves why it is needed.
 ## 5. Dependency and image policy (REQ-DEP-*)
 
 | ID | Requirement |
-|----|-------------|
+| --- | --- |
 | REQ-DEP-1 | Go modules pinned in `go.mod`/`go.sum`; `go build ./... && go vet ./... && go test ./...` green |
 | REQ-DEP-2 | Minor/patch upgrades applied continuously; majors only with an explicit API review recorded in `PLAN.md` |
 | REQ-DEP-3 | Node packages managed by **pnpm only**: `web/pnpm-lock.yaml` committed, `packageManager` pinned, CI/Docker use `--frozen-lockfile` |
@@ -245,17 +245,22 @@ new row here and a test that proves why it is needed.
 
 ## 6. Architecture
 
-`docs/architecture.md` is the authoritative implementation map: startup sequence,
-per-package responsibilities, agent engine sequence, data model, HTTP surface,
-frontend structure, cross-cutting services, and the integration table between
-frontend, backend, database and agent. This specification defines *what* must be
-true; that document defines *where* and *how* it is implemented.
+`docs/architecture.md` is the entry point of the authoritative implementation map.
+It carries the system overview and a map to one document per area, all under
+`docs/architecture/`: startup and runtime, backend packages, the agent engine, the
+data model, the HTTP surface, the frontend, cross-cutting services, and the
+integration table between frontend, backend, database and agent. Section numbers are
+stable across the split (`§4.5` is the tool catalog in every document), so a
+cross-reference keeps its meaning.
+
+This specification defines *what* must be true; those documents define *where* and
+*how* it is implemented.
 
 Module index (responsibility summary; details and file references in
-`docs/architecture.md`):
+[`docs/architecture/backend-packages.md`](docs/architecture/backend-packages.md)):
 
 | Package | Responsibility |
-|---------|----------------|
+| --- | --- |
 | `cmd/artex` | Process entry point: config → DB → server → listen |
 | `config` | Configuration resolution and validation (`ARTEX_*` > file > default) |
 | `db` | PostgreSQL schema, migrations, queries, seed data |
@@ -290,7 +295,7 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 ```
 
 | ID | Requirement |
-|----|-------------|
+| --- | --- |
 | REQ-QA-1 | A functional change without a test is not done |
 | REQ-QA-2 | Tests MUST assert the new contract, not merely "no panic" |
 | REQ-QA-3 | A deleted language MUST have a test proving it is rejected |
@@ -303,7 +308,7 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 1. **Specify** — edit the relevant section here (and `PLAN.md` for execution
    detail) before writing code. Requirements get an ID (`REQ-<AREA>-<n>`).
-2. **Design** — update `docs/architecture.md` if the structure changes; record
+2. **Design** — update `docs/architecture/` if the structure changes; record
    alternatives in the PR description.
 3. **Test first** — add/extend the test named in the traceability table below.
 4. **Implement** — smallest change that satisfies the spec; keep the package's
@@ -314,7 +319,7 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 ### 8.1 Traceability
 
 | Requirement | Owner code | Test | Plan wave |
-|-------------|-----------|------|-----------|
+| --- | --- | --- | --- |
 | REQ-I18N-1 locales = {en, es} | `web/src/i18n/config.ts`, `agent/outputlang.go` | `web/src/i18n/config.test.ts`, `agent/prompt_test.go` | W2, W3a |
 | REQ-I18N-1 removed locales rejected | `web/src/i18n/config.ts`, `server/server.go` | `config.test.ts`, `server/errmsg_i18n_test.go` | W2, W3a |
 | REQ-I18N-1 catalogues in sync | `web/messages/*.json` | `web/src/scripts/i18n-keys.test.ts`, `check:i18n` | W2 |
@@ -334,7 +339,7 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 - [ ] `LOCALES` is exactly `["en","es"]`; `ko`, `zh`, `ja` are gone from code, tests, messages and docs.
 - [ ] Every user-visible backend message has an `es` entry; every UI string exists in both catalogues.
 - [ ] Zero Korean/Chinese characters outside allowed Spanish catalogues and deliberate non-ASCII test fixtures.
-- [ ] `docs/architecture.md` maps every package with file:line evidence; `SPEC.md`, `PLAN.md` and the docs cross-link.
+- [ ] `docs/architecture.md` (index) and `docs/architecture/*.md` map every package with file:line evidence; `SPEC.md`, `PLAN.md` and the docs cross-link.
 - [ ] Both Dockerfiles use `python:3.12-slim-trixie` and pnpm.
 - [ ] `go.mod` upgraded with a recorded delta and a clean `govulncheck` (or documented residual risk).
 - [ ] `web/pnpm-lock.yaml` committed, no `npm` invocation left.
