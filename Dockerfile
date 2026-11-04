@@ -62,7 +62,7 @@ RUN set -eux; \
 # pnpm comes from the Node distribution's corepack, pinned to the version in
 # web/package.json ("packageManager").
 RUN corepack enable \
-    && corepack prepare pnpm@12.16.1 --activate \
+    && corepack prepare pnpm@12.17.0 --activate \
     && pnpm --version
 # Pre-install the Playwright MCP server and CLI globally, so the runtime never downloads
 # them over the network.

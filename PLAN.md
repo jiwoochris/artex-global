@@ -229,7 +229,7 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 | Wave | Item | Status |
 | --- | --- | --- |
-| W0a | pnpm + Trixie image | done — `pnpm@12.16.1` pinned, `package-lock.json` removed, `web/pnpm-workspace.yaml` carries `allowBuilds`, both Dockerfiles on `python:3.12-slim-trixie` |
+| W0a | pnpm + Trixie image | done — pnpm pinned in `packageManager` (currently `pnpm@12.17.0`), `package-lock.json` removed, `web/pnpm-workspace.yaml` carries `allowBuilds`, both Dockerfiles on `python:3.12-slim-trixie` |
 | W0b | Go dependency update | done — 34 modules upgraded (x/net 0.62.0, x/crypto 0.58.0, pgx 5.12.0, mitmproxy 1.9.4, dnsx 1.3.1, sqlite 1.61.1 …), `go 1.26.10` directive, 11 govulncheck findings fixed, 1 residual (GO-2026-5932, unreachable) |
 | W1a | English-only docs | done — 4 README translations, `CHANGELOG.zh.md`, Korean canonical docs and all `*.ko.md` deleted; `*.en.md` promoted to canonical; `docs/docker-seguro.es.md` → `docs/docker.md`; `check-doc-links.py` clean (34 docs, 284 refs) |
 | W1b | `docs/architecture.md` + `docs/architecture/` | done — index (186 lines) plus eight documents (2 023 lines, 2 209 with headers) covering §2–§9 with file:line evidence, Mermaid diagrams, per-document contents lists and an integration table |
