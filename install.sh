@@ -27,9 +27,6 @@ ensure_docker(){
     ok "docker and docker compose are available"; return
   fi
   warn "docker / docker compose not found"
-  case "$(uname -s)" in
-    Darwin) die "on macOS install Docker Desktop first: https://www.docker.com/products/docker-desktop/" ;;
-  esac
   cat >&2 <<'EOF'
 Install Docker Engine with the official instructions for your distribution:
   https://docs.docker.com/engine/install/

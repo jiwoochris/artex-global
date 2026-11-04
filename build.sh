@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# ARTEX cross-platform release builder.
+# ARTEX release builder for Linux.
 #
 # The default mode builds one target and embeds the already-exported frontend.
-# `./build.sh --release` builds and packages all supported desktop/server targets.
+# `./build.sh --release` builds and packages both Linux targets (amd64 and arm64).
 #
 # Environment variables:
 #   ARTEX_TARGET_OS=linux             One target OS in single-target mode.
@@ -32,21 +32,21 @@ usage() {
 Usage:
   ./build.sh                         Build for the current system and architecture
   ./build.sh --target linux/amd64   Build one specified target
-  ./build.sh --release               Build and package every supported target
+  ./build.sh --release               Build and package both Linux targets
 
 Options:
-  --release              Build the amd64/arm64 targets for Linux, macOS and Windows and create zips
-  --target OS/ARCH       Select a single target, e.g. windows/amd64
+  --release              Build the linux/amd64 and linux/arm64 targets and create zips
+  --target OS/ARCH       Select a single target, e.g. linux/amd64
   --upx                  Force UPX compression of the binary (may affect compatibility on some Linux environments)
   --no-compress          Do not use UPX; only shrink with the Go linker, then zip
   --help                 Show this help
 
 The multi-target list can be overridden with ARTEX_TARGETS, e.g.:
-  ARTEX_TARGETS=linux/amd64,windows/amd64 ./build.sh --release
+  ARTEX_TARGETS=linux/amd64 ./build.sh --release
 EOF
 }
 
-RELEASE_TARGETS_DEFAULT="linux/amd64,linux/arm64,darwin/amd64,darwin/arm64,windows/amd64"
+RELEASE_TARGETS_DEFAULT="linux/amd64,linux/arm64"
 ARTEX_RELEASE="${ARTEX_RELEASE:-0}"
 ARTEX_COMPRESS="${ARTEX_COMPRESS:-off}"
 ARTEX_PACKAGE="${ARTEX_PACKAGE:-0}"
@@ -128,7 +128,6 @@ fi
 
 compress_binary() {
   binary="$1"
-  goos="$2"
   case "$ARTEX_COMPRESS" in
     0|off|false|none)
       info "skipping UPX: $binary"
@@ -147,10 +146,8 @@ compress_binary() {
   fi
 
   before=$(wc -c < "$binary" | tr -d ' ')
-  upx_args="$ARTEX_UPX_ARGS"
-  [ "$goos" = "darwin" ] && upx_args="$upx_args --force-macos"
   # shellcheck disable=SC2086
-  if ! upx $upx_args -- "$binary"; then
+  if ! upx $ARTEX_UPX_ARGS -- "$binary"; then
     if [ "$ARTEX_COMPRESS" = "required" ]; then
       die "UPX compression failed: $binary"
     fi
@@ -175,14 +172,9 @@ package_binary() {
   cp "$binary" "$package_root/"
   # The daemon start script is the real entry point. The one-click update in the UI only
   # works when this script brings the process back after it exits; running the artex binary
-  # directly leaves the service down after an update. Ship the one set that matches the
-  # target system.
-  if [ "$goos" = "windows" ]; then
-    cp start.bat "$package_root/"
-  else
-    cp start.sh "$package_root/"
-    chmod +x "$package_root/start.sh"
-  fi
+  # directly leaves the service down after an update.
+  cp start.sh "$package_root/"
+  chmod +x "$package_root/start.sh"
   cp -R skills "$package_root/"
   cp config.example.json "$package_root/"
   if [ -f README.md ]; then cp README.md "$package_root/"; fi
@@ -200,16 +192,14 @@ build_target() {
   goos="${target%%/*}"
   goarch="${target##*/}"
   case "$goos" in
-    linux|darwin|windows) ;;
-    *) die "unsupported system: $goos (linux, darwin and windows are supported)" ;;
+    linux) ;;
+    *) die "unsupported system: $goos: ARTEX runs on Linux only, and other hosts use the Docker stack" ;;
   esac
 
-  binary_name="artex"
-  [ "$goos" = "windows" ] && binary_name="artex.exe"
   if [ -n "${ARTEX_OUTPUT:-}" ] && [ "$ARTEX_RELEASE" != "1" ]; then
     output="$ARTEX_OUTPUT"
   else
-    output="${ARTEX_OUTPUT_DIR}/artex-${goos}-${goarch}/${binary_name}"
+    output="${ARTEX_OUTPUT_DIR}/artex-${goos}-${goarch}/artex"
   fi
   mkdir -p "$(dirname "$output")"
 
@@ -225,7 +215,7 @@ build_target() {
     -o "$output" \
     ./cmd/artex
 
-  compress_binary "$output" "$goos"
+  compress_binary "$output"
   if command -v file >/dev/null 2>&1; then file "$output"; fi
   if [ "$ARTEX_PACKAGE" = "1" ]; then package_binary "$output" "$goos" "$goarch"; fi
   ok "compilation done: $output"
