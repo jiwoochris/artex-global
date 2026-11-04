@@ -7,7 +7,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex/db"
 )
 
 // containsHan returns true when the string contains CJK Han (Chinese) characters.

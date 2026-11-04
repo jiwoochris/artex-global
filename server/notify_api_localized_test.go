@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex/db"
 )
 
 // Regression guard for the notification-settings API response wording in notify_api.go: every

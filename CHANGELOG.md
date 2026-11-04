@@ -37,6 +37,12 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 
 - **pnpm 12.17.0.** `packageManager` in `web/package.json` and the `corepack prepare` pin in the `Dockerfile` move from 12.16.1 to 12.17.0, so CI (which reads `packageManager`), the image and local development all resolve the same release. The lockfile was regenerated with 12.17.0 and `pnpm install --frozen-lockfile`, the type check, the unit tests, the i18n gate, the production audit and the static export were re-run against it.
 
+### Module path
+
+- **The Go module is `github.com/yukiteruamano/artex`.** `go.mod` and all 249 import references across 154 files move off `github.com/Autumn-27/artex`, which belongs to a repository that no longer exists. References to the upstream project (`Autumn-27/ARTEX`) and to its SDK (`Autumn-27/norma`) are untouched, as is the historical note in the 0.3.15 entry that recorded the module being left alone at that release.
+
+  Note: `go get`/`go install` resolve a `github.com/<owner>/<repo>` module path by repository name, so a remote install needs the GitHub repository to be named `artex` (or a vanity import path); today it is `artex-global`. Building from a clone, the container image and the release archives are unaffected.
+
 ### Developer tooling
 
 - **`Makefile` as the single entry point.** `make` lists every target with a description; the targets wrap the same commands CI runs (`make check` = format, lint, tests, i18n; `make ci` adds doc links, the language gate and the posture tests), plus `make binary`, `make dev`, `make docker-*` (up, overlays, logs, reset), `make release`, `make audit`, `make test-detections` and `make clean`. Toolchains are overridable (`make test-go GO=/path/to/go`), which matters when `go` is not on `PATH`. CONTRIBUTING and the README now point at it instead of repeating the commands.

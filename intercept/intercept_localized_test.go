@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Autumn-27/artex/config"
+	"github.com/yukiteruamano/artex/config"
 )
 
 // wantEnglish asserts that a user-visible literal is exactly its English source text.

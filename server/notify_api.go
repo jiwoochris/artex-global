@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/notify"
+	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex/notify"
 )
 
 // This file holds the HTTP endpoints of the notification push feature. All routes are mounted

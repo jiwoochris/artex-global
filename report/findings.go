@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Autumn-27/artex/db"
+	"github.com/yukiteruamano/artex/db"
 )
 
 // Rendering for the vulnerability page's "Export": it renders several findings table rows into a summary Markdown,

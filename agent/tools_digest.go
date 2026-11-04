@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/Autumn-27/artex/db"
 	actool "github.com/Autumn-27/norma/tool"
+	"github.com/yukiteruamano/artex/db"
 )
 
 // digestMemberEntry builds the compact per-member view expand_digest returns —

@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/notify"
+	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex/notify"
 )
 
 // This file covers the notification push feature end to end: finding persisted ->

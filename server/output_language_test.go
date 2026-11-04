@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Autumn-27/artex/config"
+	"github.com/yukiteruamano/artex/config"
 )
 
 // TestOutputLanguageCacheFollowsSettings pins that the cached output language

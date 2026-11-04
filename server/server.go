@@ -20,18 +20,18 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Autumn-27/artex/agent"
-	"github.com/Autumn-27/artex/config"
-	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/intercept"
-	"github.com/Autumn-27/artex/llmpool"
-	"github.com/Autumn-27/artex/llmrec"
-	"github.com/Autumn-27/artex/notify"
-	"github.com/Autumn-27/artex/report"
-	"github.com/Autumn-27/artex/traffic"
 	"github.com/Autumn-27/norma/llm"
 	actool "github.com/Autumn-27/norma/tool"
 	"github.com/Autumn-27/norma/transcript"
+	"github.com/yukiteruamano/artex/agent"
+	"github.com/yukiteruamano/artex/config"
+	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex/intercept"
+	"github.com/yukiteruamano/artex/llmpool"
+	"github.com/yukiteruamano/artex/llmrec"
+	"github.com/yukiteruamano/artex/notify"
+	"github.com/yukiteruamano/artex/report"
+	"github.com/yukiteruamano/artex/traffic"
 )
 
 // BuildVersion is the backend application version, injected from cmd/artex at

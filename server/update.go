@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Autumn-27/artex/selfupdate"
+	"github.com/yukiteruamano/artex/selfupdate"
 )
 
 // The HTTP surface of the page's one-click update. The real download/verify/swap logic

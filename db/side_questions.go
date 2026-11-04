@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Autumn-27/artex/sidequestion"
 	"github.com/google/uuid"
+	"github.com/yukiteruamano/artex/sidequestion"
 )
 
 var ErrSideBusy = errors.New("A side question is already being answered in this conversation")

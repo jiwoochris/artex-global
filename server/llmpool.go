@@ -4,10 +4,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/Autumn-27/artex/agent"
-	"github.com/Autumn-27/artex/db"
-	"github.com/Autumn-27/artex/llmpool"
 	"github.com/Autumn-27/norma/llm"
+	"github.com/yukiteruamano/artex/agent"
+	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex/llmpool"
 )
 
 // Server-side wiring for LLM failover (round-robin). Design: the LLM failover design

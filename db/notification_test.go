@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Autumn-27/artex/notify"
+	"github.com/yukiteruamano/artex/notify"
 )
 
 // The tests in this file all connect to a real PostgreSQL (skipped when there is none). The SQL uses

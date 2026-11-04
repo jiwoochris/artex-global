@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Autumn-27/artex/db"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/yukiteruamano/artex/db"
 )
 
 // TestMain acquires a PostgreSQL advisory lock (7337741002) for the entire

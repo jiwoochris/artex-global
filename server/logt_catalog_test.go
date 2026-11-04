@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Autumn-27/artex/config"
+	"github.com/yukiteruamano/artex/config"
 )
 
 // TestLogTTemplatesHaveTranslations pins that every logT("…") template in this
