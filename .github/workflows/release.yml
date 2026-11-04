@@ -10,7 +10,7 @@ on:
 permissions: {}
 
 jobs:
-  # 1) Export the frontend statically once; every platform cross-compile reuses the artifact
+  # 1) Export the frontend statically once; every target cross-compile reuses the artifact
   frontend:
     runs-on: ubuntu-latest
     permissions:
@@ -38,7 +38,7 @@ jobs:
           name: web-dist
           path: web/out
 
-  # 2) Cross-compile for five platforms (with the frontend embedded) and package a zip
+  # 2) Cross-compile for the two Linux targets (with the frontend embedded) and package a zip
   binaries:
     needs: frontend
     runs-on: ubuntu-latest
@@ -49,9 +49,6 @@ jobs:
         include:
           - { goos: linux, goarch: amd64 }
           - { goos: linux, goarch: arm64 }
-          - { goos: darwin, goarch: amd64 }
-          - { goos: darwin, goarch: arm64 }
-          - { goos: windows, goarch: amd64 }
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:

@@ -347,11 +347,20 @@ ones we cannot fix, so they go on the allowlist with a reason and are excluded f
 ## 9. The release pipeline
 
 Pushing a version tag (`v*`) makes [`.github/workflows/release.yml`](.github/workflows/release.yml)
-build binaries for five platforms and, when a condition is met, a multi-architecture Docker image.
-This fork has never cut a release tag, so this workflow has never run. This section therefore records
-what the pipeline assumes and produces, and whether those assumptions match the current repository
-structure. Because pushing a tag creates a GitHub Release on the public repository, cut a release only
-after the publishing decision is made.
+build Linux binaries (amd64 and arm64) and, when a condition is met, a multi-architecture Docker
+image. This fork has never cut a release tag, so this workflow has never run. This section therefore
+records what the pipeline assumes and produces, and whether those assumptions match the current
+repository structure. Because pushing a tag creates a GitHub Release on the public repository, cut a
+release only after the publishing decision is made.
+
+Releases are Linux-only, on purpose. The runtime is one Go binary plus a Debian Trixie image, and
+Docker on any other host is a Linux VM, so native Windows and macOS binaries bought nothing and were
+dropped. The container path is unaffected: the multi-architecture image below still runs on any host
+that runs Docker, including Docker Desktop on Windows and macOS. The narrowing is about release
+artifacts only — detection and defence material about Windows and macOS targets is deliberately
+untouched, because it describes the environments ARTEX inspects, not the system ARTEX runs on.
+Installations of the old native Windows and macOS builds are not migrated: they stay frozen on the
+last multiplatform release.
 
 ### 9.1 How to cut a release
 
@@ -364,13 +373,12 @@ git push origin v0.3.15
 
 ### 9.2 What the pipeline does
 
-The workflow is split into five jobs.
+The workflow is split into four jobs.
 
 - **frontend.** Statically exports the frontend once (`web/out`) and uploads that output as the
   `web-dist` artifact. The binaries job below downloads and reuses this output per target.
-- **binaries.** Cross-compiles five targets (linux amd64/arm64, darwin amd64/arm64, windows amd64) and
-  packages a zip per target. On the linux amd64 binary it runs an `artex -h` smoke test to confirm the
-  binary actually runs.
+- **binaries.** Cross-compiles the two Linux targets (amd64 and arm64) and packages a zip per target.
+  On the linux amd64 binary it runs an `artex -h` smoke test to confirm the binary actually runs.
 - **release.** Gathers all zips, generates a `SHA256SUMS` checksum file, and creates a GitHub Release
   with the zips and the checksum attached.
 - **docker.** Takes the linux binaries cross-compiled by binaries, builds a multi-architecture
@@ -388,9 +396,8 @@ current repository structure by reproducing the binaries job locally.
   embeds that location into the binary. The binaries job therefore does not rebuild the frontend; it
   calls [`build.sh`](build.sh) with `ARTEX_SKIP_FRONTEND=1`.
 - **Binary and package paths.** `build.sh --target <os>/<arch>` produces the `dist/artex-<os>-<arch>/artex`
-  binary and a zip package under `dist/`. The zip contains the binary together with a start script
-  (`start.sh` on Linux/macOS, `start.bat` on Windows), `skills/`, `config.example.json`, and
-  `README.md`.
+  binary and a zip package under `dist/`. The zip contains the binary together with the start script
+  `start.sh` (the daemon entry point, executable), `skills/`, `config.example.json`, and `README.md`.
 - **Copying the binary into the Docker image.** The binaries job uploads the linux binary separately as
   the `bin-linux-<arch>` artifact, and the docker job receives it as `dist/<arch>/artex`. The
   `COPY dist/${TARGETARCH}/artex` in [`Dockerfile`](Dockerfile) picks up that path via the `TARGETARCH`
