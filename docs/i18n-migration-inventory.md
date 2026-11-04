@@ -338,6 +338,6 @@ Proposed order (each step compiles and keeps tests explainable):
 Open `server/errmsg_i18n.go:19-55` together with `server/errmsg_catalog.go:7` and `config/msg_i18n.go:8`
 — that is the whole lookup contract — then `config/config.go:39-95` + `agent/outputlang.go` for the
 code lists, then `server/server.go:317-321` for the wiring. Run
-`export PATH=/tmp/pi/go/bin:$PATH; go test ./config/ ./server/ -run 'Catalog|Lang|Localized'`
+`go test ./config/ ./server/ -run 'Catalog|Lang|Localized'`
 after any catalog edit; `server/errmsg_i18n_test.go`, `config/msg_i18n_test.go` and
 `server/logt_catalog_test.go` are the fast canaries.

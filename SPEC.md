@@ -311,7 +311,6 @@ Module index (responsibility summary; details and file references in
 Every change MUST pass, in this order:
 
 ```bash
-export PATH=/tmp/pi/go/bin:$PATH     # local container only; CI uses setup-go
 go build ./... && go vet ./... && go test ./... -count=1
 cd web && pnpm install --frozen-lockfile && pnpm exec tsc --noEmit \
   && pnpm test --run && pnpm run build:static && pnpm run check:i18n \

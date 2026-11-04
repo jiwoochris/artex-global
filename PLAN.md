@@ -144,7 +144,7 @@ dependency/image policy, test strategy, acceptance criteria.
 - Every `web/src/**` file: Korean/Chinese comments → English (86 files, ~8.5k chars).
 - Exported functions/types get a doc comment that states the contract (requirement 2:
   "every function explained"). Missing doc comments are added for exported symbols.
-- Verification: `python3 /tmp/pi/scan.py .` must report only allow-listed residual
+- Verification: `python3 scripts/check-non-english.py` must report only allow-listed residual
   non-English content (none expected), plus `go build/vet/test` and `pnpm tsc/test`.
 
 ### W5 — Security review and remediation
@@ -202,11 +202,10 @@ and the input hardening that tolerates Windows-produced artefacts.
 ## 5. Verification gates (must all pass before hand-off)
 
 ```bash
-export PATH=/tmp/pi/go/bin:$PATH
 go build ./... && go vet ./... && go test ./... -count=1
 cd web && pnpm install --frozen-lockfile && pnpm exec tsc --noEmit && pnpm test --run && pnpm run build:static
 python3 scripts/check-doc-links.py
-python3 /tmp/pi/scan.py .        # residual non-English scan
+python3 scripts/check-non-english.py   # residual non-English scan
 go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 ```
 
@@ -237,7 +236,7 @@ go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 | W2 | UI en/es purge | done — `LOCALES = ["en","es"]`, `ko/zh/ja` message files and every locale branch removed, `tsc`, vitest, `check:i18n` (2996 keys), biome and `build:static` (31 pages) green |
 | W3a | Backend language plumbing | done — `config.SupportedLanguages` / `agent.SupportedOutputLangs` = {en,es}, `ActiveLanguage()` fallback `en`, notify/intercept label maps reduced, `server/testmain_test.go` pins `ARTEX_LANG=en` |
 | W3b | English source language | done — every user-facing literal translated to English, `server/errmsg_catalog.go` re-keyed English → `{es}` (354 entries), `config/msg_i18n.go` re-keyed, 151 new Spanish pairs merged, write-once prompt/tool reseed added |
-| W4 | Comment/docstring translation | done — `python3 /tmp/pi/scan.py .` reports 23 Korean + 856 Chinese characters left, all on the documented sentinel/fixture allow-list (SPEC §3.5.1) |
+| W4 | Comment/docstring translation | done — `python3 scripts/check-non-english.py` reports 23 Korean + 856 Chinese characters left, all on the documented sentinel/fixture allow-list (SPEC §3.5.1) |
 | W5 | Security review | done — `docs/security-review.md` (4 High, 9 Medium, 5 Low, with verified file:line evidence); HTTP-layer and infrastructure findings remediated with tests |
 | W6 | Linux-only consolidation | done — `start.bat` and the Windows/macOS release matrix entries removed, docs/UI strings rewritten, REQ-PLAT-1 added, `deploy/platform_test.go` guards the contract |
 
@@ -260,7 +259,7 @@ python3 scripts/check-doc-links.py PASS  (0 broken references)
 1. **Worksheet pipeline instead of file-by-file editing.** Translating ~124k characters
    through per-edit tool calls exceeded the agent budget; the remainder was converted by
    extracting `file\tline\ttext` worksheets, translating them in one pass, and applying them
-   by line number (`/tmp/pi/wsl.py`). Consequence: a few rows dropped trailing commas in
+   by line number (a throwaway `file:line:text` worksheet). Consequence: a few rows dropped trailing commas in
    composite literals (fixed) and one struct field was lost during the earlier phase
    (`Task.TimeoutSeconds`, restored). This is why the whole suite is re-run at the end.
 2. **`biome.json` migrated** to the installed Biome 2.6.4 schema and
