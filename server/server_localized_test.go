@@ -271,24 +271,23 @@ func TestChatUnavailableReasonLocalized(t *testing.T) {
 }
 
 // TestFallbackCommandParsing checks that the rule-mode chat trigger keyword parser
-// (fallbackCommand) recognises the Korean and Chinese aliases while still accepting the
-// English triggers, and returns the argument with only the keyword stripped. It is pure input
-// parsing that touches neither Store nor DB, so it runs without a DB.
-// The 의도/힌트 and 意图/提示 keywords are kept non-ASCII on purpose: they are the trigger tokens
-// that must keep parsing in conversations written before the language switch.
-// Deleting the Korean aliases breaks the korean-* cases; deleting the Chinese or English ones
-// breaks those cases (non-vacuity).
+// (fallbackCommand) recognises the English and Spanish triggers advertised by the
+// rule-mode help text, strips only the keyword, and leaves anything else as a
+// status request. It is pure input parsing that touches neither Store nor DB, so
+// it runs without a DB. Both language cases must keep passing: dropping either
+// keyword set breaks its cases (non-vacuity).
 func TestFallbackCommandParsing(t *testing.T) {
 	cases := []struct {
 		name, in, cmd, text string
 	}{
-		{"korean-intent", "의도 check the SQLi injection point first", "intent", "check the SQLi injection point first"},
-		{"korean-hint", "힌트 look at the login form first", "hint", "look at the login form first"},
-		{"chinese-intent", "意图 scan ports", "intent", "scan ports"},           // backward compatibility kept
-		{"chinese-hint", "提示 look at the login", "hint", "look at the login"}, // backward compatibility kept
 		{"english-intent", "intent scan ports", "intent", "scan ports"},
 		{"english-hint", "hint try admin:admin", "hint", "try admin:admin"},
+		{"spanish-intent", "intención escanear los puertos", "intent", "escanear los puertos"},
+		{"spanish-intent-accent-insensitive", "INTENCIÓN escanear", "intent", "escanear"},
+		{"spanish-hint", "pista revisa el formulario de acceso", "hint", "revisa el formulario de acceso"},
+		{"spanish-hint-uppercase", "Pista revisa la cookie", "hint", "revisa la cookie"},
 		{"status-plain", "show me the current status", "", "show me the current status"},
+		{"status-spanish", "muéstrame el estado actual", "", "muéstrame el estado actual"},
 		{"status-empty", "   ", "", ""},
 	}
 	for _, c := range cases {

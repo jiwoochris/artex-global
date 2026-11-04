@@ -27,17 +27,37 @@ import os
 import re
 import sys
 
-HANGUL = "[\uac00-\ud7af]"
-HAN = "[\u4e00-\u9fff]"
-KANA = "[\u3040-\u30ff]"
+# Every non-Latin script, so a string in Russian, Arabic, Greek, Thai, Hebrew and the
+# like cannot hide behind the Hangul/Han-only check this script started as. Spanish
+# diacritics and typographic punctuation are Latin/ASCII-adjacent and therefore not
+# counted: they are legitimate in an English document and in the Spanish catalogue.
+NON_LATIN = [
+    "[\u0400-\u04ff]",  # Cyrillic
+    "[\u0370-\u03ff]",  # Greek
+    "[\u0590-\u05ff]",  # Hebrew
+    "[\u0600-\u06ff]",  # Arabic
+    "[\u0900-\u097f]",  # Devanagari
+    "[\u0980-\u09ff]",  # Bengali
+    "[\u0b80-\u0bff]",  # Tamil
+    "[\u0e00-\u0e7f]",  # Thai
+    "[\u3040-\u30ff]",  # Kana
+    "[\u4e00-\u9fff]",  # Han
+    "[\uac00-\ud7af]",  # Hangul
+    "[\u1100-\u11ff]",  # Hangul Jamo
+    "[\u10a0-\u10ff]",  # Georgian
+    "[\u0530-\u058f]",  # Armenian
+]
 
 SKIP_DIRS = {".git", "node_modules", ".next", "out", "dist", "data"}
-TEXT_EXTS = {".go", ".ts", ".tsx", ".js", ".mjs", ".py", ".sh", ".sql", ".yml", ".yaml", ".md", ".json"}
+TEXT_EXTS = {
+    ".go", ".ts", ".tsx", ".js", ".mjs", ".py", ".sh", ".sql", ".yml", ".yaml", ".md",
+    ".json", ".txt", ".csv", ".rules", ".bat", ".example", ".conf",
+}
 BASELINE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "non-english-baseline.json")
 
 
 def count(text: str) -> int:
-    return len(re.findall(HANGUL, text)) + len(re.findall(HAN, text)) + len(re.findall(KANA, text))
+    return sum(len(re.findall(pattern, text)) for pattern in NON_LATIN)
 
 
 def walk(roots: list[str]):

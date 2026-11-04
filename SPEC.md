@@ -195,10 +195,23 @@ them would silently break a matcher. The complete allow-list:
 | Provider quota/balance regexes (e.g. `余额`, `未登录`) | `agent/provider.go`, `skills/api-recon/scripts/preload.js` | Must match the Chinese error text returned by upstream provider APIs and target login pages |
 | ICP filing detection (`icp\|备案`) | `web/src/lib/company-scope.ts`, `db/company_scope*.go` | Chinese ICP filing numbers are matched in user-scope text |
 | Guard control marker in `intercept/` reason text | `db/schema.sql:1076` | Stored-data marker |
-| Byte/rune fixtures (`中`, `가`, `文` × N, quoted third-party page titles) | `*_test.go`, `web/src/lib/chat-mentions.test.mjs`, `sidequestion/VALIDATION.md` | The test asserts multi-byte or non-ASCII handling; ASCII input cannot exercise it |
+| Legacy reporter trigger message (`reporterToolCallMessageV1`, Chinese) | `server/orchestration.go` | Compared with `trigger.tool_call_message` rows written by earlier versions; translating it would stop the trigger from matching existing installations |
+| Byte/rune fixtures (`中`, `가`, `文` × N, quoted third-party page titles, CJK filenames in upload tests, non-ASCII search fixtures) | `*_test.go`, `web/src/lib/chat-mentions.test.mjs`, `sidequestion/VALIDATION.md`, `traffic/traffic_store_test.go`, `notify/render_test.go` | The test asserts multi-byte, rune-width or non-ASCII-search handling; ASCII input cannot exercise it |
 
 Anything not on this list must be English. A new non-English literal requires a
 new row here and a test that proves why it is needed.
+
+Two enforcement points keep this honest:
+
+- `scripts/check-non-english.py` counts characters in **every non-Latin script**
+  (Cyrillic, Greek, Hebrew, Arabic, Devanagari, Bengali, Tamil, Thai, Kana, Han,
+  Hangul, Georgian, Armenian) against `scripts/non-english-baseline.json`, and the
+  `docs` workflow fails when a file grows past its baseline or a new file appears.
+  Spanish diacritics and typographic punctuation are not counted.
+- Rule-mode chat commands (`intent …` / `hint …`) are part of the UI surface, so the
+  parser accepts exactly the English and Spanish keywords advertised by the help
+  text (`intent`/`intención`, `hint`/`pista`). The pre-en/es Korean and Chinese
+  keywords were UI input, never a stored format, and are no longer accepted.
 
 ### 3.6 Migration rules
 

@@ -4002,21 +4002,28 @@ func (s *Server) stopChat(w http.ResponseWriter, r *http.Request) {
 }
 
 // fallbackCommand classifies a rule-mode chat message into an intent/hint command
-// plus the trimmed argument. The trigger keywords accept Chinese, English
-// (intent/hint) and Korean prefixes — pure input parsing, not a wire
-// format, so the Korean aliases are additive and backward compatible. cmd is
-// "intent", "hint" or "" (status summary). (F34 d)
+// plus the trimmed argument. The trigger keywords are the two supported UI
+// languages, English and Spanish, matching what the rule-mode help text in the
+// message catalogue tells the operator to type. cmd is "intent", "hint" or ""
+// (status summary).
+//
+// The Korean and Chinese keywords of the pre-en/es UI are deliberately not
+// accepted: they were UI input, never a stored wire format, and the catalogue no
+// longer advertises them.
 func fallbackCommand(msg string) (cmd, text string) {
 	m := strings.TrimSpace(msg)
 	lower := strings.ToLower(m)
-	switch {
-	case strings.HasPrefix(m, "意图") || strings.HasPrefix(m, "의도") || strings.HasPrefix(lower, "intent"):
-		return "intent", strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(m, "意图"), "의도"), "intent"))
-	case strings.HasPrefix(m, "提示") || strings.HasPrefix(m, "힌트") || strings.HasPrefix(lower, "hint"):
-		return "hint", strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(m, "提示"), "힌트"), "hint"))
-	default:
-		return "", m
+	for _, keyword := range []string{"intención", "intent"} {
+		if strings.HasPrefix(lower, keyword) {
+			return "intent", strings.TrimSpace(m[len(keyword):])
+		}
 	}
+	for _, keyword := range []string{"pista", "hint"} {
+		if strings.HasPrefix(lower, keyword) {
+			return "hint", strings.TrimSpace(m[len(keyword):])
+		}
+	}
+	return "", m
 }
 
 // fallbackChat is the no-LLM human-steering handler: simple commands + a situation summary.
