@@ -2,38 +2,47 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 import { fileURLToPath } from "node:url";
 
-// 静态导出：`NEXT_EXPORT=1 next build` 产出纯静态目录到 web/out，可直接丢进
-// nginx web 根目录运行。开发(next dev)不设该变量，保留 /api 反代与热更新。
+// Static export: `NEXT_EXPORT=1 next build` emits a pure static directory into web/out that can be dropped straight into
+// an nginx web root and served. Development (next dev) does not set the variable, keeping the /api rewrite and hot reload.
 const isExport = process.env.NEXT_EXPORT === "1";
-// Vercel demo：整站走 mock，无后端，无需 /api 反代。
+// Vercel demo: the whole site runs on mocks, no backend, no /api rewrite needed.
 const isMock = process.env.NEXT_PUBLIC_MOCK === "1";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // 避免父目录的 lockfile 影响根目录推断及资源路径生成。
+  // Keep a parent-directory lockfile from affecting root inference and asset path generation.
   turbopack: { root: fileURLToPath(new URL(".", import.meta.url)) },
   reactCompiler: true,
-  // 允许从局域网 IP 访问 dev 资源（HMR），按需增删。
-  // dev 阶段放开任意 IPv4 来源访问 /_next/* 与 HMR（局域网 IP 变动也不受影响）。
-  // 注意：Next 出于安全禁止裸 "*"，需用分段通配；"*.*.*.*" 匹配任意 IPv4。
-  allowedDevOrigins: ["*.*.*.*"],
+  // Development-only cross-origin allowance for `next dev` (HMR + /_next/*). Next refuses a bare "*",
+  // so the previous value was the IPv4 wildcard "*.*.*.*": every IPv4 origin could drive dev/HMR
+  // against a laptop exposed on a LAN. Loopback stays the default (Next allows it anyway); LAN work
+  // is an explicit opt-in with the hosts you actually use, e.g.
+  //
+  //   ARTEX_DEV_ORIGINS="192.168.1.20,*.mylan.lan" pnpm dev
+  //
+  // Comma-separated, same syntax Next accepts for allowedDevOrigins. Ignored by the static export
+  // (NEXT_EXPORT=1) and by mock builds, which never run the dev server.
+  allowedDevOrigins: (process.env.ARTEX_DEV_ORIGINS ?? "localhost,127.0.0.1")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
   ...(isExport
     ? {
-        // 纯静态导出：无 Node 运行时；图片不经优化；每个路由产出 <route>/index.html。
+        // Pure static export: no Node runtime; images are not optimized; each route emits <route>/index.html.
         output: "export",
         images: { unoptimized: true },
         trailingSlash: true,
       }
     : isMock
       ? {
-          // Vercel mock demo：无后端，不需要 /api 反代。
+          // Vercel mock demo: no backend, no /api rewrite needed.
           images: { unoptimized: true },
         }
       : {
-          // 开发：把 /api/* 反代到 Go 后端（默认 :8787，可用 AUTOPENTEST_API 覆盖）。
+          // Development: rewrite /api/* to the Go backend (default :8787, override with AUTOPENTEST_API).
           async rewrites() {
             const backend = process.env.AUTOPENTEST_API ?? "http://localhost:8787";
             return [{ source: "/api/:path*", destination: `${backend}/api/:path*` }];
@@ -41,8 +50,8 @@ const nextConfig = {
         }),
 };
 
-// next-intl 플러그인. 요청 설정은 src/i18n/request.ts 에 둔다. i18n 경로 라우팅을
-// 쓰지 않으므로 미들웨어는 추가하지 않는다(정적 내보내기 output: "export" 와 호환).
+// next-intl plugin. Request config lives in src/i18n/request.ts. Since i18n path routing is
+// not used, no middleware is added (compatible with static export output: "export").
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 export default withNextIntl(nextConfig);

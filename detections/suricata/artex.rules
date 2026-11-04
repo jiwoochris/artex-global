@@ -1,6 +1,6 @@
 # ARTEX network detection - Suricata rules
 # Repo:  https://github.com/jiwoochris/artex-global
-# Guide: ../../docs/defense-en.md (English) / ../../docs/defense-ko.md (Korean)
+# Guide: ../../docs/defense.md
 # Index & how-to-test: detections/suricata/README.md
 #
 # SCOPE AND HONESTY - read before deploying:

@@ -1,140 +1,153 @@
-# 상류 동기화와 번역 드리프트 방지 (메인테이너 안내)
+# Upstream Sync and Preventing Translation Drift (Maintainer Guide)
 
-한국어 · [English](MAINTAINING.en.md)
+This document lays out the procedure a **maintainer** follows to keep up with changes in the
+upstream repository [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX) (currently unreachable, checked 2026-10) while maintaining the
+the global edition. Contribution scope, legal responsibility, and the localization policy live in
+[CONTRIBUTING.md](CONTRIBUTING.md); user-facing guidance lives in [README.md](README.md).
+This document therefore focuses solely on **how that policy is actually enforced**.
 
-이 문서는 **메인테이너**가 원본 저장소 [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX)(현재 접속 불가, 2026-10 확인)의
-변경을 따라잡으면서 다국어 현지화를 유지하는 절차를 정리한 것입니다. 기여 범위·법적 책임·
-현지화 방침은 [CONTRIBUTING.md](CONTRIBUTING.md)에, 사용자용 안내는 [README.ko.md](README.ko.md)에
-있으므로, 이 문서는 그 방침을 **실제로 어떻게 집행하는지**에만 집중합니다.
-
-현지화의 핵심 목표는 한 문장으로 요약됩니다. 원본의 **판단 성능을 그대로 보존하면서 사용자에게
-보이는 산출물만 설정한 언어로 바꾸는 것**입니다. 상류가 갱신될 때마다 이 경계가 흐트러지기 쉬우므로,
-아래 절차와 검사로 번역 드리프트를 막습니다.
-
----
-
-## 1. 현지화 구조 한눈에 보기
-
-이 저장소는 상류 ARTEX 를 **포크**해서 그 이력 위에 한국어 현지화 커밋을 쌓은 구조입니다.
-상류 `main` 의 모든 커밋이 이 저장소의 이력에 포함되어 있고, 그 위에 현지화 커밋이 더해져
-있습니다. 따라서 상류 변경을 가져오는 일은 "상류 `main` 과의 차이를 확인하고, 보존할 것과
-번역할 것을 가려서 반영하는 일"이 됩니다.
-
-산출물은 세 갈래로 나뉩니다.
-
-- **원문을 그대로 두는 자산**(아래 2절). 번역하면 성능이나 상류 대조가 깨집니다.
-- **코드에 고정된 출력 언어 강제**. `agent/prompt.go` 의 `langDirective()` 가 각 역할의 system
-  프롬프트 끝에 "사용자 노출 출력은 한국어로 작성하라"는 지시를 덧붙입니다.
-- **한국어로 번역하는 사용자 노출 문자열**. UI 는 `web/messages/ko.json` 에, 서버의
-  사용자 응답 문구는 각 Go 파일의 명명 상수에 둡니다.
+The core goal of the localization can be summed up in one sentence: **preserve the original's
+judgment performance exactly, while translating only the user-facing output into the selected language (English by default)**. That
+boundary is easy to blur every time upstream updates, so the procedures and checks below prevent
+translation drift.
 
 ---
 
-## 2. 원문을 보존하는 자산 (번역 금지)
+## 1. The localization structure at a glance
 
-다음 자산은 번역하지 않고 원문(중국어 또는 영어)을 유지합니다. 상류 변경이 이 자산에 닿으면
-**번역 없이 그대로 반영**합니다.
+This repository **forks** upstream ARTEX and stacks localization commits on top of its
+history. Every commit on upstream `main` is contained in this repository's history, with the
+localization commits added above them. Bringing in an upstream change therefore becomes a matter of
+"inspecting the difference against upstream `main`, then separating what to preserve from what to
+translate and applying each accordingly."
 
-- **에이전트 내부 추론 프롬프트(두뇌 본문).** `agent/promptcatalog.go` 와 DB 시드
-  `agent_prompts` 에 있는 행동 지침 본문입니다. 원문(중국어)으로 벤치마크된 동작을 유지해야
-  하므로 번역하면 판단에 드리프트가 생깁니다.
-- **표시와 에이전트 입력을 겸하는 문자열.** 활동 타임라인에 보이면서 동시에 플래너·리포터의
-  입력 컨텍스트로 되먹여지는 일부 문구(작업 중단 사유, 가로채기 차단 메시지, 트래픽 증거 헬퍼
-  등)는 하나의 레코드가 두 용도를 겸하므로 원문을 보존합니다. 판정 근거는
-  `work/DECISIONS-FOR-JIWOO.md` 의 "두뇌 경계 기록"에 사안별로 적혀 있습니다.
-- **원본 중국어 문서·문자열.** 문서는 `README.zh.md`, UI 문자열은 `web/messages/zh.json` 에
-  원문을 그대로 남겨 상류 변경과 대조하기 쉽게 합니다. 한국어 번역은 `web/messages/ko.json`
-  에만 채웁니다.
-- **명령·페이로드·코드·URL·식별자·로그 원문.** 분석에 필요한 원본이므로 번역하지 않습니다.
-  Go 코드 주석도 우선순위가 가장 낮아 상류 대조가 끝나는 시점까지 원문을 둡니다.
+The deliverables fall into three groups.
+
+- **Assets kept in the original language** (section 2). Translating them breaks performance or the
+  ability to diff against upstream.
+- **Output-language enforcement fixed in code.** `langDirective()` in `agent/prompt.go` appends to
+  the end of each role's system prompt the instruction "write user-facing output in the selected language."
+- **User-facing strings translated for each display language.** The UI strings live in `web/messages/{en,es}.json`
+  (English is the source; Spanish is the only translation);
+  the server's user-facing response strings live in named constants in each Go file.
 
 ---
 
-## 3. 상류 추적 베이스
+## 2. Assets preserved in the original language (do not translate)
 
-상류 리모트가 다음과 같이 설정되어 있어야 합니다. 없다면 추가합니다.
+The following assets are kept as upstream ships them and are not translated per locale. When an
+upstream change touches these assets, **apply it as is, without translating**.
+
+- **The agent's internal reasoning prompts (the "brain" body).** These are the behavioral-instruction
+  bodies in `agent/promptcatalog.go` and the DB seed `agent_prompts`. The behavior was benchmarked
+  in the original Chinese edition, so per-locale translation introduces drift in the agent's judgment.
+- **Strings that serve both as display and as agent input.** Some text that appears on the activity
+  timeline while also being fed back as planner/reporter input context (task-abort reasons,
+  interception-block messages, traffic-evidence helpers, and so on) is kept in the original, because
+  a single record serves two purposes. The rationale is recorded case by case under the "brain
+  boundary records" in `work/DECISIONS-FOR-JIWOO.md`.
+- **The English documents and source strings.** Documentation, comments and skills are written in
+  English only, one canonical file per subject. UI strings are English source (`en.json`) with the
+  Spanish overlay (`es.json`). Upstream documents in other languages are not copied into this
+  repository; they are compared against the upstream repository instead.
+- **Command, payload, code, URL, identifier, and log originals.** These are the originals needed for
+  analysis, so they are not translated.
+
+---
+
+## 3. The upstream tracking base
+
+The upstream remote must be configured as follows. If it is missing, add it.
 
 ```bash
 git remote add upstream https://github.com/Autumn-27/ARTEX
-git remote -v   # upstream 이 보이는지 확인
+git remote -v   # check that upstream shows up
 ```
 
-현재 현지화가 반영을 마친 상류 베이스 커밋은 다음과 같습니다.
+The upstream base commit that the localization has finished applying is:
 
-- **베이스 = `d003372`** (상류 `main`, 2026-10-03, PR #189 `fix/sse-same-origin` 병합).
+- **Base = `d003372`** (upstream `main`, 2026-10-03, merge of PR #189 `fix/sse-same-origin`).
 
-이 값은 "이 커밋까지의 상류 변경은 전부 이 저장소에 녹아 있다"는 뜻입니다. 상류 변경을 새로
-반영할 때마다 이 베이스를 7절의 방법으로 갱신합니다.
+This value means "every upstream change up to this commit is already folded into this repository."
+Each time you apply a new upstream change, update this base using the method in section 7.
 
 ---
 
-## 4. 상류 변경을 가져오는 절차
+## 4. The procedure for bringing in upstream changes
 
-### 4.1 상류를 내려받고 차이를 확인합니다
+### 4.1 Fetch upstream and inspect the difference
 
 ```bash
 git fetch upstream
-git rev-list --count d003372..upstream/main        # 미반영 상류 커밋 수
-git log --oneline d003372..upstream/main           # 미반영 커밋 목록
+git rev-list --count d003372..upstream/main        # number of unapplied upstream commits
+git log --oneline d003372..upstream/main           # list of unapplied commits
 ```
 
-`git fetch` 는 상류의 원격 추적 브랜치만 갱신하므로 작업 트리와 `HEAD` 에는 영향을 주지
-않습니다. 미반영 커밋이 0 이면 상류와 동기화된 상태이므로 더 할 일이 없습니다.
+`git fetch` only updates upstream's remote-tracking branch, so it leaves the working tree and `HEAD`
+untouched. If the count of unapplied commits is 0, you are in sync with upstream and there is nothing
+more to do.
 
-### 4.2 변경 파일을 분류합니다
+### 4.2 Classify the changed files
 
-미반영 커밋이 어떤 파일을 건드렸는지 보고, 2절의 보존 자산과 번역 대상으로 나눕니다.
+See which files the unapplied commits touched, and split them into the preserved assets of section 2
+and the translation targets.
 
 ```bash
 git log --name-status --oneline d003372..upstream/main
 ```
 
-분류 기준은 다음과 같습니다.
+The classification criteria are as follows.
 
-- `agent/promptcatalog.go`·`agent_prompts` 시드, 그리고 2절의 표시 겸 입력 문자열이 바뀌었다면
-  → **번역 없이 그대로 반영**합니다.
-- Go 백엔드 로직(`db/`·`llmrec/`·`server/` 등)이 바뀌었다면 → 로직은 그대로 반영하되,
-  **새로 생긴 사용자 응답 문구**(`writeErr` 등)가 있는지 확인해서 한국어 상수로 번역합니다.
-- UI(`web/src/**`)가 바뀌어 **새 화면 문자열**이 생겼다면 → 하드코딩하지 말고
-  `web/messages/zh.json`(원문)과 `web/messages/ko.json`(번역)에 같은 키로 추가합니다.
-- **탐지 규칙이 고정한 상류 지표**(`enrich/enrich.go` 의 프로버 User-Agent, `selfupdate/` 의
-  자가 갱신 User-Agent, `guard/guard.go` 의 감사 마커, `db/db.go` 의 파괴명령 deny 목록,
-  `cmd/artex/main.go` 의 기본 리슨·기록 프록시 포트)가 바뀌었다면 → `detections/` 의
-  Sigma·Suricata 규칙과 ATT&CK 레이어, 그리고 `detections/indicators/artex_indicators.csv` 의
-  값도 새 값으로 맞춥니다. 이 지표는 번역 대상이 아니라 **탐지의 근거**라, 상류가 값을 바꾸면
-  규칙이 조용히 낡습니다. 5.4 의 지표 일치 테스트가 이 어긋남을 자동으로 잡습니다.
+- If `agent/promptcatalog.go` / the `agent_prompts` seed, or the display-and-input strings of
+  section 2, changed → **apply as is, without translating**.
+- If Go backend logic (`db/`, `llmrec/`, `server/`, and so on) changed → apply the logic as is, but
+  check for **newly introduced user-facing strings** (`writeErr`, and the like) and write them as
+  English source strings, adding the Spanish catalog entry.
+- If the UI (`web/src/**`) changed and introduced **new screen strings** → do not hard-code them;
+  add them under the same key to `web/messages/en.json` (source) and `web/messages/es.json`
+  (translation).
+- If **upstream indicators pinned by the detection rules** changed (the prober User-Agent in
+  `enrich/enrich.go`, the self-update User-Agent in `selfupdate/`, the audit marker in
+  `guard/guard.go`, the destructive-command deny list in `db/db.go`, the default listen and
+  recording-proxy ports in `cmd/artex/main.go`) → bring the Sigma/Suricata rules and the ATT&CK layer
+  in `detections/`, as well as the values in `detections/indicators/artex_indicators.csv`, in line
+  with the new values. These indicators are not translation targets but the **basis of detection**,
+  so when upstream changes a value, the rules silently go stale. The indicator-match test in 5.4
+  catches that mismatch automatically.
 
-### 4.3 반영합니다
+### 4.3 Apply
 
-기능 단위로 병합하거나 선별 반영한 뒤, 4.2 에서 가려낸 새 문자열을 한국어로 번역합니다.
-병합 과정에서 `ko.json`·`zh.json` 의 키가 어긋나거나 사용자 노출 자리에 원문이 새어 들어오기
-쉬우므로, 반영 직후 반드시 5절의 검사를 돌립니다.
+Merge or cherry-pick feature by feature, then translate the new strings you separated out in 4.2 into
+Spanish. During the merge it is easy for `en.json` / `es.json` keys to fall out of sync or for an
+source string to leak into a user-facing slot, so always run the checks in section 5 right after
+applying.
 
-> **예시(2026-10-05 기준 미반영 커밋).** `git fetch upstream` 결과 상류 `main` 이
-> `b55ceb1` 로 앞서 있고, 베이스 `d003372` 대비 커밋 2개(`86729b6` 모델 폴백 승인 토큰 계량
-> 기능 + 병합 커밋 `b55ceb1`)가 미반영입니다. 이 커밋은 `db/llm_usage.go`·`llmrec/llmrec.go`·
-> `server/intercept.go`·`server/server.go` 같은 Go 로직과 `web/src/app/(main)/system/intercept/page.tsx`·
-> `web/src/lib/api.ts`·`web/src/lib/mock/handler.ts`·`web/src/lib/types.ts` 를 건드립니다.
-> 따라서 메인테이너는 Go 로직은 그대로 반영하고, intercept 설정 페이지에 새로 생긴 화면
-> 문자열만 `ko.json`·`zh.json` 키로 추출·번역하면 됩니다. (이 두 커밋은 이 문서를 쓴 시점에는
-> 아직 반영하지 않았으므로 베이스는 `d003372` 로 둡니다.)
+> **Example (unapplied commits as of 2026-10-05).** The `git fetch upstream` result shows upstream
+> `main` ahead at `b55ceb1`, with 2 commits (`86729b6`, the model-fallback approval-token metering
+> feature, plus the merge commit `b55ceb1`) unapplied relative to base `d003372`. These commits touch
+> Go logic such as `db/llm_usage.go`, `llmrec/llmrec.go`, `server/intercept.go`, and `server/server.go`,
+> and `web/src/app/(main)/system/intercept/page.tsx`, `web/src/lib/api.ts`, `web/src/lib/mock/handler.ts`,
+> and `web/src/lib/types.ts`. The maintainer therefore applies the Go logic as is and only extracts and
+> translates the new screen strings introduced on the intercept settings page into `en.json` / `es.json`
+> keys. (These two commits had not yet been applied at the time this document was written, so the base
+> stays at `d003372`.)
 
 ---
 
-## 5. 번역 대칭과 드리프트 검사
+## 5. Translation-symmetry and drift checks
 
-상류 반영이나 번역 작업 뒤에 아래 세 가지를 확인합니다.
+After applying an upstream change or doing translation work, verify the following three things.
 
-### 5.1 ko ↔ zh 메시지 대칭과 사용자 노출 CJK
+### 5.1 English ↔ Spanish message symmetry
 
-`ko.json` 과 `zh.json` 의 키가 정확히 같고, `ko.json` 값에 중국어 한자가 남아 있지 않아야
-합니다. 아래 스크립트가 세 수치를 출력합니다.
+The keys of `en.json` and `es.json` must be exactly the same: no key may exist in only one of them.
+The script below prints the leaf-key counts and the symmetric difference (which must be 0).
 
 ```bash
 python3 - <<'PY'
-import json, re
-ko = json.load(open('web/messages/ko.json'))
-zh = json.load(open('web/messages/zh.json'))
+import json
+en = json.load(open('web/messages/en.json'))
+es = json.load(open('web/messages/es.json'))
 def flatten(d, p=''):
     out = {}
     if isinstance(d, dict):
@@ -143,80 +156,83 @@ def flatten(d, p=''):
         for i, v in enumerate(d): out.update(flatten(v, p + '/' + str(i)))
     else: out[p] = d
     return out
-fk, fz = flatten(ko), flatten(zh)
-han = re.compile(r'[㐀-鿿]')
-print('ko leaf keys :', len(fk))
-print('zh leaf keys :', len(fz))
-print('key symdiff  :', len(set(fk) ^ set(fz)))        # 0 이어야 함
-print('ko vals w/CJK:', sum(1 for v in fk.values() if isinstance(v, str) and han.search(v)))  # 0 이어야 함
+fe, fs = flatten(en), flatten(es)
+print('en leaf keys :', len(fe))
+print('es leaf keys :', len(fs))
+print('key symdiff  :', len(set(fe) ^ set(fs)))        # must be 0
 PY
 ```
 
-기준값(2026-10-05): `ko leaf keys = 2950`, `zh leaf keys = 2950`, `key symdiff = 0`,
-`ko vals w/CJK = 0`. 키 수는 상류 반영으로 늘 수 있지만, ko 와 zh 는 항상 같아야 하고
-`key symdiff` 와 `ko vals w/CJK` 는 항상 0 이어야 합니다.
+The key count can grow as upstream changes are applied, but en and es must always be equal and
+`key symdiff` must always be 0.
 
-### 5.2 두뇌 자산의 원문 보존 확인
+### 5.2 Confirm that the reasoning prompts are in English
 
-두뇌 본문은 중국어 원문을 유지하므로, 아래 검사에서 **한자 라인 수가 0 으로 떨어지면** 오히려
-두뇌가 실수로 번역돼 오염됐다는 신호입니다.
+The agent's reasoning-prompt body is in English. A non-zero count of lines containing Han
+characters in the check below is a signal that an upstream merge pulled the Chinese body back in.
 
 ```bash
 python3 -c "import re; han=re.compile(r'[㐀-鿿]'); t=open('agent/promptcatalog.go').read(); print('promptcatalog.go CJK lines =', sum(1 for l in t.splitlines() if han.search(l)))"
 ```
 
-기준값(2026-10-05): `promptcatalog.go CJK lines = 70`. 이 수가 크게 줄면 두뇌 본문이 번역됐는지
-확인합니다.
+`promptcatalog.go CJK lines = 0` after the English conversion. If this number rises, check whether
+the brain body was merged in its original language.
 
-### 5.3 빌드 산출물에 원문이 새지 않는지
+### 5.3 Make sure no untranslated language leaks into the build output
 
-UI 를 정적으로 내보낸 뒤 프리렌더 HTML 에 중국어가 보이면 번역 누락입니다.
-
-```bash
-cd web && npm ci && NEXT_EXPORT=1 npm run build   # out/ 생성
-# out/**/*.html 에서 가시 텍스트의 중국어 한자가 0 인지 확인
-```
-
-### 5.4 탐지 지표가 상류 소스와 여전히 맞는지
-
-`detections/` 의 규칙은 상류가 실제로 내보내는 문자열(프로버 User-Agent·자가 갱신
-User-Agent·감사 마커·파괴명령 deny 목록)에 근거합니다. 상류 재동기화가 이 값을 바꾸면
-번역 검사는 전부 통과하는데 배포된 규칙만 조용히 매칭을 멈춥니다. 아래 테스트가 각 지표가
-상류 소스와 규칙 양쪽에 여전히 있는지 양방향으로 확인하므로, 재동기화 뒤에 함께 돌립니다.
+After exporting the UI statically, Chinese (or any language other than the active locale's) appearing
+in the prerendered HTML means a missing translation or a leaked source string.
 
 ```bash
-detections/tests/indicators/run.sh   # Docker 로 격리 실행, RESULT: PASS 이면 일치
+cd web && npm ci && NEXT_EXPORT=1 npm run build   # generates out/
+# check that the visible text in out/**/*.html contains 0 Chinese characters
 ```
 
-실패하면 어느 지표가 어긋났는지와 그 방향(상류 소스가 바뀌었는지, 규칙이 바뀌었는지)을
-출력하므로, 4.2 의 마지막 분류 기준대로 규칙·레이어를 새 값에 맞춥니다. 이 테스트는 저장소
-CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))에서도 규칙 트리나
-위 상류 소스 파일이 바뀐 푸시·PR 마다 자동으로 돌아, 재동기화 드리프트를 머지 게이트에서 잡습니다.
+### 5.4 Make sure the detection indicators still match the upstream source
 
-새 지표를 추가하면서 **새 상류 소스 파일을 고정했다면**(예: `cmd/artex/main.go` 의 포트 지표를
-넣을 때처럼), 그 파일을 반드시 위 워크플로의 `push`·`pull_request` `paths` 필터에도 추가합니다.
-빠뜨리면 그 소스만 바꾼 PR 은 지표 테스트를 발화시키지 못해, 드리프트가 머지 게이트를 조용히
-통과합니다. 이 동기화 자체도 지표 테스트가 자동으로 확인합니다(다섯 번째 검사 "CI triggers this
-test when any pinned source changes"): 테스트가 읽는 모든 비 `detections/` 소스가 양쪽 `paths`
-블록에 열거돼 있지 않으면 테스트가 실패하므로, 소스 고정과 CI 발화 조건이 어긋난 채로 머지되지
-않습니다.
+The rules in `detections/` are based on the strings that upstream actually emits (prober User-Agent,
+self-update User-Agent, audit marker, destructive-command deny list). When an upstream re-sync changes
+these values, the translation checks all pass while only the shipped rules silently stop matching. The
+test below verifies bidirectionally that each indicator is still present in both the upstream source
+and the rules, so run it after a re-sync.
 
-### 5.5 탐지 테스트 도구 핀을 올릴 때
+```bash
+detections/tests/indicators/run.sh   # runs in isolation under Docker; RESULT: PASS means a match
+```
 
-탐지 테스트는 `sigma-cli`·SigmaHQ 검증기 플러그인(`pySigma-validators-sigmahq`)·Suricata 이미지를
-고정 버전으로 돌립니다(각 `run.sh` 의 기본값, 환경 변수로 덮어쓰기 가능). 이 핀을 올리면 상류
-소스가 아니라 **도구 쪽 드리프트**가 생길 수 있습니다. 특히 SigmaHQ 검증기는 판올림마다 새 관례
-검사를 추가하므로, `detections/tests/sigma_lint/run.sh` 가 새 이슈를 빨갛게 드러낼 수 있습니다.
-그때는 규칙을 새 관례에 맞추거나, 단독 규칙 세트에 맞지 않는 관례라면 그 사유를 적어
-[`detections/tests/sigma_lint/validators.yml`](detections/tests/sigma_lint/validators.yml) 의 제외
-목록에 추가합니다. 백엔드 플러그인이 지원을 바꾸면 `sigma_backends` 테스트가 같은 신호를 줍니다.
+On failure it prints which indicator is out of sync and in which direction (whether the upstream
+source changed or the rule changed), so bring the rules and the layer in line with the new values per
+the last classification criterion of 4.2. This test also runs automatically in the repository CI
+([`.github/workflows/detections.yml`](.github/workflows/detections.yml)) on every push/PR that changes
+the rule tree or the upstream source files above, catching re-sync drift at the merge gate.
+
+If you add a new indicator and in doing so **pin a new upstream source file** (as when adding the port
+indicator from `cmd/artex/main.go`, for example), you must also add that file to the `push` and
+`pull_request` `paths` filters of the workflow above. If you miss it, a PR that changes only that
+source will not trigger the indicator test, and the drift will silently pass the merge gate. The
+indicator test checks this synchronization itself (its fifth check, "CI triggers this test when any
+pinned source changes"): if any non-`detections/` source the test reads is not listed in both `paths`
+blocks, the test fails, so source pinning and CI trigger conditions cannot be merged out of sync.
+
+### 5.5 When bumping the detection-test tool pins
+
+The detection tests run `sigma-cli`, the SigmaHQ validator plugin (`pySigma-validators-sigmahq`), and
+the Suricata image at fixed versions (the defaults in each `run.sh`, overridable via environment
+variables). Bumping these pins can introduce **tool-side drift** rather than upstream-source drift. In
+particular, the SigmaHQ validator adds new convention checks with each release, so
+`detections/tests/sigma_lint/run.sh` may surface new issues in red. When that happens, bring the rules
+in line with the new convention, or — if the convention does not fit a standalone rule set — record
+the reason and add it to the exclusion list in
+[`detections/tests/sigma_lint/validators.yml`](detections/tests/sigma_lint/validators.yml). If a
+backend plugin changes its support, the `sigma_backends` test gives the same signal.
 
 ---
 
-## 6. 빌드와 테스트로 마무리 검증
+## 6. Finishing with build and test verification
 
-반영·번역 뒤에는 [CONTRIBUTING.md 의 개발 환경](CONTRIBUTING.md#개발-환경) 절차대로 백엔드와
-프런트엔드를 검증합니다. 로컬에 Go 가 없으면 Docker 로 동일하게 돌릴 수 있습니다.
+After applying and translating, verify the backend and frontend per the
+[development environment procedure in CONTRIBUTING.md](CONTRIBUTING.md#development-environment).
+If you do not have Go locally, you can run the same thing under Docker.
 
 ```bash
 docker run --rm -v "$PWD":/src -w /src \
@@ -224,74 +240,77 @@ docker run --rm -v "$PWD":/src -w /src \
   golang:1.26 sh -c 'go build ./... && go vet ./... && go test ./... -count=1'
 ```
 
-사용자 노출 문구를 번역할 때는 그 문구를 단언하는 회귀 테스트(`*_localized_test.go`)를 함께
-두어, 나중에 상류 변경이 다시 중국어를 끌어와도 테스트가 잡게 합니다. 번역 검증은 반드시
-역량 있는(프런티어급) 모델로 합니다. 저가·소형 모델은 출력이 원문으로 되돌아갈 수 있어
-번역 적용 여부를 그 출력만으로 판단하면 안 됩니다.
+When you translate a user-facing string, add a regression test (`*_localized_test.go`) that asserts
+that string as well, so that if a later upstream change pulls another language back in, the test
+catches it.
+Always do translation verification with a capable (frontier-class) model. Low-cost, small models can
+revert their output to the original language, so you must not judge whether a translation applied from
+their output alone.
 
 ---
 
-## 7. 베이스 갱신 기록
+## 7. Base-update record
 
-상류 변경을 반영하고 검증까지 마쳤다면, 이 문서 3절의 **베이스 커밋 값을 새 상류 커밋으로
-갱신**하고 그 변경을 같은 커밋 또는 뒤따르는 커밋에 포함합니다. 이렇게 해두면 다음 메인테이너가
-"어디까지 반영됐는지"를 이 문서 한 곳에서 확인할 수 있습니다.
+Once you have applied an upstream change and finished verifying it, **update the base commit value in
+section 3 of this document to the new upstream commit** and include that change in the same commit or
+a following one. Doing so lets the next maintainer confirm "how far things have been applied" in this
+one place.
 
-커밋 메시지는 [CONTRIBUTING.md 의 커밋 메시지 규칙](CONTRIBUTING.md#커밋-메시지)을 따릅니다.
-예를 들어 상류 동기화 커밋은 다음과 같이 적습니다.
+Commit messages follow the [commit-message rules in CONTRIBUTING.md](CONTRIBUTING.md#commit-messages).
+For example, an upstream-sync commit is written like this (the description is in English).
 
 ```
-chore(upstream): 상류 d003372..b55ceb1 반영 (intercept 토큰 계량) + 신규 UI 문자열 번역
+chore(upstream): sync d003372..b55ceb1 (intercept token metering) + translate new UI strings
 ```
 
 ---
 
-## 8. 검토·검증 수칙 (흔한 함정)
+## 8. Review and verification rules of thumb (common pitfalls)
 
-상류 반영·번역·문서 보강을 점검할 때 메인테이너가 반복해서 빠지는 함정 두 가지를 적어
-둡니다. 둘 다 "검사 방법 자체가 틀려서 멀쩡한 것을 깨졌다고 오인하는" 경우라, 불필요한
-되돌림을 막으려고 수칙으로 고정합니다.
+Here are two pitfalls maintainers repeatedly fall into when checking upstream applies, translations,
+and documentation improvements. Both are cases where "the checking method itself is wrong, so you
+mistake something healthy for broken," so they are fixed here as rules of thumb to prevent unnecessary
+reverts.
 
-### 8.1 저장소 CI 상태는 저장소를 지정해서 확인합니다
+### 8.1 Check the repository's CI status by specifying the repository
 
-이 저장소는 상류 ARTEX 의 포크라서, 로컬 `git remote` 에 `origin`(jiwoochris/artex-global)과
-`upstream`(Autumn-27/ARTEX)이 함께 등록되어 있습니다(3절 참조). 이 상태에서 `gh` 명령에
-저장소를 지정하지 않으면, `gh` 가 **상류 저장소를 기본값으로 골라** 우리 워크플로가 없는
-상류의 실행 결과를 보여 줍니다. 그러면 상류 CI 가 초록인 것을 보고 **우리 CI 가 통과했다고
-착각**하거나, 우리 워크플로(`ci.yml`·`detections.yml`)를 "HTTP 404 … not found" 로 잘못
-판단할 수 있습니다.
+This repository is a fork of upstream ARTEX, so the local `git remote` has both `origin`
+(jiwoochris/artex-global) and `upstream` (Autumn-27/ARTEX) registered (see section 3). In this state, if
+you do not specify a repository in a `gh` command, `gh` **picks the upstream repository as the
+default** and shows you run results from upstream, which does not have our workflows. You can then see
+upstream CI green and **mistakenly think our CI passed**, or judge our workflows (`ci.yml`,
+`detections.yml`) as "HTTP 404 ... not found" by mistake.
 
-그래서 CI 를 확인할 때는 항상 저장소를 명시합니다.
+So when checking CI, always name the repository explicitly.
 
 ```bash
 gh run list -R jiwoochris/artex-global --workflow ci.yml --limit 5
 gh run list -R jiwoochris/artex-global --workflow detections.yml --limit 5
 ```
 
-한 번 설정해 두면 `-R` 를 생략해도 우리 저장소를 기본으로 보도록 바꿀 수 있습니다. 다만 이
-설정은 **로컬 gh 설정**이라 저장소에 커밋되지 않으므로, 새 머신이나 새 체크아웃에서는 다시
-지정해야 합니다.
+Once set, you can make `gh` default to our repository even when you omit `-R`. Note, however, that
+this setting is a **local gh setting** and is not committed to the repository, so you must set it
+again on a new machine or a new checkout.
 
 ```bash
 gh repo set-default jiwoochris/artex-global
-gh repo set-default --view   # jiwoochris/artex-global 가 보이는지 확인
+gh repo set-default --view   # check that jiwoochris/artex-global shows up
 ```
 
-### 8.2 문서의 외부 링크는 브라우저처럼 GET 으로 확인합니다
+### 8.2 Check external links in documents with GET, like a browser
 
-방어 가이드([`docs/defense-ko.md`](docs/defense-ko.md)·[`defense-en.md`](docs/defense-en.md))의
-7절은 국내 공식 채널(boho.or.kr·fsec.or.kr·pipc.go.kr)의 링크를 싣습니다. 이 링크가 살아
-있는지 확인할 때 `curl -I`(HEAD 요청)나 기본 User-Agent 로만 확인하면 **멀쩡한 링크를 깨진
-것으로 오인**합니다. 국내 공공·보안 기관 사이트는 다음 세 가지 이유로 단순 확인을 거부하기
-때문입니다.
+Section 7 of the defense guide ([`docs/defense.md`](docs/defense.md)) carries links to Korean official channels (boho.or.kr,
+fsec.or.kr, pipc.go.kr). When checking whether these links are alive, using only `curl -I` (a HEAD
+request) or the default User-Agent will **mistake a healthy link for a broken one**. Korean public and
+security agency sites refuse a simple check for three reasons.
 
-- **HEAD 요청을 거부합니다.** 예를 들어 fsec.or.kr 은 `curl -I`(HEAD)에 400 을 돌려줍니다.
-- **기본 `curl` User-Agent 를 차단합니다.** fsec.or.kr 과 pipc.go.kr 은 기본 UA 로 보낸
-  GET 요청에도 400 을 돌려줍니다(브라우저 UA 로 보내면 200).
-- **다른 주소로 리다이렉트합니다.** pipc.go.kr 은 `www.pipc.go.kr` 에서 `pipc.go.kr/np/` 로
-  두 번 리다이렉트하므로, 리다이렉트를 따라가지 않으면 최종 상태를 놓칩니다.
+- **They reject HEAD requests.** For example, fsec.or.kr returns 400 to `curl -I` (HEAD).
+- **They block the default `curl` User-Agent.** fsec.or.kr and pipc.go.kr return 400 even to GET
+  requests sent with the default UA (they return 200 when sent with a browser UA).
+- **They redirect to a different address.** pipc.go.kr redirects twice, from `www.pipc.go.kr` to
+  `pipc.go.kr/np/`, so if you do not follow redirects you miss the final status.
 
-따라서 링크 확인은 **브라우저 User-Agent 로, GET 으로, 리다이렉트를 따라가며** 합니다.
+So check links **with a browser User-Agent, with GET, following redirects**.
 
 ```bash
 UA='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36'
@@ -300,111 +319,113 @@ for u in https://www.boho.or.kr https://www.fsec.or.kr https://www.pipc.go.kr; d
 done
 ```
 
-최종 상태 코드가 200 이면 링크는 유효합니다. 상태 코드가 400·403 으로 나오면 링크가 깨진
-것이 아니라 **확인 방법이 서버의 접근 정책에 막힌 것**은 아닌지 먼저 의심하고, HEAD·기본
-UA·리다이렉트 미추적 같은 요인을 하나씩 제거해 다시 확인합니다. (2026-10-06 확인 기준으로
-세 링크 모두 위 방법에서 200 이며, pipc.go.kr 은 2회 리다이렉트 뒤 200 입니다.)
+A final status code of 200 means the link is valid. If the status code comes back 400 or 403, first
+suspect that the link is not broken but that **your checking method was blocked by the server's access
+policy**, and re-check by eliminating factors one at a time: HEAD, the default UA, and not following
+redirects. (As of the 2026-10-06 check, all three links return 200 with the method above, with
+pipc.go.kr returning 200 after two redirects.)
 
-이 수동 절차는 `scripts/check-external-links.py` 가 그대로 자동화합니다. 추적되는 모든 `.md`
-에서 코드펜스·인라인 코드 밖의 외부 링크를 모으고(예약·플레이스홀더 호스트는 제외), 위와
-같이 브라우저 UA·GET·리다이렉트 추적으로 상태를 확인하며 네트워크 오류·5xx·429 는 재시도해
-일시적 깜빡임과 진짜 장애를 가릅니다. 결과를 네 가지로 나눕니다: OK(2xx·3xx) ·
-RESTRICTED(401·403·405·429, 호스트는 살아 있고 확인 방법만 막힘) · ALLOWED
-(`scripts/external-links-allowlist.txt` 에 적힌, 우리가 고칠 수 없는 상류 상속 죽은 링크) ·
-DOWN(404·410·5xx·연결 오류, 깨졌을 가능성 높음).
+This manual procedure is automated as-is by `scripts/check-external-links.py`. It gathers the external
+links outside code fences and inline code from every tracked `.md` (excluding reserved and placeholder
+hosts), checks their status with a browser UA, GET, and redirect-following as above, and retries on
+network errors, 5xx, and 429 to separate transient flakes from real outages. It sorts results into four
+classes: OK (2xx/3xx) · RESTRICTED (401/403/405/429 — the host is alive, only the checking method is
+blocked) · ALLOWED (a known upstream-inherited dead link we cannot fix, listed in
+`scripts/external-links-allowlist.txt`) · DOWN (404/410/5xx/connection error — likely broken).
 
-- 네트워크 없이 점검 대상만 미리 보기: `python3 -I scripts/check-external-links.py --list`
-- 릴리스·주기 점검(새로 깨진 링크가 있으면 비정상 종료): `python3 -I scripts/check-external-links.py --strict`
+- Preview the targets without the network: `python3 -I scripts/check-external-links.py --list`
+- Release/periodic check (exits non-zero on a newly broken link): `python3 -I scripts/check-external-links.py --strict`
 
-외부 링크 생존은 flaky 하므로 **머지 게이트에 넣지 않습니다**. 대신 비차단 워크플로
-[`external-links`](.github/workflows/external-links.yml) 가 매주 월요일과 수동 실행으로
-`--strict` 를 돌려, allowlist 에 없는 DOWN 이 새로 생기면 빨갛게 드러냅니다. 상류 원문 보존
-파일이 물려받은 죽은 링크(예: `CHANGELOG.zh.md` 가 크레딧한, 사라진 기여자 계정)는 우리가
-고칠 수 없으므로 allowlist 에 사유와 함께 적어 strict 점검에서 뺍니다.
+External-link liveness is flaky, so it is **not a merge gate**. Instead the non-blocking
+[`external-links`](.github/workflows/external-links.yml) workflow runs `--strict` every Monday and on
+manual dispatch, turning red when a DOWN not on the allowlist newly appears. Dead links inherited by
+upstream-preserved files (for example a vanished contributor account credited upstream) are
+ones we cannot fix, so they go on the allowlist with a reason and are excluded from the strict check.
 
 ---
 
-## 9. 릴리스 발행 파이프라인
+## 9. The release pipeline
 
-버전 태그(`v*`)를 밀면 [`.github/workflows/release.yml`](.github/workflows/release.yml) 이 다섯
-플랫폼용 바이너리와, 조건을 만족할 때 멀티아키텍처 Docker 이미지를 만듭니다. 이 포크는 아직
-릴리스 태그를 끊은 적이 없어 이 워크플로가 한 번도 실행되지 않았으므로, 이 절은 파이프라인이
-무엇을 전제하고 무엇을 산출하는지, 그리고 그 전제가 지금 저장소 구조와 맞는지를 정리합니다.
-태그를 밀면 공개 저장소에 GitHub Release 가 생기므로, 릴리스를 끊는 일은 발행 결정이 선 뒤에
-합니다.
+Pushing a version tag (`v*`) makes [`.github/workflows/release.yml`](.github/workflows/release.yml)
+build binaries for five platforms and, when a condition is met, a multi-architecture Docker image.
+This fork has never cut a release tag, so this workflow has never run. This section therefore records
+what the pipeline assumes and produces, and whether those assumptions match the current repository
+structure. Because pushing a tag creates a GitHub Release on the public repository, cut a release only
+after the publishing decision is made.
 
-### 9.1 릴리스를 끊는 법
+### 9.1 How to cut a release
 
-`v` 로 시작하는 태그를 밀면 워크플로가 발화합니다.
+Pushing a tag that starts with `v` fires the workflow.
 
 ```bash
 git tag v0.3.15
 git push origin v0.3.15
 ```
 
-### 9.2 파이프라인이 하는 일
+### 9.2 What the pipeline does
 
-워크플로는 잡 다섯 개로 나뉩니다.
+The workflow is split into five jobs.
 
-- **frontend.** 프런트엔드를 정적으로 한 번 내보내고(`web/out`) 그 산출물을 `web-dist`
-  아티팩트로 올립니다. 아래 binaries 잡이 대상마다 이 산출물을 다시 받아 재사용합니다.
-- **binaries.** 다섯 대상(linux amd64·arm64, darwin amd64·arm64, windows amd64)을 교차
-  컴파일하고 대상마다 zip 으로 묶습니다. linux amd64 바이너리에는 `artex -h` 스모크 테스트를
-  돌려 바이너리가 실제로 실행되는지 확인합니다.
-- **release.** 모든 zip 을 모아 `SHA256SUMS` 체크섬을 만들고, GitHub Release 를 생성해 zip 과
-  체크섬을 첨부합니다.
-- **docker.** binaries 가 교차 컴파일한 linux 바이너리를 받아 멀티아키텍처(amd64·arm64) 이미지를
-  빌드하고 GitHub Container Registry 의 `ghcr.io/jiwoochris/artex-global` 에 릴리스 태그와 `latest`
-  로 올립니다. 로그인은 워크플로 기본 `GITHUB_TOKEN`(잡 권한 `packages: write`)으로 하므로 따로
-  둘 시크릿이 없습니다.
+- **frontend.** Statically exports the frontend once (`web/out`) and uploads that output as the
+  `web-dist` artifact. The binaries job below downloads and reuses this output per target.
+- **binaries.** Cross-compiles five targets (linux amd64/arm64, darwin amd64/arm64, windows amd64) and
+  packages a zip per target. On the linux amd64 binary it runs an `artex -h` smoke test to confirm the
+  binary actually runs.
+- **release.** Gathers all zips, generates a `SHA256SUMS` checksum file, and creates a GitHub Release
+  with the zips and the checksum attached.
+- **docker.** Takes the linux binaries cross-compiled by binaries, builds a multi-architecture
+  (amd64/arm64) image, and pushes it to GitHub Container Registry as `ghcr.io/jiwoochris/artex-global`
+  with the release tag and `latest`. It logs in with the workflow's built-in `GITHUB_TOKEN` (job
+  permission `packages: write`), so no extra secrets are needed.
 
-### 9.3 빌드 전제가 저장소 구조와 맞는가
+### 9.3 Do the build assumptions match the repository structure
 
-파이프라인은 다음 세 가지 전제 위에서 동작하며, 이 전제가 지금 저장소 구조와 모두 맞는지를
-로컬에서 binaries 잡을 직접 재현해 확인했습니다.
+The pipeline runs on the following three assumptions, and all three were confirmed to match the
+current repository structure by reproducing the binaries job locally.
 
-- **프런트엔드 임베드.** frontend 잡이 올린 `web-dist`(= `web/out` 의 내용)를 binaries 잡이
-  `server/webui/dist` 로 받고, `server/webui_embed.go` 의 `//go:embed all:webui/dist` 가 그 자리를
-  바이너리에 임베드합니다. 그래서 binaries 잡은 프런트엔드를 다시 빌드하지 않고
-  `ARTEX_SKIP_FRONTEND=1` 로 [`build.sh`](build.sh) 를 호출합니다.
-- **바이너리·패키지 경로.** `build.sh --target <os>/<arch>` 는 `dist/artex-<os>-<arch>/artex`
-  바이너리와 `dist/` 아래 zip 패키지를 만듭니다. zip 에는 바이너리와 함께 시작 스크립트(리눅스·
-  macOS 는 `start.sh`, 윈도우는 `start.bat`), `skills/`, `config.example.json`, `README.md` 가
-  들어갑니다.
-- **Docker 이미지의 바이너리 복사.** binaries 잡은 linux 바이너리를 `bin-linux-<arch>`
-  아티팩트로 따로 올리고, docker 잡이 이것을 `dist/<arch>/artex` 로 받습니다.
-  [`Dockerfile`](Dockerfile) 의 `COPY dist/${TARGETARCH}/artex` 가, 멀티아키텍처 빌드에서 buildx
-  가 각 플랫폼에 맞춰 채워 주는 `TARGETARCH` 로 그 경로를 집습니다.
-  [`.dockerignore`](.dockerignore) 는 `dist/` 를 제외하지 않으므로 바이너리가 빌드 컨텍스트에
-  포함됩니다.
+- **Frontend embed.** The binaries job receives the `web-dist` (the contents of `web/out`) uploaded by
+  the frontend job into `server/webui/dist`, and `//go:embed all:webui/dist` in `server/webui_embed.go`
+  embeds that location into the binary. The binaries job therefore does not rebuild the frontend; it
+  calls [`build.sh`](build.sh) with `ARTEX_SKIP_FRONTEND=1`.
+- **Binary and package paths.** `build.sh --target <os>/<arch>` produces the `dist/artex-<os>-<arch>/artex`
+  binary and a zip package under `dist/`. The zip contains the binary together with a start script
+  (`start.sh` on Linux/macOS, `start.bat` on Windows), `skills/`, `config.example.json`, and
+  `README.md`.
+- **Copying the binary into the Docker image.** The binaries job uploads the linux binary separately as
+  the `bin-linux-<arch>` artifact, and the docker job receives it as `dist/<arch>/artex`. The
+  `COPY dist/${TARGETARCH}/artex` in [`Dockerfile`](Dockerfile) picks up that path via the `TARGETARCH`
+  that buildx fills in per platform during a multi-architecture build. [`.dockerignore`](.dockerignore)
+  does not exclude `dist/`, so the binary is included in the build context.
 
-### 9.4 Docker 이미지 네임스페이스
+### 9.4 The Docker image namespace
 
-이미지는 이 포크가 소유한 `ghcr.io/jiwoochris/artex-global` 로 발행하고, `docker-compose.yml` 도 이
-이미지를 받습니다(2026-10-11 결정, `work/DECISIONS-FOR-JIWOO.md` 8번 항목). 상류의
-`autumn27/artex` 는 Docker Hub 에서 내려갔고 이 포크에는 push 권한도 없어 쓰지 않습니다.
-GHCR 패키지는 처음 발행될 때 비공개로 만들어질 수 있으니, 첫 릴리스 뒤 패키지 설정에서 공개
-(public)인지 확인합니다. 비공개면 `docker compose pull` 이 인증 오류로 실패합니다.
+Images are published to `ghcr.io/jiwoochris/artex-global`, a namespace this fork owns, and
+`docker-compose.yml` pulls that image (decided 2026-10-11, `work/DECISIONS-FOR-JIWOO.md`, item 8).
+Upstream's `autumn27/artex` has been taken down from Docker Hub and this fork has no push access to
+it, so it is no longer used. A GHCR package may be created as private on its first publish, so after
+the first release check in the package settings that it is public; if it is private,
+`docker compose pull` fails with an authentication error.
 
-### 9.5 태그 없이 로컬에서 미리 검증하기
+### 9.5 Verifying locally without a tag
 
-공개 릴리스를 끊지 않고 파이프라인 전제만 확인하려면, binaries 잡을 로컬에서 재현합니다.
-로컬에 Go 가 없으면 Docker 로 동일하게 돌릴 수 있습니다.
+To check only the pipeline assumptions without cutting a public release, reproduce the binaries job
+locally. If you do not have Go locally, you can run the same thing under Docker.
 
 ```bash
-# 1) 프런트엔드 정적 내보내기(release.yml 의 frontend 잡에 해당)
+# 1) Static frontend export (corresponds to the frontend job in release.yml)
 cd web && npm ci && npm run build:static && cd ..
-# 2) binaries 잡이 아티팩트를 받는 자리에 배치
+# 2) Place it where the binaries job receives the artifact
 rm -rf server/webui/dist && mkdir -p server/webui/dist && cp -a web/out/. server/webui/dist/
-# 3) 한 대상만 binaries 잡과 같은 환경으로 빌드
+# 3) Build one target with the same environment as the binaries job
 docker run --rm -v "$PWD":/app -w /app \
   -e ARTEX_SKIP_FRONTEND=1 -e ARTEX_SKIP_NPM_CI=1 \
   -e ARTEX_COMPRESS=0 -e ARTEX_PACKAGE=1 -e ARTEX_PACKAGE_DIR=dist \
   -e ARTEX_BUILD_VERSION=v0.0.0-local \
   golang:1.26 bash -c 'apt-get update && apt-get install -y zip && ./build.sh --target linux/amd64'
-# 4) 산출물 확인: dist/artex-linux-amd64/artex · dist/*.zip · dist/SHA256SUMS
+# 4) Confirm the outputs: dist/artex-linux-amd64/artex · dist/*.zip · dist/SHA256SUMS
 ```
 
-`dist/artex-linux-amd64/artex` 는 정적 링크된 ELF 이고, `-h` 를 주면 사용법을 출력한 뒤 종료
-코드 0 으로 끝납니다. 이것이 binaries 잡의 스모크 테스트가 확인하는 동작입니다. 빌드 산출물
-(`dist/`·`server/webui/dist/`)은 저장소에 커밋하지 않습니다(`.gitignore` 로 제외됩니다).
+`dist/artex-linux-amd64/artex` is a statically linked ELF, and given `-h` it prints usage and exits
+with code 0. This is the behavior the binaries job's smoke test confirms. Build outputs
+(`dist/`, `server/webui/dist/`) are not committed to the repository (they are excluded by
+`.gitignore`).

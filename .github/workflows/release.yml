@@ -3,33 +3,47 @@ on:
   push:
     tags: ["v*"]
 
-permissions:
-  contents: write # Release 생성에 필요
+# No workflow-level permissions: the GITHUB_TOKEN defaults to the repository's configured
+# default (read/write on older repositories), so every job states its own. Only `release`
+# may write contents, only `docker` may push packages; the jobs that run third-party
+# install code (`frontend` runs `pnpm install`) get a read-only token.
+permissions: {}
 
 jobs:
-  # ① 프런트엔드 정적 내보내기(한 번 수행), 산출물을 각 플랫폼 크로스 컴파일에서 재사용
+  # 1) Export the frontend statically once; every platform cross-compile reuses the artifact
   frontend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # pnpm postinstall scripts run here; nothing needs write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # pnpm/action-setup takes the version from "packageManager" in web/package.json,
+      # and has to run before setup-node so `cache: pnpm` can find pnpm.
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
         working-directory: web
-      - run: npm run build:static
+      - run: pnpm run build:static
         working-directory: web
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: web-dist
           path: web/out
 
-  # ② 5개 플랫폼 크로스 컴파일(프런트엔드 내장) + zip 패키징
+  # 2) Cross-compile for five platforms (with the frontend embedded) and package a zip
   binaries:
     needs: frontend
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         include:
@@ -39,12 +53,14 @@ jobs:
           - { goos: darwin, goarch: arm64 }
           - { goos: windows, goarch: amd64 }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version: "1.26"
           cache: true
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: web-dist
           path: server/webui/dist
@@ -54,9 +70,10 @@ jobs:
           ARTEX_TARGET_ARCH: ${{ matrix.goarch }}
           ARTEX_BUILD_VERSION: ${{ github.ref_name }}
           ARTEX_SKIP_FRONTEND: "1"
-          ARTEX_SKIP_NPM_CI: "1"
-          # UPX 자가 압축 해제 ELF 는 일부 Linux 커널·가상화·보안 정책에서 크래시가 난다.
-          # Release 는 Go linker 스트립과 zip 압축을 사용해 이식성을 우선 보장한다.
+          ARTEX_SKIP_PNPM_INSTALL: "1"
+          # A UPX self-extracting ELF crashes under some Linux kernels, virtualisation and
+          # security policies. Releases prefer portability: the Go linker strip plus zip
+          # compression only.
           ARTEX_COMPRESS: "0"
           ARTEX_PACKAGE: "1"
           ARTEX_PACKAGE_DIR: dist
@@ -65,41 +82,54 @@ jobs:
       - name: Smoke test Linux amd64 binary
         if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         run: dist/artex-linux-amd64/artex -h
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pkg-${{ matrix.goos }}-${{ matrix.goarch }}
           path: "dist/*.zip"
-      # Linux 원본 바이너리를 따로 업로드해 docker job 에서 재사용한다(이미지 안에서 프런트엔드+Go 를 다시 빌드하지 않도록)
+      # Upload the raw Linux binary separately so the docker job can reuse it (the image
+      # must not rebuild frontend + Go inside itself)
       - if: matrix.goos == 'linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: bin-linux-${{ matrix.goarch }}
           path: dist/artex-linux-${{ matrix.goarch }}/artex
 
-  # ③ 모든 zip 을 모아 → GitHub Release 생성
+  # 3) Collect every zip -> create the GitHub Release
   release:
     needs: binaries
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # required to create the Release
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: pkg-*
           merge-multiple: true
           path: dist
+      # Integrity limit, stated on purpose: this sums file is published unsigned next to the
+      # artifacts it describes, so it detects corruption and CDN tampering but not a
+      # compromised release. The one-click updater (selfupdate/github.go + stage.go) fetches
+      # SHA256SUMS and the binary from the same channel, over TLS, with no signature — see
+      # docs/docker-hardened.md §6. A real fix needs a detached signature (minisign or
+      # Sigstore/cosign) produced here from a key the maintainer holds, the public half
+      # compiled into the binary, and a verification step before the swap; without a key
+      # under CI control nothing can actually sign yet, so this stays a documented gap.
       - name: Generate checksums
         working-directory: dist
         run: sha256sum -- *.zip > SHA256SUMS
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: |
             dist/*.zip
             dist/SHA256SUMS
           generate_release_notes: true
 
-  # ④ 다중 아키텍처 이미지 → GitHub Container Registry(ghcr.io) 에 push(binaries 가 빌드한 Linux 바이너리를
-  #    재사용하고, 이미지에는 도구만 설치 + 바이너리만 배치; arm64 는 apt 계층만 에뮬레이션하면 되어 빌드가 훨씬 빠르다)
-  #    로그인은 워크플로 기본 GITHUB_TOKEN 으로 하므로 별도 시크릿이 필요 없다. 상류 autumn27/artex(Docker Hub)는
-  #    내려갔고 이 포크는 그 네임스페이스에 push 권한도 없어, 이 포크 소유의 ghcr 네임스페이스로 발행한다.
+  # 4) Multi-architecture image -> pushed to GitHub Container Registry (ghcr.io). It reuses
+  #    the Linux binaries the `binaries` job built, and the image only installs the tools and
+  #    places the binary; arm64 then emulates just the apt layer, which is far faster.
+  #    Login uses the workflow's default GITHUB_TOKEN, so no extra secret is needed. The
+  #    upstream autumn27/artex (Docker Hub) is gone and this fork has no push rights to that
+  #    namespace, so images are published to the ghcr namespace this fork owns.
   docker:
     needs: [binaries]
     runs-on: ubuntu-latest
@@ -109,30 +139,32 @@ jobs:
     env:
       IMAGE_NAMESPACE: ghcr.io/jiwoochris/artex-global
     steps:
-      - uses: actions/checkout@v4 # Dockerfile 과 skills/ 를 가져온다
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0 (brings in the Dockerfile and skills/)
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: bin-linux-amd64
           path: dist/amd64
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: bin-linux-arm64
           path: dist/arm64
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v5
+      - uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         id: meta
         with:
           images: ${{ env.IMAGE_NAMESPACE }}
           tags: |
             type=ref,event=tag
             type=raw,value=latest
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           platforms: linux/amd64,linux/arm64

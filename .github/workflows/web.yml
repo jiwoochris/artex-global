@@ -1,9 +1,10 @@
 name: web
-# 한국어 UI(web/)의 정적 내보내기 빌드를 푸시·PR 마다 돌려, 프런트엔드 회귀를
-# 머지 전에 잡는다. 릴리스 워크플로(release.yml)는 태그(v*)에서만 web 을 빌드하는데
-# 이 포크에는 태그 푸시 이력이 없어 한 번도 실행된 적이 없다 — 그래서 일상적인 web
-# 변경(TypeScript·React·i18n·next-intl)을 검증하는 역할은 이 워크플로가 맡는다. Go
-# 쪽 빌드·테스트는 ci.yml 이 맡으므로, 여기서는 web/ 가 바뀔 때만 돈다(paths 필터).
+# Runs the web UI's static export build (web/) on every push and pull request, so
+# frontend regressions are caught before merge. The release workflow (release.yml) only
+# builds web on tags (v*), and this fork has no tag-push history, so that path has never
+# run -- verifying everyday web changes (TypeScript, React, i18n, next-intl) is this
+# workflow's job. Go builds and tests belong to ci.yml, so this one only runs when web/
+# changes (paths filter).
 on:
   push:
     branches: ["**"]
@@ -19,42 +20,54 @@ permissions:
   contents: read
 
 jobs:
-  # 정적 내보내기 빌드가 머지 게이트다. `NEXT_EXPORT=1 next build` 는 next.config 에
-  # typescript.ignoreBuildErrors 설정이 없어 TypeScript 타입 검사까지 함께 수행하므로,
-  # 타입 오류나 내보내기 실패가 있으면 이 잡이 빨갛게 멈춰 머지를 막는다.
+  # The static export build is the merge gate. `NEXT_EXPORT=1 next build` also runs the
+  # TypeScript type check, because next.config does not set typescript.ignoreBuildErrors,
+  # so a type error or a failed export turns this job red and blocks the merge.
   #
-  # biome 린트도 머지 게이트다. 상류에서 딸려온 선재 린트 부채(G7)를 0 으로 정리한
-  # 뒤(오류 8→0: skills 트리 a11y 6 + package.json 포매터 1 + logo.svg noSvgWithoutTitle 1),
-  # 정보용 단계를 게이트로 승격했다. 이제 `npm run check`(biome check)가 오류를 내면 이
-  # 잡이 빨갛게 멈춰 머지를 막아, 깨끗해진 상태가 다시 더럽혀지는 회귀를 방지한다.
-  # 경고·정보는 종료 코드에 영향이 없어(biome 은 error 레벨에서만 비-0) 머지를 막지 않는다.
+  # The biome lint is a merge gate too. After the pre-existing lint debt inherited from
+  # upstream (G7) was cleared to zero (errors 8 -> 0: 6 a11y in the skills tree, 1
+  # package.json formatter, 1 logo.svg noSvgWithoutTitle), the informational step was
+  # promoted to a gate. `pnpm run check` (biome check) errors now turn this job red and
+  # block the merge, so the cleaned-up state cannot be silently re-dirtied. Warnings and
+  # infos do not affect the exit code (biome is non-zero only at the error level) and do
+  # not block a merge.
   web:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # pnpm/action-setup takes the version from "packageManager" in web/package.json.
+      # It has to run before setup-node, otherwise `cache: pnpm` cannot find pnpm.
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - name: npm ci
-        run: npm ci
-      - name: 단위 테스트 (머지 게이트 · vitest)
-        # 순수 로직(getInitials/formatCurrency, i18n config, statusMeta)과 i18n 키 정합성 회귀를 머지 전에 잡는다.
-        run: npm run test -- --run
-      - name: i18n 로케일 키 정합성 (머지 게이트 · ko 기준 5개 로케일 일치)
-        # ko.json 을 기준으로 en/zh/es/ja 의 키 집합이 완전히 같은지 검사한다(누락·추가 모두 실패).
-        run: npm run check:i18n
-      - name: build:static (머지 게이트 · 타입 검사 포함)
-        run: npm run build:static
-      - name: UI 한자 누출 가드 (머지 게이트 · out HTML 에 중국어 0)
-        # 이 포크의 핵심 성과는 "사용자에게 보이는 화면에 중국어가 없다"는 것이다.
-        # 기여자가 중국어를 하드코딩하거나 번역이 누락되는 회귀를 머지 전에 막는다.
-        # 스크립트는 git 루트의 web/out 를 스스로 찾으므로 작업 디렉터리와 무관하다.
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+      - name: Unit tests (merge gate - vitest)
+        # Catches regressions in pure logic (getInitials/formatCurrency, i18n config, statusMeta)
+        # and in i18n key consistency before merge.
+        run: pnpm run test --run
+      - name: i18n locale key consistency (merge gate - identical key sets per locale)
+        # Checks that every locale's key set matches the reference locale exactly (both a
+        # missing and an extra key fail).
+        run: pnpm run check:i18n
+      - name: build:static (merge gate - includes type checking)
+        run: pnpm run build:static
+      - name: CJK leak guard (merge gate - zero Chinese characters in the exported HTML)
+        # This fork's core promise is that no user-visible screen contains Chinese text.
+        # This blocks the regression where a contributor hardcodes Chinese or a translation
+        # is missed. The script locates web/out from the git root itself, so the working
+        # directory does not matter.
         run: python3 -I ../scripts/check-web-cjk.py
-      - name: biome check (머지 게이트 · lint·format·a11y 오류 0 유지)
+      - name: biome check (merge gate - keep lint, format and a11y at zero errors)
         if: always()
-        run: npm run check
+        run: pnpm run check

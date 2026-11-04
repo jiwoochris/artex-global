@@ -1,8 +1,6 @@
 # Defending Against and Detecting Autonomous AI Attacks
 
 > This document helps **defenders** understand how an **autonomous AI penetration agent** such as ARTEX operates, so that you can build the capability to **detect and block** such attacks. It is not a guide to carrying out attacks. Use everything here only to protect systems you own or have explicit written authorization to test. Probing or attacking someone else's information and communications network without authorization is itself a crime (see the [security and misuse warning in the top-level README](../README.md)).
->
-> 한국어판: **[자율 AI 공격 방어·탐지 가이드 (defense-ko.md)](defense-ko.md)**.
 
 An autonomous AI attack tool turns a penetration test — once a manual process a single operator ran by hand — into a 24/7 automated process in which an LLM agent **breaks goals down on its own, executes real tools, and accumulates discoveries**. The adversary a defender faces shifts from "one skilled attacker" to "a swarm of agents that never tire and never rest." This guide sets out what that shift demands of detection and response.
 
@@ -156,8 +154,7 @@ description: |
     signature; tune the count and window to your own baseline. On its own this leg is low signal
     and earns weight only inside the correlation below.
 references:
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-ko.md
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-en.md
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense.md
 author: artex-global defense guide (generic template)
 date: 2026-10-07
 tags:
@@ -186,8 +183,7 @@ description: |
     correlation below. Extend the marker list to your own probe corpus and WAF categories; it is
     a coarse proxy for the broader "adapts requests to responses" behaviour the guide describes.
 references:
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-ko.md
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-en.md
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense.md
 author: artex-global defense guide (generic template)
 date: 2026-10-07
 tags:
@@ -219,8 +215,7 @@ description: |
     often expose weaker identity-verification endpoints than the main service and belong here
     too. This leg is broad by design and is only meaningful inside the correlation below.
 references:
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-ko.md
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-en.md
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense.md
 author: artex-global defense guide (generic template)
 date: 2026-10-07
 tags:
@@ -257,8 +252,7 @@ description: |
     session identifier if you have one) and tune the window to your baseline. If three legs are
     too strict and miss cases, relax to any two of the three.
 references:
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-ko.md
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-en.md
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense.md
 author: artex-global defense guide (generic template)
 date: 2026-10-07
 tags:
@@ -280,7 +274,7 @@ level: high
 
 Notes for using this template:
 
-- This block was validated with the same tooling the detection pack uses: `sigma check` with the full SigmaHQ convention set passes with 0 errors and 0 issues, and `sigma convert -t splunk` produces a query (the three sub-rules binned to a 10-minute window, grouped by `c-ip`, firing when all three are present). It is kept out of the tested `detections/` rule tree because it cannot be grounded in ARTEX source — that preserves the tree's promise to ship only what is "confirmed in this repository's source, not assumed." These facts are not a one-time measurement: [`detections/tests/check-defense-template.sh`](../detections/tests/check-defense-template.sh) re-runs them in CI on every change to this guide (the `sigma check` pass, the splunk/eql/loki conversions, the lucene/kusto rejection, and that the Korean and English copies carry a byte-identical rule body), so the claims here cannot silently drift from an upstream `sigma-cli` change.
+- This block was validated with the same tooling the detection pack uses: `sigma check` with the full SigmaHQ convention set passes with 0 errors and 0 issues, and `sigma convert -t splunk` produces a query (the three sub-rules binned to a 10-minute window, grouped by `c-ip`, firing when all three are present). It is kept out of the tested `detections/` rule tree because it cannot be grounded in ARTEX source — that preserves the tree's promise to ship only what is "confirmed in this repository's source, not assumed." These facts are not a one-time measurement: [`detections/tests/check-defense-template.sh`](../detections/tests/check-defense-template.sh) re-runs them in CI on every change to this guide (the `sigma check` pass, the splunk/eql/loki conversions and the lucene/kusto rejection), so the claims here cannot silently drift from an upstream `sigma-cli` change.
 - Because this template is a correlation rule, whether `sigma convert` emits the whole template or only the three sub-rules depends on the backend's support for Sigma correlation conversion. Measured with the same pinned `sigma-cli` 3.1.0: the whole template converts on Splunk (`-t splunk`), Elasticsearch EQL (`-t eql`), and Grafana Loki (`-t loki`). On the Microsoft `kusto` backend (Sentinel and Defender) and Elasticsearch Lucene (`-t lucene`) the correlation does not convert (`Backend does not support correlation rules`), so convert the three sub-rules only and express the 10-minute, same-`c-ip` correlation natively in the product (for example, a Sentinel scheduled-analytics `summarize ... by bin(TimeGenerated, 10m), <client>`). This is the same portability the detection pack documents; the measured support matrix is in [Sigma backend portability](../detections/README.md#sigma-backend-portability).
 - Stage 2 (probing) rests on a list of injection/traversal markers and is a coarse, noisy signal on its own. That is why the three sub-rules are scored `low` and only the correlation — all three from one source — raises a high alert.
 - The client is grouped by `c-ip`. Behind a proxy or CDN, switch to the real client address recovered from `X-Forwarded-For`, or to a session identifier. If requiring all three stages is too strict and misses cases, relax it to any two of the three.

@@ -1,0 +1,155 @@
+# Hardened ARTEX stack: private bridge networks, unprivileged container, no host
+# access beyond the one published UI port. Usage and the reasoning behind every
+# setting are in docs/docker-hardened.md.
+#
+#   cp .env.example .env        # fill POSTGRES_PASSWORD + your LLM key
+#   docker compose -f docker-compose.hardened.yml up -d --build
+#   → http://127.0.0.1:8787
+#
+name: artex-secure
+
+services:
+  postgres:
+    # Digest-pinned (multi-arch index) so an upstream retag cannot change what runs.
+    image: postgres:16-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-artex}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-artex}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Internal network: postgres can talk to artex and nothing else. It has no
+    # route to the internet or to the host's LAN.
+    networks:
+      - db_net
+    # The official entrypoint starts as root only to chown the data dir and drop
+    # to the postgres user; these five are exactly what that needs.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 512
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-artex} -d ${POSTGRES_DB:-artex}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  artex:
+    build:
+      context: .
+      dockerfile: Dockerfile.hardened
+    image: artex-hardened:local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Pinned UID/GID baked into the image; never root.
+    user: "10001:10001"
+    # tini as PID 1 reaps the processes the agent spawns; start.sh still receives
+    # and forwards SIGTERM, so `docker stop` stays graceful.
+    init: true
+    # Root filesystem is immutable: the agent can only write to the two volumes
+    # and the tmpfs below. One-click self-update inside the container is therefore
+    # disabled by design; upgrade by rebuilding/pulling the image.
+    read_only: true
+    tmpfs:
+      # exec/noexec: keep exec enabled (net exec and downloaded tools run from
+      # /tmp) but block setuid tricks and cap the size so a runaway tool fills RAM
+      # instead of the host disk.
+      - /tmp:rw,exec,nosuid,nodev,size=2g,mode=1777
+    volumes:
+      # Named volumes, not host bind mounts: the agent gets a writable /app/data
+      # (SQLite, JWT key, traffic, evidence) and /app/skills (seeded from the
+      # image, editable from the UI) without being able to create arbitrary files
+      # in a host directory.
+      - artex_data:/app/data
+      - artex_skills:/app/skills
+    environment:
+      # URL-safe password only (it goes into the DSN verbatim).
+      ARTEX_PG_DSN: postgres://${POSTGRES_USER:-artex}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-artex}?sslmode=disable
+      # LLM. Leave empty and configure the profiles in the UI instead (required
+      # for OpenCode Go, which needs the x-opencode-session header).
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ARTEX_LLM_PROVIDER: ${ARTEX_LLM_PROVIDER:-}
+      ARTEX_LLM_MODEL: ${ARTEX_LLM_MODEL:-}
+      ARTEX_LLM_BASE_URL: ${ARTEX_LLM_BASE_URL:-}
+      ARTEX_LLM_PROXY: ${ARTEX_LLM_PROXY:-}
+      # First-run protection: with ARTEX_ADMIN_PASSWORD set there is no /setup
+      # step (8+ chars). Otherwise the random setup token appears in
+      # `docker compose logs artex`.
+      ARTEX_SETUP_TOKEN: ${ARTEX_SETUP_TOKEN:-}
+      ARTEX_ADMIN_PASSWORD: ${ARTEX_ADMIN_PASSWORD:-}
+      ARTEX_CORS_ORIGINS: ${ARTEX_CORS_ORIGINS:-}
+      ARTEX_LANG: ${ARTEX_LANG:-}
+    ports:
+      # UI + API on host loopback only. The MITM proxy (8788) stays unpublished.
+      - "127.0.0.1:8787:8787"
+    networks:
+      - app_net
+      - db_net
+    # No capability at all: the ports are > 1024, so nothing is needed.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # Unprivileged ICMP so `ping` works without CAP_NET_RAW. Raw-socket scans
+    # (SYN/OS detection) are not possible by design — see the doc.
+    sysctls:
+      net.ipv4.ping_group_range: "0 2147483647"
+    # Chromium (Playwright MCP) needs more than Docker's default 64MB /dev/shm.
+    pids_limit: 4096
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 16384
+      core: 0
+    restart: unless-stopped
+    stop_grace_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8787/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  pgdata:
+  artex_data:
+  artex_skills:
+
+networks:
+  # Egress bridge: outbound internet is allowed (LLM APIs, targets, tooling).
+  # Fixed subnets so the optional host firewall rules in docs/docker-hardened.md
+  # can name them exactly. If 172.30.0.0/24 or 172.31.0.0/24 already exists on your
+  # host, change both here and in those firewall rules.
+  app_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
+  # No egress at all: internal bridge for postgres <-> artex.
+  db_net:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.31.0.0/24

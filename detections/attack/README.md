@@ -1,15 +1,5 @@
 # ARTEX ATT&CK coverage
 
-English · [한국어](README.ko.md)
-
-> 한국어: 이 디렉터리는 [`../`](../)의 ARTEX 탐지 규칙(Sigma·Suricata)이 다루는 공격 기법을
-> [MITRE ATT&CK](https://attack.mitre.org/) 전술·기법으로 정리한 **커버리지 레이어**입니다.
-> 각 기법은 저장소 소스에 근거가 있는 규칙의 `attack.*` 태그에서만 가져왔고, 추정으로 넣은 항목은
-> 없습니다. [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/)에 그대로 올려
-> 어떤 ARTEX 행위에 어떤 규칙이 걸리는지 한눈에 볼 수 있습니다. 이 레이어는 자신이 소유하거나 서면
-> 허가를 받은 시스템을 지키는 **방어·탐지 목적에만** 쓰십시오. 한국어 전체 문서는
-> **[README.ko.md](README.ko.md)** 를 보십시오.
-
 A [MITRE ATT&CK](https://attack.mitre.org/) Navigator layer that maps the detection rules in this
 repository to the ATT&CK (Enterprise) techniques they tag. It is built by hand from the `attack.*` tags on
 the [Sigma rules](../sigma/) — every technique is grounded in a rule whose indicator is a string or
@@ -70,7 +60,7 @@ Eight techniques across six tactics. Each maps to the rule(s) that tag it:
   prober (`artex-enrich/1.0`) in the reconnaissance phase and the norma SDK WebFetch tool (`norma/0.4`) in
   the attack phase — while the rest of the attack traffic follows tool-default fingerprints; the durable
   detection is behavioural
-  (see the defense guide, [Korean](../../docs/defense-ko.md) · [English](../../docs/defense-en.md), sections 1–2 and 4.1–4.2). The pure web multi-stage
+  (see the defense guide, [Korean](../../docs/defense.md) · [English](../../docs/defense.md), sections 1–2 and 4.1–4.2). The pure web multi-stage
   case still needs base rules specific to your environment.
 - **Static indicators can be changed.** An operator can set a different User-Agent, so the absence of a
   tagged indicator does not imply safety. This is the same caveat the rule files carry.
@@ -87,4 +77,4 @@ detections/tests/attack/run.sh
 
 When you add or retag a rule, update this layer to match — the test fails if a rule technique is missing
 from the layer or a layer technique is absent from the rules. See [`../README.md`](../README.md) and
-[`../../CONTRIBUTING.en.md`](../../CONTRIBUTING.en.md).
+[`../../CONTRIBUTING.md`](../../CONTRIBUTING.md).

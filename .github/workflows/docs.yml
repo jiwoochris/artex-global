@@ -1,13 +1,16 @@
 name: docs
-# 추적되는 마크다운 문서의 저장소 내부 링크·이미지 참조가 실존 파일을 가리키는지,
-# 그리고 문서 앵커 링크(#헤딩)가 대상 문서에 실제로 있는 헤딩을 가리키는지 푸시·PR
-# 마다 검사해, 깨진 링크·이미지·앵커가 머지되는 것을 막는다. 링크가 가리키는
-# 파일은 저장소 어디에나 있을 수 있어(예: ../LICENSE·screenshots/en/*.png) paths
-# 필터 없이 모든 변경에 돌린다. 외부 URL(http/https/mailto)은 네트워크에 의존해
-# flaky 하므로 검사하지 않는다 — scripts/check-doc-links.py 가 내부 참조만 본다.
-# 파이썬 표준 라이브러리만 쓰고 네트워크에 접속하지 않아 결정론적으로 끝나므로,
-# Docker Hub 속도 제한 같은 외부 요인으로 깜빡이지 않는다. Go 빌드·정적 분석·테스트는
-# ci.yml, 탐지 규칙 재현은 detections.yml, 한국어 UI 빌드는 web.yml 이 맡는다.
+# On every push and pull request, checks that the repository-internal links and image
+# references in the tracked Markdown documents point at files that exist, and that
+# document anchor links (#heading) point at headings the target document actually has,
+# so that broken links, images and anchors cannot merge. The files a link points at can
+# live anywhere in the repository (e.g. ../LICENSE or screenshots/en/*.png), so this runs
+# on every change without a paths filter. External URLs (http/https/mailto) are not
+# checked because they depend on the network and are flaky — scripts/check-doc-links.py
+# looks only at internal references. It uses only the Python standard library and makes
+# no network access, so it finishes deterministically and never flakes on an external
+# factor such as a Docker Hub rate limit. Go build, static analysis and tests are handled
+# by ci.yml, detection-rule reproduction by detections.yml, and the web UI build by
+# web.yml.
 on:
   push:
     branches: ["**"]
@@ -16,7 +19,7 @@ on:
 permissions:
   contents: read
 
-# 같은 브랜치에 새 푸시가 오면 앞선 실행을 취소해 불필요한 실행이 쌓이지 않게 한다.
+# A new push to the same branch cancels the previous run, so unnecessary runs do not pile up.
 concurrency:
   group: docs-${{ github.ref }}
   cancel-in-progress: true
@@ -25,9 +28,17 @@ jobs:
   links:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      # python3 는 ubuntu-latest 러너에 기본 설치되어 있고, 스크립트는 표준
-      # 라이브러리만 쓰므로 별도 설치 단계가 필요 없다. -I 로 사용자 사이트·환경을
-      # 격리해 실행한다.
-      - name: 문서 내부 링크·이미지·앵커 무결성 검사
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # python3 ships with the ubuntu-latest runner and the script uses only the
+      # standard library, so no separate install step is needed. -I isolates the user
+      # site and environment.
+      - name: Document internal link, image and anchor integrity check
         run: python3 -I scripts/check-doc-links.py
+      # Language gate (SPEC.md §3): English is the source language and the only
+      # non-English text allowed is the Spanish catalogue plus the sentinels and
+      # fixtures listed in SPEC.md §3.5.1. The baseline records today's allowed
+      # counts, so this fails when new non-English text appears or a count grows.
+      - name: Language gate (no new non-English text)
+        run: python3 -I scripts/check-non-english.py
