@@ -100,9 +100,11 @@ services:
     #   ARTEX_PROXY_ADDR=0.0.0.0:8788   (default 127.0.0.1:8788)
     # -addr stays :8787: the UI/API port is authenticated and published per ARTEX_BIND.
     command: ["-addr", ":8787", "-proxy", "${ARTEX_PROXY_ADDR:-127.0.0.1:8788}"]
-    # The image already runs as the unprivileged uid/gid 10001 (`artex`); pinning it here
-    # keeps that true even if someone rebuilds the image with a different USER.
-    user: "10001:10001"
+    # The image runs as the unprivileged uid/gid 10001 (`artex`). Override ARTEX_UID/ARTEX_GID
+    # with your own ids (`ARTEX_UID=$(id -u) ARTEX_GID=$(id -g)`) to use the bind mounts below
+    # without any ownership change: a directory the invoking user owns is writable by the same
+    # uid inside the container. The default keeps a fixed, documented identity.
+    user: "${ARTEX_UID:-10001}:${ARTEX_GID:-10001}"
     # tini as PID 1 reaps the processes the agent spawns; start.sh still forwards SIGTERM,
     # so `docker stop` remains graceful.
     init: true
@@ -147,13 +149,17 @@ services:
       retries: 3
       start_period: 60s
     volumes:
-      # Bind mounts keep data and skills inspectable, backable up and editable from the
-      # host. The container writes as uid/gid 10001 (`artex`), so these two directories
-      # must belong to that uid once, otherwise the app cannot create jwt.key, the SQLite
-      # index or a skill and fails to start:
-      #   sudo chown -R 10001:10001 data skills
-      # Prefer named volumes instead (nothing of the host mounted)? Use
-      # docker-compose.volumes.yml:  docker compose -f docker-compose.yml -f docker-compose.volumes.yml up -d
+      # Bind mounts keep data and skills inspectable, backable up and editable from the host.
+      # The container writes as the uid/gid above (default 10001), so these two directories
+      # must be writable by it. Two ways to get there, neither involving the image:
+      #   a) run as yourself (recommended on a single-user host):
+      #      mkdir -p data skills && ARTEX_UID=$(id -u) ARTEX_GID=$(id -g) docker compose up -d
+      #   b) keep the fixed uid 10001 and give it the directories once, as root:
+      #      mkdir -p data skills && chown -R 10001:10001 data skills
+      # Docker creates a missing bind-mount source as root, which the container cannot write,
+      # so the directories must exist first. ./install.sh does (a) for you. Prefer named
+      # volumes instead? Use the overlay:
+      #   docker compose -f docker-compose.yml -f docker-compose.volumes.yml up -d
       - ./data:/app/data
       - ./skills:/app/skills
     networks:

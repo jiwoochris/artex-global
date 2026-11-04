@@ -110,6 +110,29 @@ func hasCap(caps []string, want string) bool {
 	return false
 }
 
+// defaultUserID resolves the compose `${VAR:-default}` form so the test checks the id that
+// is actually used when the operator leaves the variable unset.
+func defaultUserID(t *testing.T, user string) string {
+	t.Helper()
+	// `${ARTEX_UID:-10001}:${ARTEX_GID:-10001}` — take the first group and resolve its default.
+	if strings.HasPrefix(user, "${") {
+		end := strings.Index(user, "}")
+		if end == -1 {
+			t.Fatalf("user %q: unterminated variable reference", user)
+		}
+		expr := user[2:end]
+		sep := strings.Index(expr, ":-")
+		if sep == -1 {
+			t.Fatalf("user %q: a variable default is required so an unset variable cannot mean root", user)
+		}
+		return expr[sep+2:]
+	}
+	if sep := strings.Index(user, ":"); sep != -1 {
+		return user[:sep]
+	}
+	return user
+}
+
 func onlyCaps(t *testing.T, service, name string, caps []string, allowed map[string]bool) {
 	t.Helper()
 	for _, cap := range caps {
@@ -169,8 +192,11 @@ func TestComposePosture(t *testing.T) {
 	})
 
 	t.Run("artex runs unprivileged with a single capability", func(t *testing.T) {
-		if artex.User == "" || strings.HasPrefix(artex.User, "0") || strings.HasPrefix(artex.User, "root") {
-			t.Errorf("artex: must run as a non-root user, got %q", artex.User)
+		if artex.User == "" {
+			t.Error("artex: user must be pinned")
+		}
+		if uid := defaultUserID(t, artex.User); uid == "0" || strings.EqualFold(uid, "root") {
+			t.Errorf("artex: default user resolves to root (%q)", artex.User)
 		}
 		if !hasCap(artex.CapDrop, "ALL") {
 			t.Errorf("artex: cap_drop must contain ALL, got %v", artex.CapDrop)
@@ -260,6 +286,12 @@ func TestComposeOverlays(t *testing.T) {
 	}
 	if roArtex.Environment["HOME"] == "" {
 		t.Error("readonly overlay: must point HOME at a writable path (Chromium/pnpm need it)")
+	}
+
+	// The volumes overlay is seeded from the image, so it must keep the image uid: honouring
+	// the ARTEX_UID bind-mount override there would make the volume unwritable.
+	if got := defaultUserID(t, overlayArtex.User); got != "10001" {
+		t.Errorf("volumes overlay: user must pin the image uid 10001, got %q", overlayArtex.User)
 	}
 }
 

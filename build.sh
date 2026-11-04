@@ -233,6 +233,12 @@ build_target() {
 
 write_checksums() {
   [ "$ARTEX_PACKAGE" = "1" ] || return 0
+  # Without this guard a `.zip` glob that matched nothing would be passed to sha256sum as a
+  # literal filename and abort the script under `set -e`.
+  if ! compgen -G "$ARTEX_PACKAGE_DIR/*.zip" >/dev/null; then
+    warn "no release archives found, skipping SHA256SUMS"
+    return 0
+  fi
   checksum_file="$ARTEX_PACKAGE_DIR/SHA256SUMS"
   if command -v sha256sum >/dev/null 2>&1; then
     (cd "$ARTEX_PACKAGE_DIR" && for archive in *.zip; do sha256sum "$archive"; done > "$(basename "$checksum_file")")

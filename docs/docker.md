@@ -83,9 +83,17 @@ still works and only SYN/OS-detection scans are lost — see §9.
 git clone https://github.com/yukiteruamano/artex-global.git
 cd artex-global
 cp .env.example .env        # set POSTGRES_PASSWORD; an LLM key is optional here
-sudo chown -R 10001:10001 data skills   # the container writes as uid 10001
+mkdir -p data skills        # must exist before the first start (see §5)
 docker compose up -d
 docker compose logs -f artex              # first start prints the setup token
+```
+
+By default the container runs as uid/gid `10001`, so `./data` and `./skills` have to be
+writable by it. On a single-user host the simplest way to get that without touching
+permissions is to run the container as yourself:
+
+```bash
+ARTEX_UID=$(id -u) ARTEX_GID=$(id -g) docker compose up -d   # or put both lines in .env
 ```
 
 Open `http://127.0.0.1:8787`, complete `/setup` with the token from the log (or skip it by
@@ -187,7 +195,17 @@ Two bind mounts, both written as uid/gid `10001`:
 | `./skills` | The skills the agents can use; editable from the UI without a rebuild |
 
 They are bind mounts so you can back them up and inspect them with the tools you already
-have. The first start needs `sudo chown -R 10001:10001 data skills`.
+have. Both must exist and be writable by the container's uid before the first start:
+
+- **Run as yourself (recommended, no privileges):** `mkdir -p data skills` and set
+  `ARTEX_UID=$(id -u)` / `ARTEX_GID=$(id -g)` in `.env` (or in front of the command). The
+  container then writes as the same user that owns the directories.
+- **Keep the image user (uid/gid 10001):** give it the directories once —
+  `mkdir -p data skills && chown -R 10001:10001 data skills` — as root.
+
+If the directories are missing, Docker creates them owned by root, the container cannot
+write them, and the first start fails with a permission error. `./install.sh` does the
+"run as yourself" path for you.
 
 **Prefer nothing of the host to be writable?** Use the overlay; it swaps both for named
 volumes, which need no `chown` and cannot touch the host filesystem:

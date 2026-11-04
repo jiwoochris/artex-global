@@ -15,7 +15,10 @@ ask(){  local p="$1" d="${2:-}" a; read -rp "$p${d:+ [$d]}: " a; echo "${a:-$d}"
 
 # ── Optional: sync the repository to the latest code (this refreshes compose, the scripts and the local build sources) ───────
 sync_repo(){
-  [ -d .git ] && command -v git >/dev/null 2>&1 || { warn "not a git checkout, skipping git pull"; return; }
+  if [ ! -d .git ] || ! command -v git >/dev/null 2>&1; then
+    warn "not a git checkout, skipping git pull"
+    return
+  fi
   [ "$(ask 'Fetch the latest code (git pull --ff-only)? (y/n)' y)" = y ] || return
   if ! git pull --ff-only; then
     warn "git pull could not fast-forward (local changes or a diverged branch). Resolve it yourself and retry; this run continues with the current code"
@@ -24,15 +27,17 @@ sync_repo(){
 
 # ── 1) Docker update ───────────────────────────────
 update_docker(){
-  command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 \
-    || die "docker / docker compose not found. Install and deploy with ./install.sh first"
+  if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+    die "docker / docker compose not found. Install and deploy with ./install.sh first"
+  fi
   [ -f .env ] || die ".env not found. Complete the first deployment with ./install.sh first"
 
   # Optional: upgrade to a specific version tag (empty means follow ARTEX_TAG from .env, which defaults to latest)
   local tag; tag="$(ask 'Target image tag (press Enter to use .env / latest)' '')"
   if [ -n "$tag" ]; then
     if grep -q '^ARTEX_TAG=' .env; then
-      sed -i.bak "s|^ARTEX_TAG=.*|ARTEX_TAG=${tag}|" .env && rm -f .env.bak
+      sed -i.bak "s|^ARTEX_TAG=.*|ARTEX_TAG=${tag}|" .env
+      rm -f .env.bak
     else
       printf '\nARTEX_TAG=%s\n' "$tag" >> .env
     fi
@@ -64,7 +69,11 @@ update_local(){
   if command -v pnpm >/dev/null 2>&1; then
     info "rebuilding the frontend static assets…"
     ( cd web && pnpm install --frozen-lockfile && pnpm run build:static )
-    rm -rf server/webui/dist && cp -r web/out server/webui/dist
+    # Replace the embed directory instead of copying over it: a file removed from the
+    # frontend would otherwise survive here and be embedded again.
+    rm -rf server/webui/dist
+    mkdir -p server/webui/dist
+    cp -R web/out/. server/webui/dist/
     info "recompiling the single binary with the frontend embedded…"
     CGO_ENABLED=0 go build -tags embedui -trimpath -o artex ./cmd/artex
   else

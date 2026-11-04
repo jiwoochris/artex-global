@@ -102,7 +102,7 @@ PY
 }
 
 apply_config_fields() {
-  local line key val
+  local key val
   while IFS=$'\t' read -r key val; do
     [[ -z "$key" ]] && continue
     case "$key" in
@@ -209,15 +209,22 @@ else
     fi
   fi
 
-  # psql credentials inside the container: command line first, then POSTGRES_* from .env, then the compose default (artex)
-  if [[ -f .env ]]; then
-    # shellcheck disable=SC1091
-    set -a; . ./.env; set +a
-  fi
-  DUSER="${USER:-${POSTGRES_USER:-artex}}"
-  DNAME="${DBNAME:-${POSTGRES_DB:-artex}}"
+  # Read only the keys we need with sed. Sourcing the file would execute whatever it
+  # contains; .env is configuration, not a script.
+  env_get() {
+    local key="$1"
+    [ -f .env ] || return 0
+    sed -n "s/^[[:space:]]*${key}=//p" .env | tail -1 | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//"
+  }
+  DUSER="${USER:-$(env_get POSTGRES_USER)}"
+  DUSER="${DUSER:-artex}"
+  DNAME="${DBNAME:-$(env_get POSTGRES_DB)}"
+  DNAME="${DNAME:-artex}"
   [[ -n "$DBPASS" ]] && export PGPASSWORD="$DBPASS"
-  [[ -z "${PGPASSWORD:-}" && -n "${POSTGRES_PASSWORD:-}" ]] && export PGPASSWORD="$POSTGRES_PASSWORD"
+  if [[ -z "${PGPASSWORD:-}" ]]; then
+    DBENV_PASS="$(env_get POSTGRES_PASSWORD)"
+    [[ -n "$DBENV_PASS" ]] && export PGPASSWORD="$DBENV_PASS"
+  fi
 
   info "target: psql -U $DUSER -d $DNAME inside container $CONTAINER (exec=$EXEC_KIND)"
   if [[ "$ASSUME_YES" -ne 1 ]]; then
