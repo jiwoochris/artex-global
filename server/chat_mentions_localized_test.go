@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yukiteruamano/artex/config"
+	"github.com/yukiteruamano/artex-global/config"
 )
 
 // TestChatMentionErrorsLocalized guards F3b chat_mentions.go: every user-facing

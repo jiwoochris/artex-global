@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 func TestCompanyScopeInputsAcceptStructuredAndLegacyRules(t *testing.T) {

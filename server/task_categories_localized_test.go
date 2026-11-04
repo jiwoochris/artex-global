@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // decodeErrorField pulls the "error" string out of a writeErr JSON body so the

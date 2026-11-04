@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // Regression defence test that keeps the "user-facing" messages among engine.go's work-control

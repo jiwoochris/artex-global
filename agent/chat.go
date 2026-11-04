@@ -11,9 +11,9 @@ import (
 	"github.com/Autumn-27/norma/permission"
 	actool "github.com/Autumn-27/norma/tool"
 	"github.com/Autumn-27/norma/transcript"
-	"github.com/yukiteruamano/artex/db"
-	"github.com/yukiteruamano/artex/guard"
-	"github.com/yukiteruamano/artex/intercept"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/guard"
+	"github.com/yukiteruamano/artex-global/intercept"
 )
 
 // ChatAgent is the generic, task-independent conversational runner behind the chat

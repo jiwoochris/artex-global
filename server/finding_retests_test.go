@@ -16,9 +16,9 @@ import (
 
 	"github.com/Autumn-27/norma/llm"
 	actool "github.com/Autumn-27/norma/tool"
-	"github.com/yukiteruamano/artex/agent"
-	"github.com/yukiteruamano/artex/db"
-	"github.com/yukiteruamano/artex/intercept"
+	"github.com/yukiteruamano/artex-global/agent"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/intercept"
 )
 
 type retestProvider struct {

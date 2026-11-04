@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yukiteruamano/artex/agent"
+	"github.com/yukiteruamano/artex-global/agent"
 )
 
 func TestEngineDeleteBarrierRejectsNewTaskOperations(t *testing.T) {

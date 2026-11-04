@@ -15,12 +15,12 @@ import (
 	"time"
 
 	actool "github.com/Autumn-27/norma/tool"
-	"github.com/yukiteruamano/artex/agent"
-	pgdb "github.com/yukiteruamano/artex/db"
-	"github.com/yukiteruamano/artex/enrich"
-	"github.com/yukiteruamano/artex/guard"
-	"github.com/yukiteruamano/artex/intercept"
-	"github.com/yukiteruamano/artex/traffic"
+	"github.com/yukiteruamano/artex-global/agent"
+	pgdb "github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/enrich"
+	"github.com/yukiteruamano/artex-global/guard"
+	"github.com/yukiteruamano/artex-global/intercept"
+	"github.com/yukiteruamano/artex-global/traffic"
 )
 
 // Task is one engagement: a description + goal + its own exploration store,

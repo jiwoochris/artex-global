@@ -9,9 +9,9 @@ import (
 	"github.com/Autumn-27/norma/llm"
 	"github.com/Autumn-27/norma/permission"
 	"github.com/Autumn-27/norma/tool"
-	"github.com/yukiteruamano/artex/db"
-	"github.com/yukiteruamano/artex/guard"
-	"github.com/yukiteruamano/artex/intercept"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/guard"
+	"github.com/yukiteruamano/artex-global/intercept"
 )
 
 // Exercise the actual SDK event -> hook -> execution -> result path. No real

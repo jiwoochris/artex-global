@@ -13,7 +13,7 @@ import (
 	"sort"
 
 	actool "github.com/Autumn-27/norma/tool"
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // digestMemberEntry builds the compact per-member view expand_digest returns —

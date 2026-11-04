@@ -13,9 +13,9 @@ import (
 	"unicode/utf8"
 
 	actool "github.com/Autumn-27/norma/tool"
-	"github.com/yukiteruamano/artex/agent"
-	"github.com/yukiteruamano/artex/db"
-	"github.com/yukiteruamano/artex/intercept"
+	"github.com/yukiteruamano/artex-global/agent"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/intercept"
 )
 
 // User-facing HTTP error responses. The four messages below are returned only by the

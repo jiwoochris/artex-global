@@ -2,7 +2,7 @@
 
 | Field | Value |
 | --- | --- |
-| Module | `github.com/yukiteruamano/artex` (`go.mod:1`); the GitHub repository is `yukiteruamano/artex-global` |
+| Module | `github.com/yukiteruamano/artex-global` (`go.mod:1`), matching the GitHub repository `yukiteruamano/artex-global` |
 | Branch | `chore/i18n-en-es-hardening` |
 | Commit analysed | `fdfb7a17b7da5e2de716c0e98475ec77a41c64c6` (`fdfb7a1`, 2026-10-14) |
 | Go toolchain | `go 1.26.10` (`go.mod:3`) |

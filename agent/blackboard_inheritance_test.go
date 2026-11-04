@@ -9,7 +9,7 @@ import (
 	"time"
 
 	actool "github.com/Autumn-27/norma/tool"
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 func callReadJSON(t *testing.T, tool actool.CoreTool, input string) any {

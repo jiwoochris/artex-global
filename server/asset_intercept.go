@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // The four user-facing errors returned by the asset intercept rule validator

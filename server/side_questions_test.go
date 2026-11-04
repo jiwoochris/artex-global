@@ -16,9 +16,9 @@ import (
 
 	"github.com/Autumn-27/norma/harness"
 	"github.com/Autumn-27/norma/llm"
-	"github.com/yukiteruamano/artex/agent"
-	"github.com/yukiteruamano/artex/db"
-	"github.com/yukiteruamano/artex/sidequestion"
+	"github.com/yukiteruamano/artex-global/agent"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/sidequestion"
 )
 
 type sideHTTPProvider struct {

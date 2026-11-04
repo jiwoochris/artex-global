@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // Initialize an explicitly configured fresh database before taking the same

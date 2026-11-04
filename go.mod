@@ -1,4 +1,4 @@
-module github.com/yukiteruamano/artex
+module github.com/yukiteruamano/artex-global
 
 go 1.26.10
 

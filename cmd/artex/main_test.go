@@ -10,7 +10,7 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/yukiteruamano/artex/agent"
+	"github.com/yukiteruamano/artex-global/agent"
 )
 
 func TestShutdownContextPreservesNamedCause(t *testing.T) {

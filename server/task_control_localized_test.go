@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // Regression guard on the task and intent control API error responses in

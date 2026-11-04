@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // This test was added together with bringing back into this fork the

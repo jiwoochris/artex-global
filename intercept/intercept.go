@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // Interception decision/approval messages exposed to users (Korean). The judge result and rule messages are

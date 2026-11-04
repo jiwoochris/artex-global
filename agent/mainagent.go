@@ -9,8 +9,8 @@ import (
 	"github.com/Autumn-27/norma/permission"
 	actool "github.com/Autumn-27/norma/tool"
 	"github.com/Autumn-27/norma/transcript"
-	"github.com/yukiteruamano/artex/db"
-	"github.com/yukiteruamano/artex/intercept"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/intercept"
 )
 
 // MainAgent is the thin human-interface orchestrator (docs §4.2 / §7). The human

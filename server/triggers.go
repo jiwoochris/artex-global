@@ -3,7 +3,7 @@ package server
 import (
 	"net/http"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // ---------- P3 agent triggers (custom agents only) ----------

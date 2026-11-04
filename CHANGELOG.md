@@ -39,9 +39,9 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 
 ### Module path
 
-- **The Go module is `github.com/yukiteruamano/artex`.** `go.mod` and all 249 import references across 154 files move off `github.com/Autumn-27/artex`, which belongs to a repository that no longer exists. References to the upstream project (`Autumn-27/ARTEX`) and to its SDK (`Autumn-27/norma`) are untouched, as is the historical note in the 0.3.15 entry that recorded the module being left alone at that release.
+- **The Go module is `github.com/yukiteruamano/artex-global`.** `go.mod` and all 249 import references across 155 files move off `github.com/Autumn-27/artex`, which belongs to a repository that no longer exists. References to the upstream project (`Autumn-27/ARTEX`) and to its SDK (`Autumn-27/norma`) are untouched, as is the historical note in the 0.3.15 entry that recorded the module being left alone at that release.
 
-  Note: `go get`/`go install` resolve a `github.com/<owner>/<repo>` module path by repository name, so a remote install needs the GitHub repository to be named `artex` (or a vanity import path); today it is `artex-global`. Building from a clone, the container image and the release archives are unaffected.
+  The module path matches the repository name on purpose: `go get` and `go install` resolve a `github.com/<owner>/<repo>` module path by repository name, so `go install github.com/yukiteruamano/artex-global/cmd/artex@latest` works against the repository as it is named today.
 
 ### Developer tooling
 

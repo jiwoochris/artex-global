@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	pgdb "github.com/yukiteruamano/artex/db"
-	"github.com/yukiteruamano/artex/traffic"
+	pgdb "github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/traffic"
 )
 
 func TestSeedAssociatesTargetAssetWithTask(t *testing.T) {

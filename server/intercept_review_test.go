@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/Autumn-27/norma/llm"
-	"github.com/yukiteruamano/artex/db"
-	"github.com/yukiteruamano/artex/intercept"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/intercept"
 )
 
 type reviewCaptureProvider struct{ request llm.CompletionRequest }

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // Scheduler drives P3 triggers: on each tick it fires due interval triggers and

@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"github.com/yukiteruamano/artex/config"
+	"github.com/yukiteruamano/artex-global/config"
 )
 
 // TestTrMsgSwitchesLanguage pins the backend output-language switching: English is the

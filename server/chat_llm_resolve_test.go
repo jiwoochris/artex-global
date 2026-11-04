@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // TestChatUnavailableReasonDistinguishesStates pins the operator-facing message

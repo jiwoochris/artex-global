@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // TestTaskTemplateErrorConstantsLocalized guards the F3b task-template bundle:

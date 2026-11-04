@@ -1,6 +1,6 @@
 package intercept
 
-import "github.com/yukiteruamano/artex/config"
+import "github.com/yukiteruamano/artex-global/config"
 
 // Multilingual table of the intercept verdict action labels (allow/deny/ask). It is used in verdict messages and follows
 // the output language (config.ActiveLanguage). An unwired or unsupported language falls back to ko. The enum keys (allow/deny/

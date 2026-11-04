@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // Action validation error of validateTaskInterceptRuleReq. Its only callers are this

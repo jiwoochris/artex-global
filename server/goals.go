@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yukiteruamano/artex/agent"
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/agent"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // Error copy for the preconditions of the resume path (requirePaused). Both messages

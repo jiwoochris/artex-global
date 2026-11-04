@@ -9,9 +9,9 @@ import (
 	"github.com/Autumn-27/norma/agentcore"
 	"github.com/Autumn-27/norma/harness"
 	"github.com/Autumn-27/norma/llm"
-	"github.com/yukiteruamano/artex/db"
-	"github.com/yukiteruamano/artex/intercept"
-	"github.com/yukiteruamano/artex/sidequestion"
+	"github.com/yukiteruamano/artex-global/db"
+	"github.com/yukiteruamano/artex-global/intercept"
+	"github.com/yukiteruamano/artex-global/sidequestion"
 )
 
 // captureRun drives one agent turn-to-completion over Session.Prompt and emits a

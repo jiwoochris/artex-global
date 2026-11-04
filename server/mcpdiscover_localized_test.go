@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/yukiteruamano/artex/db"
+	"github.com/yukiteruamano/artex-global/db"
 )
 
 // Regression defense test that keeps the transport config validation error messages
