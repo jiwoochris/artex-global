@@ -61,7 +61,7 @@ func TestFetchLatestErrorsLocalized(t *testing.T) {
 	wantError(t, "rate-limited", errRate, "hit the GitHub API rate limit (60 requests per hour); try again later")
 
 	_, errNF := FetchLatest(ctx, stubClient(http.StatusNotFound, ""))
-	wantError(t, "not-found", errNF, "repository Autumn-27/artex has no stable release yet")
+	wantError(t, "not-found", errNF, "repository yukiteruamano/artex-global has no stable release yet")
 
 	_, errStatus := FetchLatest(ctx, stubClient(http.StatusInternalServerError, ""))
 	wantError(t, "bad-status", errStatus, "GitHub returned status code 500")

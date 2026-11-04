@@ -13,8 +13,9 @@ import (
 
 // Repo is the release source. Hard-coded rather than configurable: a configurable
 // update source would be a remote code execution channel for anyone able to edit the
-// configuration, which is unacceptable for a penetration testing platform.
-const Repo = "Autumn-27/artex"
+// configuration, which is unacceptable for a penetration testing platform. It must be the
+// repository that actually publishes the release assets, which is this fork's repository.
+const Repo = "yukiteruamano/artex-global"
 
 // latestURL is GitHub's "latest stable release" endpoint. It skips prereleases and
 // drafts automatically.
