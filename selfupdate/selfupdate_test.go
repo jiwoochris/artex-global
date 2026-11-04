@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -64,13 +63,6 @@ func readAll(t *testing.T, path string) string {
 	return string(b)
 }
 
-func requireUnix(t *testing.T) {
-	t.Helper()
-	if runtime.GOOS == "windows" {
-		t.Skip("the fake binary is an sh script, it cannot run on Windows")
-	}
-}
-
 func TestCompareVersions(t *testing.T) {
 	cases := []struct {
 		a, b       string
@@ -115,16 +107,9 @@ func TestResolvePathsNaming(t *testing.T) {
 			t.Errorf("%s is not in the executable directory: %s (want %s)", name, path, p.Dir)
 		}
 	}
-	// on Windows .new/.old must keep the .exe suffix, otherwise both the smoke test and running the swapped-in build fail.
-	if runtime.GOOS == "windows" {
-		if !strings.HasSuffix(p.New, ".exe") || !strings.HasSuffix(p.Old, ".exe") {
-			t.Errorf("on Windows .new/.old must end with .exe: new=%s old=%s", p.New, p.Old)
-		}
-	}
 }
 
 func TestVerifyStagedRejectsTamperedBinary(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	stage(t, p, "new", 0)
 
@@ -136,7 +121,6 @@ func TestVerifyStagedRejectsTamperedBinary(t *testing.T) {
 }
 
 func TestVerifyStagedRejectsUnrunnableBinary(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	stage(t, p, "broken", 1) // runnable but exits with a non-zero code
 
@@ -146,7 +130,6 @@ func TestVerifyStagedRejectsUnrunnableBinary(t *testing.T) {
 }
 
 func TestApplyStagedHappyPath(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "old", 0)
 	stage(t, p, "new", 0)
@@ -180,7 +163,6 @@ func TestApplyStagedHappyPath(t *testing.T) {
 }
 
 func TestApplyStagedKeepsCurrentWhenVerifyFails(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "old", 0)
 	stage(t, p, "new", 0)
@@ -202,7 +184,6 @@ func TestApplyStagedKeepsCurrentWhenVerifyFails(t *testing.T) {
 }
 
 func TestSwapOverwritesPreviousBackup(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "v2", 0)
 	fakeBin(t, p.Old, "v1", 0) // backup left over from the previous update
@@ -220,7 +201,6 @@ func TestSwapOverwritesPreviousBackup(t *testing.T) {
 }
 
 func TestConfirmCountsAttemptsThenRollsBack(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "broken-new", 0)
 	fakeBin(t, p.Old, "good-old", 0)
@@ -263,7 +243,6 @@ func TestConfirmCountsAttemptsThenRollsBack(t *testing.T) {
 }
 
 func TestManualRollbackIsReversible(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "v2", 0)
 	fakeBin(t, p.Old, "v1", 0)
@@ -289,23 +268,23 @@ func TestManualRollbackIsReversible(t *testing.T) {
 
 func TestParseSums(t *testing.T) {
 	const (
-		linuxSum = "1111111111111111111111111111111111111111111111111111111111111111"
-		winSum   = "ABCDEF0000000000000000000000000000000000000000000000000000000000"
+		amd64Sum = "1111111111111111111111111111111111111111111111111111111111111111"
+		arm64Sum = "ABCDEF0000000000000000000000000000000000000000000000000000000000"
 	)
 	// sha256sum output is separated by two spaces; shasum -a 256 prefixes the filename with * in binary mode.
-	raw := linuxSum + "  artex-0.3.8-linux-amd64.zip\n" +
-		winSum + " *artex-0.3.8-windows-amd64.zip\n" +
+	raw := amd64Sum + "  artex-0.3.8-linux-amd64.zip\n" +
+		arm64Sum + " *artex-0.3.8-linux-arm64.zip\n" +
 		"\n" +
 		"garbage line\n" + // exactly two fields, but the first is not a digest
-		"deadbeef  artex-0.3.8-darwin-arm64.zip\n" // digest length is wrong
+		"deadbeef  artex-0.3.8-linux-riscv64.zip\n" // digest length is wrong
 
 	out := parseSums(raw)
-	if out["artex-0.3.8-linux-amd64.zip"] != linuxSum {
-		t.Errorf("wrong parse for the linux entry: %v", out)
+	if out["artex-0.3.8-linux-amd64.zip"] != amd64Sum {
+		t.Errorf("wrong parse for the amd64 entry: %v", out)
 	}
 	// digests are lowercased so comparison never reports a case-only mismatch.
-	if got := out["artex-0.3.8-windows-amd64.zip"]; got != strings.ToLower(winSum) {
-		t.Errorf("wrong windows entry (the * prefix should be stripped, the digest lowercased): %q", got)
+	if got := out["artex-0.3.8-linux-arm64.zip"]; got != strings.ToLower(arm64Sum) {
+		t.Errorf("wrong arm64 entry (the * prefix should be stripped, the digest lowercased): %q", got)
 	}
 	if len(out) != 2 {
 		t.Errorf("empty lines, non-digest lines and wrong-length lines should be ignored, got %v", out)
@@ -313,9 +292,6 @@ func TestParseSums(t *testing.T) {
 }
 
 func TestExtractBinaryFindsNestedEntry(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("the in-archive basename is artex.exe on Windows; this case is built with Unix naming")
-	}
 	dir := t.TempDir()
 	zipPath := filepath.Join(dir, "release.zip")
 
@@ -406,11 +382,11 @@ func TestCheckURLRejectsNonGitHub(t *testing.T) {
 
 func TestAssetNameMatchesBuildScript(t *testing.T) {
 	// build.sh's package_binary uses artex-<version>-<os>-<arch>.zip, and the version number
-	// drops the v prefix. One wrong character here and one-click update finds no asset on any platform.
+	// drops the v prefix. One wrong character here and one-click update finds no asset.
 	if got := AssetName("v0.3.8", "linux", "amd64"); got != "artex-0.3.8-linux-amd64.zip" {
 		t.Errorf("AssetName = %q", got)
 	}
-	if got := AssetName("0.3.8", "windows", "amd64"); got != "artex-0.3.8-windows-amd64.zip" {
+	if got := AssetName("0.3.8", "linux", "arm64"); got != "artex-0.3.8-linux-arm64.zip" {
 		t.Errorf("AssetName = %q", got)
 	}
 }
@@ -425,7 +401,6 @@ func mustParse(t *testing.T, raw string) *url.URL {
 }
 
 func TestSettleClearsMarkerAndStopsRollback(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "new", 0)
 	fakeBin(t, p.Old, "old", 0)
@@ -449,7 +424,6 @@ func TestSettleClearsMarkerAndStopsRollback(t *testing.T) {
 }
 
 func TestSettleIsNoopWithoutMarker(t *testing.T) {
-	requireUnix(t)
 	p := testPaths(t)
 	fakeBin(t, p.Current, "cur", 0)
 	settle(p) // normal start path: must not panic and must not touch any file

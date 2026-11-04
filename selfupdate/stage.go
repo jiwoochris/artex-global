@@ -248,9 +248,6 @@ func get(ctx context.Context, c *http.Client, rawURL string) (io.ReadCloser, err
 // single wrong character would fail the whole upgrade, so matching the base name is more resilient.
 func extractBinary(zipPath, dst string) error {
 	want := "artex"
-	if runtime.GOOS == "windows" {
-		want = "artex.exe"
-	}
 	zr, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return fmt.Errorf("Failed to open the release package: %w", err)

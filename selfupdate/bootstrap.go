@@ -209,12 +209,10 @@ func smokeTest(bin string) error {
 
 // swap replaces the current binary with the staged new version.
 //
-// Both Unix and Windows allow renaming a running executable (Windows forbids deleting and
-// overwriting it, not renaming), so this needs neither platform branching nor stopping
-// ourselves first.
+// Unix allows renaming a running executable, so this needs neither platform branching nor
+// stopping ourselves first.
 func swap(p Paths) error {
-	// Windows rename does not overwrite an existing target, so a .old left by the previous
-	// update must be removed first.
+	// Clear the backup left by the previous update before it is replaced.
 	if err := os.Remove(p.Old); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("Failed to clean up the previous backup %s: %w", p.Old, err)
 	}

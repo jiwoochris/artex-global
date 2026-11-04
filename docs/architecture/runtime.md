@@ -22,7 +22,7 @@ How the process boots, what it binds, how it shuts down and how configuration is
 | `artex` HTTP server | `127.0.0.1:8787` (`-addr`) | UI, JSON API, SSE | `cmd/artex/main.go:55`, `cmd/artex/main.go:117-121` |
 | `artex` traffic proxy | `127.0.0.1:8788` (`-proxy`, empty disables) | Recording MITM proxy | `cmd/artex/main.go:57`, `server/manager.go:395` |
 | PostgreSQL | operator-provided DSN | All application state | `config/config.go:201` |
-| `start.sh` / `start.bat` | n/a | Supervisor: relaunches on exit code 75 | `start.sh:12-13`, `start.sh:26` |
+| `start.sh` | n/a | Supervisor: relaunches on exit code 75 | `start.sh:12-13`, `start.sh:26` |
 
 The HTTP server is created with `ReadHeaderTimeout: 10 * time.Second` (`cmd/artex/main.go:117-121`). Serving
 the UI and the API on the same origin is what makes the static export work behind a reverse proxy — the

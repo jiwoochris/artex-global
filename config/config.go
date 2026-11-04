@@ -99,8 +99,8 @@ func Language() string {
 
 // BaseDir is the directory that anchors all runtime artifacts (config.json and
 // the data/ store). It is the directory the running binary lives in, so a
-// distributed executable keeps its files next to itself on any OS (Windows,
-// Linux, …) regardless of the working directory it is launched from.
+// distributed executable keeps its files next to itself regardless of the
+// working directory it is launched from.
 //
 // When launched via `go run`, the binary is throwaway: it sits either in a temp
 // build dir (cache miss → fresh link) OR straight inside the Go build cache

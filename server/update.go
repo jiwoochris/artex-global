@@ -19,8 +19,8 @@ import (
 // concurrency mutex, progress fan-out, and telling main "time to exit".
 //
 // The restart is not done in this process: once the new version is staged the process
-// exits with selfupdate.ExitRestart and the supervisor script (start.sh / start.bat,
-// the ENTRYPOINT under Docker) brings it back up.
+// exits with selfupdate.ExitRestart and the supervisor script (start.sh, the ENTRYPOINT
+// under Docker) brings it back up.
 
 // Update messages exposed to the user (SSE progress messages, check reasons, error
 // responses). The frontend (the update-card on system/settings) renders

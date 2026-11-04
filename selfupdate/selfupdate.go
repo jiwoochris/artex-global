@@ -1,13 +1,13 @@
 // Package selfupdate implements ARTEX's one-click page update: pull the new binary
 // from GitHub Release, verify it, stage it, and atomically swap it in on the next start.
 //
-// Division of work (see start.sh / start.bat):
+// Division of work (see start.sh):
 //
 //	start script = dumb supervisor loop, only responsible for "after the process exits, decide by exit code whether to start it again"
 //	this package = all the error-prone logic (download / SHA256 check / smoke test / swap / rollback on failure)
 //
-// The swap lives in Go instead of in the scripts because the sha256 check and the smoke test would
-// have to be written twice on sh and bat (sha256sum / shasum / certutil), and this is exactly the step that must not go wrong — swapping in a
+// The swap lives in Go instead of in the script because the sha256 check and the smoke test would
+// have to be written in the shell (sha256sum / shasum), and this is exactly the step that must not go wrong — swapping in a
 // binary that cannot run makes the supervisor faithfully restart it over and over, and the user can only rescue the machine by hand.
 //
 // One full upgrade goes through three process starts:
@@ -42,17 +42,14 @@ const maxAttempts = 3
 // CWD would drop the staged files somewhere else and break the swap logic outright.
 type Paths struct {
 	Dir     string // directory the executable lives in
-	Current string // currently running binary            artex      / artex.exe
-	New     string // staged new version                  artex.new  / artex.new.exe
-	Sum     string // sha256 of the new version (hex)     artex.new.sha256 / artex.new.exe.sha256
-	Old     string // old version backed up before swap    artex.old  / artex.old.exe
-	Marker  string // upgrade state marker                artex.upgrade.json
+	Current string // currently running binary         artex
+	New     string // staged new version               artex.new
+	Sum     string // sha256 of the new version (hex)  artex.new.sha256
+	Old     string // old version backed up before swap artex.old
+	Marker  string // upgrade state marker             artex.upgrade.json
 }
 
 // ResolvePaths derives every upgrade path from the current executable.
-//
-// On Windows the .new/.old names must keep the .exe suffix too, otherwise both the smoke test and the execution after the swap fail,
-// so the suffix is stripped first and appended again, which keeps the naming symmetrical on both platforms.
 func ResolvePaths() (Paths, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -62,18 +59,13 @@ func ResolvePaths() (Paths, error) {
 		exe = resolved
 	}
 	dir := filepath.Dir(exe)
-	name := filepath.Base(exe)
-	ext := filepath.Ext(name) // ".exe" on Windows, usually empty on Unix
-	stem := strings.TrimSuffix(name, ext)
-
-	join := func(suffix string) string { return filepath.Join(dir, stem+suffix+ext) }
 	return Paths{
 		Dir:     dir,
 		Current: exe,
-		New:     join(".new"),
-		Sum:     join(".new") + ".sha256",
-		Old:     join(".old"),
-		Marker:  filepath.Join(dir, stem+".upgrade.json"),
+		New:     filepath.Join(dir, "artex.new"),
+		Sum:     filepath.Join(dir, "artex.new.sha256"),
+		Old:     filepath.Join(dir, "artex.old"),
+		Marker:  filepath.Join(dir, "artex.upgrade.json"),
 	}, nil
 }
 
