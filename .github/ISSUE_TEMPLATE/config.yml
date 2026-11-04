@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: 🔒 Report a security vulnerability
-    url: https://github.com/jiwoochris/artex-global/security/policy
+    url: https://github.com/yukiteruamano/artex-global/security/policy
     about: Do not file security vulnerabilities as public issues; follow the private process in the security policy (SECURITY.md).
   - name: 📜 Authorized use and legal notice
-    url: https://github.com/jiwoochris/artex-global#️-read-first--authorized-use-and-legal-notice
+    url: https://github.com/yukiteruamano/artex-global#️-read-first--authorized-use-and-legal-notice
     about: ARTEX may be used only against targets you own or are authorized to test, or in a local isolated environment. Read the scope and legal notice before use (README.md).

@@ -5,7 +5,7 @@ gathers the scope, policies, and procedures you should know before you start con
 Before you send a contribution, please read [Authorized use and legal responsibility](#authorized-use-and-legal-responsibility)
 and [Localization policy](#localization-policy) first.
 
-- To report a bug or suggest a feature → use the [issue templates](https://github.com/jiwoochris/artex-global/issues/new/choose).
+- To report a bug or suggest a feature → use the [issue templates](https://github.com/yukiteruamano/artex-global/issues/new/choose).
 - If you find a translation or localization error → use the "translation/localization error" issue template.
 - If you find a security vulnerability → **do not open a public issue**; follow the procedure in [SECURITY.md](SECURITY.md).
 - Everyone who takes part must follow the [Code of Conduct (CODE_OF_CONDUCT.md)](CODE_OF_CONDUCT.md).

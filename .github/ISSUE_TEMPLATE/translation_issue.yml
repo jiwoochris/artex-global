@@ -8,7 +8,7 @@ body:
       value: |
         Thank you for helping improve the translation quality of the global edition.
         This repository's localization policy: **translate only user-facing output into the selected language, and leave the agent's internal reasoning prompts and the original commands, payloads, code, and logs unchanged.**
-        The full principles are in [CONTRIBUTING.md](https://github.com/jiwoochris/artex-global/blob/main/CONTRIBUTING.md#localization-policy).
+        The full principles are in [CONTRIBUTING.md](https://github.com/yukiteruamano/artex-global/blob/main/CONTRIBUTING.md#localization-policy).
   - type: dropdown
     id: kind
     attributes:

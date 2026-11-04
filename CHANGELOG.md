@@ -40,7 +40,7 @@ The release that turns the Korean edition (`0.3.15-ko.1`) into ARTEX-global, a m
 
 ### Repository rename (artex-ko → artex-global)
 
-- **Renamed the repository to `artex-global`.** Changed the GitHub slug to `jiwoochris/artex-global` (old URLs kept via GitHub redirects) and the container image path to `ghcr.io/jiwoochris/artex-global`. Replaced 126 occurrences across 37 files in the repo — badges, clone URLs, `docker-compose.yml`, `release.yml`, `install.sh`, docs, edition labels, detection-rule authors, the MISP event name. The upstream Go module (`github.com/Autumn-27/artex`) and the historical version tag (`0.3.15-ko.1`) were left unchanged.
+- **Renamed the repository to `artex-global`.** Changed the GitHub slug to `yukiteruamano/artex-global` (old URLs kept via GitHub redirects) and the container image path to `ghcr.io/yukiteruamano/artex-global`. Replaced 126 occurrences across 37 files in the repo — badges, clone URLs, `docker-compose.yml`, `release.yml`, `install.sh`, docs, edition labels, detection-rule authors, the MISP event name. The upstream Go module (`github.com/Autumn-27/artex`) and the historical version tag (`0.3.15-ko.1`) were left unchanged.
 
 ### Localization (i18n)
 
@@ -60,7 +60,7 @@ The first release of the Korean edition, based on upstream ARTEX 0.3.15.
 
 ### Distribution
 
-- **The Korean-edition Docker image is now published.** Upstream's `autumn27/artex` image was taken down from Docker Hub, which broke the `docker compose up -d` quick start. Each release tag now pushes a multi-architecture (amd64/arm64) image to `ghcr.io/jiwoochris/artex-global`, and `docker-compose.yml` pulls that image.
+- **The Korean-edition Docker image is now published.** Upstream's `autumn27/artex` image was taken down from Docker Hub, which broke the `docker compose up -d` quick start. Each release tag now pushes a multi-architecture (amd64/arm64) image to `ghcr.io/yukiteruamano/artex-global`, and `docker-compose.yml` pulls that image.
 
 ### Security
 

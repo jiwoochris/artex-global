@@ -1,6 +1,8 @@
 # Defending Against and Detecting Autonomous AI Attacks
 
 > This document helps **defenders** understand how an **autonomous AI penetration agent** such as ARTEX operates, so that you can build the capability to **detect and block** such attacks. It is not a guide to carrying out attacks. Use everything here only to protect systems you own or have explicit written authorization to test. Probing or attacking someone else's information and communications network without authorization is itself a crime (see the [security and misuse warning in the top-level README](../README.md)).
+>
+> **If you have just been breached, report it.** This document tells you how to detect and block an autonomous attack; it does not replace the legal duty to report an incident to the competent authority. Section 7 has the confirmed reporting paths for **Spain** (INCIBE-CERT 017 and the Fuerzas y Cuerpos de Seguridad del Estado for a denuncia; AEPD within 72 hours for a personal-data breach), **Venezuela** (CICPC's División de Investigaciones de Delitos Informáticos, under the Ley Especial contra los Delitos Informáticos) and the **United States** (CISA at cisa.gov/report, the FBI's IC3 at ic3.gov, plus state and sector rules), as well as the Republic of Korea.
 
 An autonomous AI attack tool turns a penetration test — once a manual process a single operator ran by hand — into a 24/7 automated process in which an LLM agent **breaks goals down on its own, executes real tools, and accumulates discoveries**. The adversary a defender faces shifts from "one skilled attacker" to "a swarm of agents that never tire and never rest." This guide sets out what that shift demands of detection and response.
 
@@ -154,7 +156,7 @@ description: |
     signature; tune the count and window to your own baseline. On its own this leg is low signal
     and earns weight only inside the correlation below.
 references:
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense.md
+    - https://github.com/yukiteruamano/artex-global/blob/main/docs/defense.md
 author: artex-global defense guide (generic template)
 date: 2026-10-07
 tags:
@@ -183,7 +185,7 @@ description: |
     correlation below. Extend the marker list to your own probe corpus and WAF categories; it is
     a coarse proxy for the broader "adapts requests to responses" behaviour the guide describes.
 references:
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense.md
+    - https://github.com/yukiteruamano/artex-global/blob/main/docs/defense.md
 author: artex-global defense guide (generic template)
 date: 2026-10-07
 tags:
@@ -215,7 +217,7 @@ description: |
     often expose weaker identity-verification endpoints than the main service and belong here
     too. This leg is broad by design and is only meaningful inside the correlation below.
 references:
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense.md
+    - https://github.com/yukiteruamano/artex-global/blob/main/docs/defense.md
 author: artex-global defense guide (generic template)
 date: 2026-10-07
 tags:
@@ -252,7 +254,7 @@ description: |
     session identifier if you have one) and tune the window to your baseline. If three legs are
     too strict and miss cases, relax to any two of the three.
 references:
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense.md
+    - https://github.com/yukiteruamano/artex-global/blob/main/docs/defense.md
 author: artex-global defense guide (generic template)
 date: 2026-10-07
 tags:
@@ -349,21 +351,57 @@ Static indicators (ports, User-Agents, markers) can be changed or deleted by an 
 
 ---
 
-## 7. Korean official channels: indicators, advisories, and reporting duties
+## 7. Official channels: indicators, advisories, and reporting duties
 
-Defending teams in Korea should take their indicators of compromise and security advisories from official channels, and, when an incident occurs, meet the reporting duties the law sets. Make the official sources below your first reference instead of circulating unofficial lists.
+Defenders should take indicators of compromise and advisories from official channels, and when an incident occurs they should meet the reporting duties of the jurisdiction they operate in. The reporting paths below cover **Spain, Venezuela and the United States**, plus the **Republic of Korea**, where the upstream project and much of the detection material originated.
+
+Confirm the current channel before you rely on it: agencies move portals, change phone numbers and revise deadlines. Each entry linked below points at the authority's own page — treat that page as the source of truth, and record the confirmed path in your incident-response procedure (section 6) while things are calm, not mid-incident.
 
 ### 7.1 Where to get indicators and advisories
 
-- **KISA (Korea Internet & Security Agency), via [Boho Nara / KrCERT/CC](https://www.boho.or.kr)**, publishes security advisories, vulnerability notices, and incident-response information, and shares threat intelligence across organizations through C-TAS (the Cyber Threat Analysis and Sharing system; unlike the open portal, C-TAS is shared among enrolled organizations and takes a separate application).
-- **[FSI (Financial Security Institute)](https://www.fsec.or.kr)** shares intrusion and threat information across the financial sector (the finance-sector ISAC). If you are in finance, watch this channel as well.
-- **[PIPC (Personal Information Protection Commission)](https://www.pipc.go.kr)** publishes the criteria for breach notification and the guidance on protective measures.
+- **[CISA](https://www.cisa.gov)** (United States) publishes advisories, alerts and the known-exploited-vulnerability catalogue; its reporting page is [cisa.gov/report](https://www.cisa.gov/report).
+- **[INCIBE-CERT](https://www.incibe.es/incibe-cert)** (Spain) publishes security advisories and coordinates incident response for citizens and companies.
+- **[KISA / Boho Nara / KrCERT/CC](https://www.boho.or.kr)** (Korea) publishes security advisories, vulnerability notices and incident-response information, and shares threat intelligence across organizations through C-TAS (the Cyber Threat Analysis and Sharing system; unlike the open portal, C-TAS is shared among enrolled organizations and takes a separate application).
+- **[FSI (Financial Security Institute)](https://www.fsec.or.kr)** (Korea) shares intrusion and threat information across the financial sector (the finance-sector ISAC). If you are in finance, watch this channel as well.
+- **[PIPC (Personal Information Protection Commission)](https://www.pipc.go.kr)** (Korea) publishes the criteria for breach notification and the guidance on protective measures.
+- **Venezuela has no public national CERT advisory feed comparable to CISA or INCIBE-CERT.** The CICPC's cybercrime division publishes guidance through its official channels (see 7.3); cross-check technical indicators against the international sources above rather than relying on a single local feed.
 
 These channels are exactly what the section 5 hardening checklist means by "take official indicators of compromise from a trusted source." Even an official IoC is applied only after you review its validity window and false-blocking risk, the same principle explained in section 2, "Why IP-address blocking is a weak first line of defense."
 
-### 7.2 Reporting duties under Korean law
+### 7.2 Spain
 
-Because autonomous attacks spread fast, build the statutory reporting steps into your section 6 incident-response procedure in advance. The following is a summary; confirm the exact scope, deadlines, and conditions against each authority's current rules.
+**Advice and incident reporting.** The national, free and confidential service is INCIBE's *Tu Ayuda en Ciberseguridad*: **017** (08:00–23:00, every day of the year, including weekends and holidays), WhatsApp **900 116 117**, Telegram **@INCIBE017**, or the web form on [incibe.es](https://www.incibe.es). For an actual security incident, INCIBE-CERT also takes reports through its [incident-response channel](https://www.incibe.es/incibe-cert). The 017 line **advises, it does not take a denuncia**.
+
+**Filing a criminal complaint (denuncia).** A denuncia is filed with the **Fuerzas y Cuerpos de Seguridad del Estado** — at any comisaría, through the **Policía Nacional** portal, or through the **Cibercomandancia of the Guardia Civil** (online denuncia); in the Basque Country through the **Ertzaintza**, in Catalonia through the **Mossos d'Esquadra**. INCIBE lists the current entry points on [its "how to report" page](https://www.incibe.es/ciudadania/ayuda/denuncia). If personal data is involved, the **Agencia Española de Protección de Datos (AEPD)** is the other competent authority.
+
+**Statutory breach notification.** Under **Article 33 GDPR**, a controller must notify the supervisory authority without undue delay and **within 72 hours** of becoming aware of a personal-data breach, unless the breach is unlikely to result in a risk to rights and freedoms. Under **Article 34**, when the risk is high the affected data subjects must also be informed. Notifications are filed electronically through the AEPD's Sede Electrónica (the AEPD publishes the procedure and the *Asesora Brecha* self-assessment tool on [aepd.es](https://www.aepd.es)). In the public sector, Spanish public administrations notify the AEPD except in Andalucía, Cataluña and País Vasco, which have their own authorities for their regional entities; operators of public electronic-communications services also report under Article 41 of Ley 9/2014. Sector rules (financial, health, NIS2 transposition) can add obligations on top — check the one that governs you.
+
+### 7.3 Venezuela
+
+**Filing a complaint (denuncia).** The competent body is the **Cuerpo de Investigaciones Científicas, Penales y Criminalísticas (CICPC)**, through its **División de Investigaciones de Delitos Informáticos**: the Caracas headquarters (Avenida Urdaneta, sede Icauca, piso 4) and CICPC delegations across the country take denuncias in person, and the division publishes its current remote intake channels through its official accounts. The **Ministerio Público** (the Public Prosecutor's office) directs the resulting investigation, so the case number and the delegation where you filed both matter — record them.
+
+**Criminal basis.** The **Ley Especial contra los Delitos Informáticos** (Gaceta Oficial Nº 37.313 of 30 October 2001, in force 29 November 2001) criminalises the behaviour this document describes:
+
+- **Article 6 (acceso indebido):** accessing, intercepting, interfering with or using an information-technology system without authorization, or beyond the authorization obtained — **one to five years** and a fine.
+- **Article 7 (sabotaje o daño a sistemas):** destroying, damaging, modifying or impairing such a system or its data — **four to eight years** and a fine, with a higher range when a virus or analogous program is introduced.
+- **Article 9:** penalties increase by one third to one half when the target is protected by security measures, serves public functions, or holds personal or patrimonial data of natural or legal persons.
+- **Article 10:** importing, manufacturing, distributing, selling or using equipment or programs intended to defeat a system's security — **three to six years** and a fine.
+
+Preserve evidence before you act: hash the relevant logs, keep the recorded traffic (section 2) and the guard/audit records, and do not wipe the host before the delegation has a copy.
+
+### 7.4 United States
+
+**Reporting an incident.** **CISA** receives voluntary reports at [cisa.gov/report](https://www.cisa.gov/report), by email at **report@cisa.gov**, or by phone at **1-844-Say-CISA (1-844-729-2472)**; CISA Central also answers on **contact@cisa.dhs.gov**. **Cybercrime complaints** — including intrusions, fraud and ransomware — go to the FBI's Internet Crime Complaint Center, **[ic3.gov](https://www.ic3.gov)**, which accepts submissions from victims and third parties; the local **FBI field office** is the path for an active intrusion, and the **Secret Service** for financial-sector cases.
+
+**Statutory reporting.** Most organisations are **not yet** under a general federal duty to report: reporting to CISA is voluntary for them today. The **Cyber Incident Reporting for Critical Infrastructure Act of 2022 (CIRCIA)** will require *covered entities* to report covered cyber incidents **within 72 hours** of reasonably believing one occurred, and ransom payments **within 24 hours** of payment. As of October 2026 the final rule is with the White House Office of Management and Budget for review and **is not in force** — check [CISA's CIRCIA page](https://www.cisa.gov/topics/cyber-threats-and-advisories/information-sharing/cyber-incident-reporting-critical-infrastructure-act-2022-circia) for the current status before you rely on a deadline.
+
+Other obligations stack on top and are often shorter than 72 hours: **state breach-notification laws** (all 50 states, with their own deadlines and definitions), **HIPAA** for protected health information (notification within 60 days), and for public companies **SEC Form 8-K Item 1.05**, which requires disclosure of a material cybersecurity incident within **four business days** of determining materiality. Regulated sectors (finance, energy, utilities) have their own reporting channels.
+
+### 7.5 Republic of Korea
+
+**Where to get indicators and advisories.** See the KISA, FSI and PIPC entries in 7.1.
+
+**Reporting duties.** Because autonomous attacks spread fast, build the statutory reporting steps into your section 6 incident-response procedure in advance. The following is a summary; confirm the exact scope, deadlines, and conditions against each authority's current rules.
 
 - **Personal-data breach:** under Article 34 of the Personal Information Protection Act, within 72 hours of becoming aware of the breach, report to the PIPC or KISA and notify the affected data subjects (the reporting conditions include a breach affecting 1,000 or more data subjects, a breach of sensitive or unique-identifier data, and a breach caused by unlawful external access).
 - **Security incident:** under the Network Act, an information and communications service provider reports the incident to the Ministry of Science and ICT and KISA (KrCERT/CC) within 24 hours of becoming aware of it.
@@ -377,7 +415,7 @@ To actually file: report a security incident through [Boho Nara](https://www.boh
 
 - Upstream project: [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX) (AGPL-3.0 · currently unreachable, checked 2026-10). This document is the defensive material of its global-edition repository.
 - The top-level [README security and misuse warning, scope of use, and legal notice](../README.md).
-- This edition is localized for Korea; where personal data is involved, Korean law (the Network Act and the Personal Information Protection Act) applies. Unauthorized testing is a crime in most jurisdictions regardless — always secure written authorization and an agreed scope first.
+- Where personal data is involved, the breach-notification law of the jurisdiction you operate in applies: the GDPR and the AEPD in Spain, the Ley Especial contra los Delitos Informáticos in Venezuela, the state breach-notification laws and sector rules (HIPAA, SEC 8-K) in the United States, and the Network Act and the Personal Information Protection Act in Korea. Section 7 spells out the channels and deadlines. Unauthorized testing is a crime in most jurisdictions regardless — always secure written authorization and an agreed scope first.
 - Standard references for general web-security hardening: [OWASP Top 10](https://owasp.org/www-project-top-ten/), [OWASP ASVS (Application Security Verification Standard)](https://owasp.org/www-project-application-security-verification-standard/), [OWASP API Security Top 10](https://api-security.owasp.org/).
 
 > This guide is continually expanded to support defense and detection capability. Suggestions for additional detection rules or hardening items are welcome as repository issues.

@@ -45,7 +45,7 @@ update_docker(){
   # and leaves it untouched when it already is.
   info "pulling the new image (artex only)…"
   if ! docker compose pull artex; then
-    warn "could not pull the image ghcr.io/jiwoochris/artex-global (check that the tag is a published release tag and that the network works)"
+    warn "could not pull the image ghcr.io/yukiteruamano/artex-global (check that the tag is a published release tag and that the network works)"
     die "image update failed. \"2) local update (rebuild with go)\" can update too"
   fi
   info "recreating and starting (artex migrates the schema automatically on restart)…"

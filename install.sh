@@ -48,7 +48,7 @@ install_docker(){
   info "pulling the image and starting up…"
   docker compose pull || true
   if ! docker compose up -d; then
-    warn "could not pull or start the image ghcr.io/jiwoochris/artex-global (check that ARTEX_TAG in .env is a published tag and that the network works)"
+    warn "could not pull or start the image ghcr.io/yukiteruamano/artex-global (check that ARTEX_TAG in .env is a published tag and that the network works)"
     warn "rerun this script and pick \"2) local run (go build)\", or build via the README route \"build a single binary from source\""
     die "Docker Compose (everything in Docker) failed to start"
   fi

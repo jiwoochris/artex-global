@@ -1,5 +1,5 @@
 # ARTEX network detection - Suricata rules
-# Repo:  https://github.com/jiwoochris/artex-global
+# Repo:  https://github.com/yukiteruamano/artex-global
 # Guide: ../../docs/defense.md
 # Index & how-to-test: detections/suricata/README.md
 #
@@ -18,8 +18,8 @@
 #  - The audit-control marker is an operator-side log artifact, not target-facing traffic -
 #    detect it with ../sigma/artex_guard_audit_framing.yml instead.
 
-alert http any any -> any any (msg:"ARTEX enrichment prober User-Agent (artex-enrich)"; flow:established,to_server; http.method; content:"GET"; http.user_agent; content:"artex-enrich/"; startswith; fast_pattern; classtype:attempted-recon; reference:url,github.com/jiwoochris/artex-global/tree/main/detections/suricata; metadata:created_at 2026_10_05; sid:1000001; rev:1;)
+alert http any any -> any any (msg:"ARTEX enrichment prober User-Agent (artex-enrich)"; flow:established,to_server; http.method; content:"GET"; http.user_agent; content:"artex-enrich/"; startswith; fast_pattern; classtype:attempted-recon; reference:url,github.com/yukiteruamano/artex-global/tree/main/detections/suricata; metadata:created_at 2026_10_05; sid:1000001; rev:1;)
 
-alert http any any -> any any (msg:"ARTEX enrichment prober high-rate enumeration (artex-enrich)"; flow:established,to_server; http.user_agent; content:"artex-enrich/"; startswith; fast_pattern; detection_filter:track by_src, count 30, seconds 300; classtype:attempted-recon; reference:url,github.com/jiwoochris/artex-global/tree/main/detections/suricata; metadata:created_at 2026_10_05; sid:1000002; rev:1;)
+alert http any any -> any any (msg:"ARTEX enrichment prober high-rate enumeration (artex-enrich)"; flow:established,to_server; http.user_agent; content:"artex-enrich/"; startswith; fast_pattern; detection_filter:track by_src, count 30, seconds 300; classtype:attempted-recon; reference:url,github.com/yukiteruamano/artex-global/tree/main/detections/suricata; metadata:created_at 2026_10_05; sid:1000002; rev:1;)
 
-alert http any any -> any any (msg:"ARTEX worker WebFetch User-Agent (norma)"; flow:established,to_server; http.user_agent; content:"norma/"; startswith; fast_pattern; classtype:attempted-recon; reference:url,github.com/jiwoochris/artex-global/tree/main/detections/suricata; metadata:created_at 2026_10_07; sid:1000003; rev:1;)
+alert http any any -> any any (msg:"ARTEX worker WebFetch User-Agent (norma)"; flow:established,to_server; http.user_agent; content:"norma/"; startswith; fast_pattern; classtype:attempted-recon; reference:url,github.com/yukiteruamano/artex-global/tree/main/detections/suricata; metadata:created_at 2026_10_07; sid:1000003; rev:1;)

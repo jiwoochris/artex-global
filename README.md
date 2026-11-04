@@ -6,7 +6,7 @@
 
 The UI and generated output default to English, and **can be switched between English and Spanish in Settings (System → Settings → Display language).** Changing the language also changes the language of agent-generated reports, summaries and chat replies.
 
-[![ci](https://github.com/jiwoochris/artex-global/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jiwoochris/artex-global/actions/workflows/ci.yml) [![detections](https://github.com/jiwoochris/artex-global/actions/workflows/detections.yml/badge.svg?branch=main)](https://github.com/jiwoochris/artex-global/actions/workflows/detections.yml) [![web](https://github.com/jiwoochris/artex-global/actions/workflows/web.yml/badge.svg?branch=main)](https://github.com/jiwoochris/artex-global/actions/workflows/web.yml) [![license: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![ci](https://github.com/yukiteruamano/artex-global/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/yukiteruamano/artex-global/actions/workflows/ci.yml) [![detections](https://github.com/yukiteruamano/artex-global/actions/workflows/detections.yml/badge.svg?branch=main)](https://github.com/yukiteruamano/artex-global/actions/workflows/detections.yml) [![web](https://github.com/yukiteruamano/artex-global/actions/workflows/web.yml/badge.svg?branch=main)](https://github.com/yukiteruamano/artex-global/actions/workflows/web.yml) [![license: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
 </div>
 
@@ -40,6 +40,8 @@ ARTEX may be used **only against targets you own or for which you have explicit 
 
 - In the Republic of Korea, intruding into or disrupting another party's information and communications network without authorization violates the **Act on Promotion of Information and Communications Network Utilization and Information Protection** (the Network Act).
 - Personal data collected or exposed during a penetration test is subject to the Korean **Personal Information Protection Act** (the PIPA). Even with authorization, handle the access, retention, and deletion of personal data with care.
+- In **Spain**, unauthorized access to an information system is a crime under the Criminal Code (and the GDPR breach-notification duties apply where personal data is involved); in **Venezuela**, the Ley Especial contra los Delitos Informáticos criminalises unauthorized access, sabotage and possession of attack tooling; in the **United States**, the Computer Fraud and Abuse Act and state computer-crime statutes apply.
+- If you suffer an incident, report it to the competent authority in your jurisdiction. [`docs/defense.md` §7](docs/defense.md#7-official-channels-indicators-advisories-and-reporting-duties) lists the confirmed channels for **Spain** (INCIBE-CERT / 017, Fuerzas y Cuerpos de Seguridad del Estado, AEPD within 72 hours for a personal-data breach), **Venezuela** (CICPC's División de Investigaciones de Delitos Informáticos) and the **United States** (CISA, FBI IC3, plus state and sector rules), as well as the Republic of Korea.
 - Wherever you are, comply with your own jurisdiction's laws on network security, data protection, and computer crime.
 - Use this for **learning, research, and verification in locally isolated environments.** Before targeting any live external system, secure written authorization and an agreed scope and time window.
 
@@ -88,10 +90,10 @@ Upstream (Chinese UI) captures preserved for comparison are described in [`scree
 
 > **Prerequisites:** Docker and Docker Compose. The database is **PostgreSQL**, brought up by compose. Exploration requires an **LLM** (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`; can also be set in the UI).
 
-> **Image:** the `artex` service in `docker-compose.yml` pulls `ghcr.io/jiwoochris/artex-global`, the global-edition image this repository publishes to GitHub Container Registry on every release tag (`v*`). The default tag is `latest` (the most recent release); set `ARTEX_TAG` in `.env` to pin a specific release. Upstream's original image `autumn27/artex` has been taken down from Docker Hub and is no longer used.
+> **Image:** the `artex` service in `docker-compose.yml` pulls `ghcr.io/yukiteruamano/artex-global`, the global-edition image this repository publishes to GitHub Container Registry on every release tag (`v*`). The default tag is `latest` (the most recent release); set `ARTEX_TAG` in `.env` to pin a specific release. Upstream's original image `autumn27/artex` has been taken down from Docker Hub and is no longer used.
 
 ```bash
-git clone https://github.com/jiwoochris/artex-global.git
+git clone https://github.com/yukiteruamano/artex-global.git
 cd artex-global
 cp .env.example .env          # set POSTGRES_PASSWORD; ANTHROPIC_API_KEY is optional
 docker compose up -d          # brings up the artex image + postgres together
@@ -105,7 +107,7 @@ The image bundles common tools (ripgrep, curl, vim, npm, nmap, and more), and wh
 
 Upstream provides several methods: an install script (`./install.sh`), precompiled binaries (Releases), and a single-binary build from source. The essentials are reproduced below.
 
-- **Install script:** running `./install.sh` detects/installs Docker and then lets you choose "① all-in-Docker" or "② local compile and run." "① all-in-Docker" pulls and starts the same image as the quick start above (`ghcr.io/jiwoochris/artex-global`), while "② local compile and run" builds it yourself the same way as the **single-binary build from source** below.
+- **Install script:** running `./install.sh` detects/installs Docker and then lets you choose "① all-in-Docker" or "② local compile and run." "① all-in-Docker" pulls and starts the same image as the quick start above (`ghcr.io/yukiteruamano/artex-global`), while "② local compile and run" builds it yourself the same way as the **single-binary build from source** below.
 - **Hardened container deployment:** `Dockerfile.hardened` and `docker-compose.hardened.yml` build the same app as an unprivileged container with a read-only rootfs, zero capabilities and its own networks. Setup, API keys, isolation checks and known limitations are in [docs/docker-hardened.md](docs/docker-hardened.md).
 - **Single-binary build from source:**
 

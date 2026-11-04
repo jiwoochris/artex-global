@@ -10,8 +10,8 @@ description: |
     change this User-Agent, so its ABSENCE does not imply safety. Treat it as a supporting
     indicator and combine it with the behaviour-based detection in the defense guide, section 4.
 references:
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense.md
-    - https://github.com/jiwoochris/artex-global
+    - https://github.com/yukiteruamano/artex-global/blob/main/docs/defense.md
+    - https://github.com/yukiteruamano/artex-global
 author: artex-global defense guide
 date: 2026-10-05
 tags:

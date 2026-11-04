@@ -18,7 +18,7 @@ services:
   artex:
     # Image this fork publishes to GitHub Container Registry on every release tag (v*)
     # (the docker job in .github/workflows/release.yml). Upstream autumn27/artex was taken down from Docker Hub.
-    image: ghcr.io/jiwoochris/artex-global:${ARTEX_TAG:-latest}
+    image: ghcr.io/yukiteruamano/artex-global:${ARTEX_TAG:-latest}
     depends_on:
       postgres:
         condition: service_healthy

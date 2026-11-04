@@ -20,7 +20,7 @@ isolated from the host but with internet egress, using **OpenCode Go** or
 | this document | Operations, API keys and isolation verification. |
 
 The original `Dockerfile` and `docker-compose.yml` stay the release-CI path (the
-release workflow uses them to publish `ghcr.io/jiwoochris/artex-global`). They are not
+release workflow uses them to publish `ghcr.io/yukiteruamano/artex-global`). They are not
 hardened as a whole, but they ship the same two posture fixes: the process runs as the
 same unprivileged `artex` user (uid/gid 10001), and the recording proxy is bound to
 container loopback. What they keep is a writable rootfs, so the one-click self-update
@@ -332,7 +332,7 @@ If you do not want to build from source, replace the `build:` block of `artex` i
 hardening as it is:
 
 ```yaml
-    image: ghcr.io/jiwoochris/artex-global:${ARTEX_TAG:-latest}
+    image: ghcr.io/yukiteruamano/artex-global:${ARTEX_TAG:-latest}
 ```
 
 That image also runs as uid/gid 10001 (`artex`), so the `user:` line stays valid — but

@@ -14,8 +14,8 @@ description: |
     guard's wider DROP set (INDEX/VIEW/USER/ROLE/TABLESPACE), which alter structure or access
     rather than destroy data and are noisy in routine migrations.
 references:
-    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense.md
-    - https://github.com/jiwoochris/artex-global
+    - https://github.com/yukiteruamano/artex-global/blob/main/docs/defense.md
+    - https://github.com/yukiteruamano/artex-global
 author: artex-global defense guide
 date: 2026-10-05
 tags:

@@ -137,7 +137,7 @@ jobs:
       contents: read
       packages: write
     env:
-      IMAGE_NAMESPACE: ghcr.io/jiwoochris/artex-global
+      IMAGE_NAMESPACE: ghcr.io/yukiteruamano/artex-global
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0 (brings in the Dockerfile and skills/)
         with:
