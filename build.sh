@@ -26,6 +26,17 @@ info() { printf '\033[36m[*]\033[0m %s\n' "$*"; }
 ok() { printf '\033[32m[+]\033[0m %s\n' "$*"; }
 warn() { printf '\033[33m[!]\033[0m %s\n' "$*" >&2; }
 die() { printf '\033[31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
+validate_target() {
+  case "$1" in
+    */*) ;;
+    *) die "invalid target: $1 (must be in OS/ARCH form)" ;;
+  esac
+  case "${1%%/*}" in
+    linux) ;;
+    *) die "unsupported system: ${1%%/*}: ARTEX runs on Linux only, and other hosts use the Docker stack" ;;
+  esac
+}
+
 
 usage() {
   cat <<'EOF'
@@ -111,6 +122,20 @@ else
   ARTEX_TARGETS="${ARTEX_TARGETS:-${ARTEX_TARGET_OS}/${ARTEX_TARGET_ARCH}}"
 fi
 
+# Reject an unsupported target before doing any work: the frontend build and the rsync
+# check come later, and a wrong platform must fail with the platform message, not with a
+# missing-tool error.
+old_ifs="$IFS"
+IFS=','
+read -r -a targets <<< "$ARTEX_TARGETS"
+IFS="$old_ifs"
+[ "${#targets[@]}" -gt 0 ] || die "ARTEX_TARGETS may not be empty"
+for target in "${targets[@]}"; do
+  target="${target//[[:space:]]/}"
+  [ -n "$target" ] || continue
+  validate_target "$target"
+done
+
 if [ "${ARTEX_SKIP_FRONTEND:-0}" = "1" ]; then
   [ -d server/webui/dist ] || die "ARTEX_SKIP_FRONTEND=1 but server/webui/dist is missing"
 else
@@ -185,16 +210,8 @@ package_binary() {
 
 build_target() {
   target="$1"
-  case "$target" in
-    */*) ;;
-    *) die "invalid target: $target (must be in OS/ARCH form)" ;;
-  esac
   goos="${target%%/*}"
   goarch="${target##*/}"
-  case "$goos" in
-    linux) ;;
-    *) die "unsupported system: $goos: ARTEX runs on Linux only, and other hosts use the Docker stack" ;;
-  esac
 
   if [ -n "${ARTEX_OUTPUT:-}" ] && [ "$ARTEX_RELEASE" != "1" ]; then
     output="$ARTEX_OUTPUT"
@@ -244,11 +261,6 @@ write_checksums() {
 mkdir -p "$ARTEX_OUTPUT_DIR"
 if [ "$ARTEX_PACKAGE" = "1" ]; then mkdir -p "$ARTEX_PACKAGE_DIR"; fi
 
-old_ifs="$IFS"
-IFS=','
-read -r -a targets <<< "$ARTEX_TARGETS"
-IFS="$old_ifs"
-[ "${#targets[@]}" -gt 0 ] || die "ARTEX_TARGETS may not be empty"
 for target in "${targets[@]}"; do
   target="${target//[[:space:]]/}"
   [ -n "$target" ] || continue
