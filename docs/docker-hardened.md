@@ -19,8 +19,12 @@ isolated from the host but with internet egress, using **OpenCode Go** or
 | `docker-compose.hardened.yml` | Full stack (artex + PostgreSQL) with its own bridge network, zero capabilities, read-only rootfs and resource limits. |
 | this document | Operations, API keys and isolation verification. |
 
-The original `Dockerfile` and `docker-compose.yml` stay untouched: the release CI
-uses them to publish `ghcr.io/jiwoochris/artex-global`.
+The original `Dockerfile` and `docker-compose.yml` stay the release-CI path (the
+release workflow uses them to publish `ghcr.io/jiwoochris/artex-global`). They are not
+hardened as a whole, but they ship the same two posture fixes: the process runs as the
+same unprivileged `artex` user (uid/gid 10001), and the recording proxy is bound to
+container loopback. What they keep is a writable rootfs, so the one-click self-update
+works there; see §8 for the exact difference.
 
 ---
 
@@ -254,6 +258,18 @@ need to attack a target on your LAN, add a specific `ACCEPT` for that IP before 
 
 ## 6. Known limitations (conscious decisions)
 
+- **The update checksum is unsigned.** The one-click updater accepts a new binary only
+  after comparing it against the `SHA256SUMS` file of the same GitHub release
+  (`selfupdate/github.go`, `selfupdate/stage.go`). That comparison happens over HTTPS
+  against a GitHub-hosted file, so it catches corruption and CDN tampering — it does
+  **not** protect against a compromised maintainer account, a hijacked release, or a
+  compromised GitHub account/token: whoever can replace the binary can replace the sum
+  that vouches for it. In this hardened image the risk is moot (the binary is read-only
+  and the update is disabled), but it applies to the published image and to the
+  plain-binary install. A real fix is a detached signature: sign `SHA256SUMS` in the
+  release job (minisign or Sigstore/cosign, key held by the maintainer), compile the
+  public half into the binary, and verify the signature before parsing the sums. That
+  requires a signing key under release control, so it is documented rather than faked.
 - **Raw-socket scans are not available.** Without `CAP_NET_RAW`, `nmap -sS`, `-O`,
   `-sU` and the like fail; the agent must use `-sT` (connect scan) and the rest of
   the tools work the same (ICMP is enabled through `net.ipv4.ping_group_range`,
@@ -269,8 +285,12 @@ need to attack a target on your LAN, add a specific `ACCEPT` for that IP before 
   security boundary here is the container, not the browser.
 - **`/tmp` is RAM.** Its cap (2 GB) counts inside `mem_limit: 8g`; if you raise one,
   raise the other.
-- **The image is not byte-reproducible** (`@latest` in Playwright/npm). If you need
-  reproducibility, pin versions in `Dockerfile.hardened`.
+- **The image is not byte-reproducible.** Node is pinned (version + SHA256 for the
+  release tarball, `ARG NODE_VERSION` in both Dockerfiles) and the base images and
+  `postgres:16-alpine` are pinned by digest (multi-arch index), but the globally
+  installed Playwright packages (`@playwright/mcp`, `playwright`, `@playwright/cli`) are
+  still resolved at build time, so the Chromium build inside them can move. Pin them in
+  both Dockerfiles if you need a fixed browser.
 - **Data lives in named volumes** (`artex-secure_artex_data`,
   `artex-secure_artex_skills`, `artex-secure_pgdata`), not in `./data`: there is no
   bind mount so that the agent cannot create arbitrary files on the host.
@@ -315,7 +335,37 @@ hardening as it is:
     image: ghcr.io/jiwoochris/artex-global:${ARTEX_TAG:-latest}
 ```
 
-That image runs as root on a writable rootfs, so the resulting isolation is the one
-from the compose options (capabilities, networks, limits) but without the two
-strongest layers (`user` and `read_only`). For maximum isolation, use the image built
-by `Dockerfile.hardened`.
+That image also runs as uid/gid 10001 (`artex`), so the `user:` line stays valid — but
+its rootfs is writable and it carries no `read_only`/tmpfs, so two of the layers above
+(`read_only`, and the assumption that the binary cannot rewrite itself) no longer hold;
+the remaining ones (capabilities, networks, limits, named volumes) still do. For
+maximum isolation, use the image built by `Dockerfile.hardened`.
+
+### 8.1 The published `docker-compose.yml` (non-hardened) stack
+
+That stack bind-mounts `./data` and `./skills` from the checkout instead of named
+volumes, and the container's uid is 10001, so make those two directories writable by it
+once, before the first start:
+
+```bash
+sudo chown -R 10001:10001 data skills
+```
+
+Otherwise the app cannot create `jwt.key`, the SQLite file or the traffic store and
+fails to start. Its recording proxy (8788) is bound to container loopback by default
+(no authentication — see §5), and publishing the port on the host does not
+change that. Routing your own browser through it is an explicit opt-in:
+
+```dotenv
+# .env — only on a host you control; makes the unauthenticated MITM proxy reachable
+# from the host (published on 127.0.0.1:8788 only, because of the ports mapping).
+ARTEX_PROXY_ADDR=0.0.0.0:8788
+```
+
+Never set it to an address reachable from a network you do not control: the proxy
+terminates TLS for anything that uses it and is not authenticated.
+
+That stack sets `no-new-privileges` but deliberately **not** `cap_drop: [ALL]`: it ships
+`nmap`/`ping` and the agent's raw-socket work (`nmap -sS`, `-O`, ICMP) needs those
+capabilities, so dropping them would silently break the scans instead of hardening
+anything. The hardened stack is where the capabilities go away (see §5 and §6).

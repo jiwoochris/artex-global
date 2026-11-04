@@ -172,7 +172,7 @@ The agent's reasoning-prompt body is in English. A non-zero count of lines conta
 characters in the check below is a signal that an upstream merge pulled the Chinese body back in.
 
 ```bash
-python3 -c "import re; han=re.compile(r'[㐀-鿿]'); t=open('agent/promptcatalog.go').read(); print('promptcatalog.go CJK lines =', sum(1 for l in t.splitlines() if han.search(l)))"
+python3 -c "import re; han=re.compile(r'[\u3400-\u9fff]'); t=open('agent/promptcatalog.go').read(); print('promptcatalog.go CJK lines =', sum(1 for l in t.splitlines() if han.search(l)))"
 ```
 
 `promptcatalog.go CJK lines = 0` after the English conversion. If this number rises, check whether
@@ -184,7 +184,7 @@ After exporting the UI statically, Chinese (or any language other than the activ
 in the prerendered HTML means a missing translation or a leaked source string.
 
 ```bash
-cd web && npm ci && NEXT_EXPORT=1 npm run build   # generates out/
+cd web && pnpm install --frozen-lockfile && NEXT_EXPORT=1 pnpm run build   # generates out/
 # check that the visible text in out/**/*.html contains 0 Chinese characters
 ```
 
@@ -413,12 +413,12 @@ locally. If you do not have Go locally, you can run the same thing under Docker.
 
 ```bash
 # 1) Static frontend export (corresponds to the frontend job in release.yml)
-cd web && npm ci && npm run build:static && cd ..
+cd web && pnpm install --frozen-lockfile && pnpm run build:static && cd ..
 # 2) Place it where the binaries job receives the artifact
 rm -rf server/webui/dist && mkdir -p server/webui/dist && cp -a web/out/. server/webui/dist/
 # 3) Build one target with the same environment as the binaries job
 docker run --rm -v "$PWD":/app -w /app \
-  -e ARTEX_SKIP_FRONTEND=1 -e ARTEX_SKIP_NPM_CI=1 \
+  -e ARTEX_SKIP_FRONTEND=1 -e ARTEX_SKIP_PNPM_INSTALL=1 \
   -e ARTEX_COMPRESS=0 -e ARTEX_PACKAGE=1 -e ARTEX_PACKAGE_DIR=dist \
   -e ARTEX_BUILD_VERSION=v0.0.0-local \
   golang:1.26 bash -c 'apt-get update && apt-get install -y zip && ./build.sh --target linux/amd64'

@@ -110,13 +110,13 @@ Upstream provides several methods: an install script (`./install.sh`), precompil
 - **Single-binary build from source:**
 
   ```bash
-  cd web && npm ci && npm run build:static && cd ..   # 1) static frontend build
+  cd web && pnpm install --frozen-lockfile --prod=false && pnpm run build:static && cd ..   # 1) static frontend build
   rm -rf server/webui/dist && mkdir -p server/webui/dist && cp -a web/out/. server/webui/dist/   # 2) sync into the embed directory (avoids nesting on rebuild)
   CGO_ENABLED=0 go build -tags embedui -o artex ./cmd/artex   # 3) compile with the frontend embedded
   ./start.sh                                          # → http://localhost:8787
   ```
 
-> The `npm ci` in step 1) installs the devDependencies the build needs (e.g. `@tailwindcss/postcss`). If your shell has `NODE_ENV=production` set, `npm ci` skips devDependencies and the build fails with `Error: Cannot find module '@tailwindcss/postcss'`; in that case install with `npm ci --include=dev`.
+> The frontend uses **pnpm**, pinned by `packageManager` in `web/package.json` (enable it with `corepack enable`). The `pnpm install` in step 1) installs the devDependencies the build needs (e.g. `@tailwindcss/postcss`); `--prod=false` makes that explicit, so an inherited `NODE_ENV=production` or a global `prod` setting cannot leave `@tailwindcss/postcss` missing and fail the build with `Error: Cannot find module '@tailwindcss/postcss'`.
 
 > Launch with `start.sh` (`start.bat` on Windows) rather than running `./artex` directly. That script is a supervisor that restarts the program based on its exit code, and it also handles the UI's "one-click update."
 
@@ -368,9 +368,9 @@ Local development and testing:
 ```
 
 - Backend: `go run ./cmd/artex` (without `-tags embedui` the frontend is not embedded)
-- Frontend: `cd web && npm run dev` (proxies `/api` to the backend, with hot reload)
+- Frontend: `cd web && pnpm run dev` (proxies `/api` to the backend, with hot reload)
 - Tests: `go test ./...`
-- Mock preview (no backend): `cd web && NEXT_PUBLIC_MOCK=1 npm run dev`
+- Mock preview (no backend): `cd web && NEXT_PUBLIC_MOCK=1 pnpm run dev`
 
 The changes this global edition adds on top of upstream ARTEX are tracked in the [changelog (CHANGELOG.md)](CHANGELOG.md).
 

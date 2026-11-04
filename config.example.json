@@ -1,7 +1,6 @@
 {
-  "_comment": "config.json 으로 복사하십시오(또는 환경 변수 ARTEX_CONFIG 로 다른 경로를 지정합니다). 이 파일에는 database 와 skill_dir 두 항목만 담깁니다. LLM 등 나머지 설정은 환경 변수나 앱 안 설정으로 두며, 이 파일에는 넣지 않습니다.",
-
-  "_comment_database": "PostgreSQL 연결입니다. 우선순위: 환경 변수 ARTEX_PG_DSN > 이 파일의 database. 두 가지 작성 방식 중 하나를 고르십시오: (A) 아래의 개별 필드를 채우거나, (B) database.dsn 하나에 완전한 연결 문자열만 채웁니다.",
+  "_comment": "Copy this file to config.json (or point ARTEX_CONFIG at another path). It carries only the database and skill_dir sections; everything else (LLM profiles and so on) lives in environment variables or in the in-app settings.",
+  "_comment_database": "PostgreSQL connection. Precedence: environment variable ARTEX_PG_DSN > this file's database section. Pick one of two shapes: (A) fill in the individual fields below, or (B) put a complete DSN in database.dsn. See the per-field comments.",
   "database": {
     "host": "127.0.0.1",
     "port": 5433,
@@ -10,17 +9,14 @@
     "dbname": "artex",
     "sslmode": "disable"
   },
-
-  "_comment_database_dsn": "작성 방식 (B): 위의 database 를 지우고 완전한 DSN 을 대신 씁니다. dsn 이 비어 있지 않으면 개별 필드는 무시됩니다.",
+  "_comment_database_dsn": "Shape (B): delete database above and put a complete DSN here instead. When dsn is non-empty the individual fields are ignored.",
   "_example_database_dsn": {
     "database": {
       "dsn": "postgres://user:pass@db.example.com:5432/artex?sslmode=require"
     }
   },
-
-  "_comment_skill_dir": "스킬 루트 디렉터리입니다(하위 디렉터리 하나가 스킬 하나이며, SKILL.md 를 포함합니다). 우선순위: 환경 변수 ARTEX_SKILL_DIR > 이 필드 > 기본값(실행 파일과 같은 위치의 skills/). 비워 두거나 이 필드를 지우면 기본값을 씁니다. 상대 경로는 현재 작업 디렉터리를 기준으로 해석됩니다.",
+  "_comment_skill_dir": "Root directory of the skills (each subdirectory is one skill and contains SKILL.md). Precedence: environment variable ARTEX_SKILL_DIR > this field > default (skills/ next to the executable). Leave it empty or remove it to use the default.",
   "skill_dir": "/opt/artex/skills",
-
-  "_comment_language": "사용자에게 보이는 출력 언어의 기본값입니다(en·ko·zh·es·ja 중 하나). 에이전트가 생성하는 리포트·요약·대화 응답과 백엔드 메시지가 이 언어를 따릅니다. 우선순위: 환경 변수 ARTEX_LANG > 이 필드 > 기본값(en). 실행 중에는 설정 화면에서 고른 값이 이 기본값을 덮습니다. 비워 두거나 이 필드를 지우면 기본값(en)을 씁니다.",
+  "_comment_language": "Default language for user-facing output (one of en or es). Agent-generated reports, summaries and chat replies, and the backend messages, follow this language. Precedence: environment variable ARTEX_LANG > this field > default (en).",
   "language": "en"
 }

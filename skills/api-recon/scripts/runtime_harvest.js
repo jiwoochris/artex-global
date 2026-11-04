@@ -2,8 +2,9 @@
 /*
  * runtime_harvest.js <config.json>
  *
- * 参考模板 — 非通用成品。执行前须按目标站点调整 config.json 及脚本内逻辑：
- *   cookies/localStorage、neutralize 字段、stubs 结构、loginUrlPattern、apiPattern
+ * Reference template — not a general-purpose product. Before running, adjust config.json and
+ * the logic below for the target site: cookies/localStorage, neutralize fields, stub shapes,
+ * loginUrlPattern, apiPattern
  *
  * Drives a headless browser through an authorized SPA to capture the live API
  * surface (method + url + body) by defeating three client-side gates:
