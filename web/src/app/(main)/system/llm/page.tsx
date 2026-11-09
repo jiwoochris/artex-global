@@ -19,6 +19,14 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -28,7 +36,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
-import type { LLMPoolMember, LLMPoolStatus, LLMProfile, LLMRetryOverride } from "@/lib/types";
+import type { ChatGPTPlanStatus, LLMPoolMember, LLMPoolStatus, LLMProfile, LLMRetryOverride } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 import { ProfileRetryFields, RetryPolicyPanel, ZERO_OVERRIDE } from "./_components/retry";
@@ -40,6 +48,7 @@ import { ProfileRetryFields, RetryPolicyPanel, ZERO_OVERRIDE } from "./_componen
 const NONE = "none";
 const fromStore = (v?: string) => (v ? v : NONE);
 const toStore = (v: string) => (v === NONE ? "" : v);
+type LLMFormat = LLMProfile["format"];
 
 function cooldownText(secs: number) {
   if (secs <= 0) return "";
@@ -260,7 +269,7 @@ function ProfileSheet({
   const t = useTranslations("llmPage");
   const isNew = !profile;
   const [name, setName] = React.useState("");
-  const [format, setFormat] = React.useState<"anthropic" | "openai" | "openai-responses">("anthropic");
+  const [format, setFormat] = React.useState<LLMFormat>("anthropic");
   const [model, setModel] = React.useState("");
   const [baseUrl, setBaseUrl] = React.useState("");
   const [proxy, setProxy] = React.useState("");
@@ -308,7 +317,7 @@ function ProfileSheet({
   React.useEffect(() => {
     if (!open) return;
     setName(profile?.name ?? "");
-    setFormat(profile?.format === "openai" || profile?.format === "openai-responses" ? profile.format : "anthropic");
+    setFormat(profile?.format ?? "anthropic");
     setModel(profile?.model ?? "");
     setBaseUrl(profile?.base_url ?? "");
     setProxy(profile?.proxy ?? "");
@@ -331,6 +340,7 @@ function ProfileSheet({
   }, [open, profile]);
 
   const profileId = profile ? Number(profile.id) : undefined;
+  const isPlan = format === "chatgpt-plan";
 
   async function loadModels() {
     if (loadingModels) return;
@@ -367,7 +377,7 @@ function ProfileSheet({
         toStore(thinkingType),
         toStore(effort),
         profileId,
-        streaming,
+        isPlan ? true : streaming,
         sessionHeaderKey.trim(),
       );
       // 回复内容一并展示：看得见模型确实说了话，才算和会话里跑通是一回事。
@@ -406,8 +416,8 @@ function ProfileSheet({
         reasoning_effort: toStore(effort),
         priority: Number(priority) || 0,
         pool_exclude: poolExclude,
-        streaming,
-        max_tokens: Math.max(0, Number(maxTokens) || 0),
+        streaming: isPlan ? true : streaming,
+        max_tokens: isPlan ? 0 : Math.max(0, Number(maxTokens) || 0),
         // 字段名开关只对 openai(Chat Completions) 有意义，其它格式一律回落到默认；
         // 后端也会再做一次同样的归一化，这里只是别让 UI 送出自相矛盾的值。
         max_tokens_field: format === "openai" ? toStore(maxTokensField) : "",
@@ -456,7 +466,20 @@ function ProfileSheet({
             </div>
             <div className="grid gap-2">
               <Label>{t("profile.format.label")}</Label>
-              <Select value={format} onValueChange={(v) => setFormat(v as "anthropic" | "openai" | "openai-responses")}>
+              <Select
+                value={format}
+                onValueChange={(v) => {
+                  const next = v as LLMFormat;
+                  setFormat(next);
+                  if (next === "chatgpt-plan") {
+                    setBaseUrl("");
+                    setApiKey("");
+                    setStreaming(true);
+                    setMaxTokens("0");
+                    setSessionHeaderKey("");
+                  }
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={t("profile.format.placeholder")} />
                 </SelectTrigger>
@@ -464,6 +487,7 @@ function ProfileSheet({
                   <SelectItem value="anthropic">Anthropic</SelectItem>
                   <SelectItem value="openai">OpenAI (Chat Completions)</SelectItem>
                   <SelectItem value="openai-responses">OpenAI (Responses API)</SelectItem>
+                  <SelectItem value="chatgpt-plan">ChatGPT plan (OAuth)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -516,16 +540,18 @@ function ProfileSheet({
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="p-base-url">{t("profile.baseUrl.label")}</Label>
-            <Input
-              id="p-base-url"
-              className="font-mono"
-              placeholder="https://api.openai.com/v1"
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-            />
-          </div>
+          {!isPlan && (
+            <div className="grid gap-2">
+              <Label htmlFor="p-base-url">{t("profile.baseUrl.label")}</Label>
+              <Input
+                id="p-base-url"
+                className="font-mono"
+                placeholder="https://api.openai.com/v1"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+              />
+            </div>
+          )}
 
           <div className="grid gap-2">
             <Label htmlFor="p-proxy">{t("profile.proxy.label")}</Label>
@@ -539,30 +565,34 @@ function ProfileSheet({
             <p className="text-muted-foreground text-xs">{t("profile.proxy.hint")}</p>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="p-session-header">{t("profile.sessionHeader.label")}</Label>
-            <Input
-              id="p-session-header"
-              className="font-mono"
-              placeholder={t("profile.sessionHeader.placeholder")}
-              value={sessionHeaderKey}
-              onChange={(e) => setSessionHeaderKey(e.target.value)}
-            />
-            <p className="text-muted-foreground text-xs">
-              {t.rich("profile.sessionHeader.hint", { b: (c) => <b>{c}</b> })}
-            </p>
-          </div>
+          {!isPlan && (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="p-session-header">{t("profile.sessionHeader.label")}</Label>
+                <Input
+                  id="p-session-header"
+                  className="font-mono"
+                  placeholder={t("profile.sessionHeader.placeholder")}
+                  value={sessionHeaderKey}
+                  onChange={(e) => setSessionHeaderKey(e.target.value)}
+                />
+                <p className="text-muted-foreground text-xs">
+                  {t.rich("profile.sessionHeader.hint", { b: (c) => <b>{c}</b> })}
+                </p>
+              </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="p-api-key">API Key</Label>
-            <Input
-              id="p-api-key"
-              type="password"
-              placeholder={keyHint ? t("profile.apiKey.placeholderSet", { hint: keyHint }) : "sk-…"}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-          </div>
+              <div className="grid gap-2">
+                <Label htmlFor="p-api-key">API Key</Label>
+                <Input
+                  id="p-api-key"
+                  type="password"
+                  placeholder={keyHint ? t("profile.apiKey.placeholderSet", { hint: keyHint }) : "sk-…"}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                />
+              </div>
+            </>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="grid gap-2">
@@ -616,7 +646,12 @@ function ProfileSheet({
                 <Label className="text-sm">{t("profile.streaming.label")}</Label>
                 <p className="text-muted-foreground text-xs">{t("profile.streaming.hint")}</p>
               </div>
-              <Switch checked={streaming} onCheckedChange={setStreaming} aria-label={t("profile.streaming.aria")} />
+              <Switch
+                checked={isPlan ? true : streaming}
+                disabled={isPlan}
+                onCheckedChange={setStreaming}
+                aria-label={t("profile.streaming.aria")}
+              />
             </div>
           </div>
 
@@ -635,6 +670,7 @@ function ProfileSheet({
                 className="w-28 shrink-0"
                 value={maxTokens}
                 onChange={(e) => setMaxTokens(e.target.value)}
+                disabled={isPlan}
                 placeholder="0"
               />
             </div>
@@ -726,6 +762,9 @@ export default function LLMPage() {
   const t = useTranslations("llmPage");
   const [profiles, setProfiles] = React.useState<LLMProfile[]>([]);
   const [pool, setPool] = React.useState<LLMPoolStatus | null>(null);
+  const [chatGPTPlan, setChatGPTPlan] = React.useState<ChatGPTPlanStatus | null>(null);
+  const [chatGPTBusy, setChatGPTBusy] = React.useState(false);
+  const [showChatGPTWelcome, setShowChatGPTWelcome] = React.useState(false);
   const [poolOpen, setPoolOpen] = React.useState(false);
   // 抽屉的开关和内容分开存：关闭时 editing 保持不变，否则关闭动画期间标题会从
   // 「编辑 X」闪成「新建」。editing = null 表示新建。
@@ -739,7 +778,14 @@ export default function LLMPage() {
   // 一个配置在卡片上显示的「是否正常」。没填 Key 的配置根本发不出请求，比熔断更该先说。
   const healthOf = React.useCallback(
     (p: LLMProfile, m?: LLMPoolMember): Health => {
-      if (!p.api_key_hint) {
+      if (p.format === "chatgpt-plan" && !chatGPTPlan?.connected) {
+        return {
+          label: t("health.noAccount.label"),
+          cls: "border-muted-foreground/40 text-muted-foreground",
+          hint: t("health.noAccount.hint"),
+        };
+      }
+      if (p.format !== "chatgpt-plan" && !p.api_key_hint) {
         return {
           label: t("health.noKey.label"),
           cls: "border-muted-foreground/40 text-muted-foreground",
@@ -765,7 +811,7 @@ export default function LLMPage() {
       }
       return { label: t("health.ok"), cls: "border-emerald-500/50 text-emerald-600 dark:text-emerald-400" };
     },
-    [t],
+    [chatGPTPlan?.connected, t],
   );
 
   const loadPool = React.useCallback(async () => {
@@ -777,17 +823,33 @@ export default function LLMPage() {
   }, []);
 
   const load = React.useCallback(async () => {
-    try {
-      setProfiles(await api.llmProfiles());
-    } catch {
-      /* ignore */
-    }
+    await Promise.all([
+      api
+        .llmProfiles()
+        .then(setProfiles)
+        .catch(() => undefined),
+      api
+        .chatGPTPlanStatus()
+        .then(setChatGPTPlan)
+        .catch(() => undefined),
+    ]);
     await loadPool();
   }, [loadPool]);
 
   React.useEffect(() => {
     void load();
   }, [load]);
+
+  React.useEffect(() => {
+    if (chatGPTPlan?.connected && localStorage.getItem("artex_chatgpt_plan_welcome") !== "1") {
+      setShowChatGPTWelcome(true);
+    }
+  }, [chatGPTPlan?.connected]);
+
+  function dismissChatGPTWelcome() {
+    localStorage.setItem("artex_chatgpt_plan_welcome", "1");
+    setShowChatGPTWelcome(false);
+  }
 
   // 卡片上的健康徽章按 profile id 取轮询状态。
   const health = React.useMemo(() => {
@@ -820,6 +882,58 @@ export default function LLMPage() {
     }
   }
 
+  async function connectChatGPT() {
+    if (chatGPTBusy) return;
+    setChatGPTBusy(true);
+    const popup = window.open("about:blank", "artex-chatgpt-plan", "popup,width=720,height=760");
+    try {
+      const { authorization_url: authorizationURL } = await api.connectChatGPTPlan();
+      if (popup) popup.location.href = authorizationURL;
+      else window.open(authorizationURL, "_blank", "noopener,noreferrer");
+      toast.info(t("chatgpt.toast.finishInWindow"));
+      let tries = 0;
+      const poll = window.setInterval(async () => {
+        tries += 1;
+        try {
+          const status = await api.chatGPTPlanStatus();
+          setChatGPTPlan(status);
+          if (status.connected) {
+            window.clearInterval(poll);
+            setChatGPTBusy(false);
+            await load();
+            toast.success(t("chatgpt.toast.connected"));
+          } else if (tries >= 60) {
+            window.clearInterval(poll);
+            setChatGPTBusy(false);
+          }
+        } catch {
+          if (tries >= 60) {
+            window.clearInterval(poll);
+            setChatGPTBusy(false);
+          }
+        }
+      }, 2_000);
+    } catch (e) {
+      popup?.close();
+      setChatGPTBusy(false);
+      toast.error(t("chatgpt.toast.connectFailed", { msg: (e as Error).message }));
+    }
+  }
+
+  async function disconnectChatGPT() {
+    if (chatGPTBusy) return;
+    setChatGPTBusy(true);
+    try {
+      const result = await api.disconnectChatGPTPlan();
+      await load();
+      toast.success(result.warning ? t("chatgpt.toast.disconnectedWarning") : t("chatgpt.toast.disconnected"));
+    } catch (e) {
+      toast.error(t("chatgpt.toast.disconnectFailed", { msg: (e as Error).message }));
+    } finally {
+      setChatGPTBusy(false);
+    }
+  }
+
   const poolOn = pool?.enabled ?? false;
 
   return (
@@ -843,6 +957,79 @@ export default function LLMPage() {
           </Button>
         </div>
       </div>
+
+      <Card className="gap-0 py-4">
+        <CardContent className="flex flex-wrap items-center justify-between gap-4 px-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="rounded-lg border bg-muted p-2">
+              <PlugZapIcon className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium">{t("chatgpt.title")}</p>
+                <Badge
+                  variant="outline"
+                  className={
+                    chatGPTPlan?.connected
+                      ? "border-emerald-500/50 text-emerald-600 dark:text-emerald-400"
+                      : "text-muted-foreground"
+                  }
+                >
+                  {chatGPTPlan?.connected ? t("chatgpt.connected") : t("chatgpt.disconnected")}
+                </Badge>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                {chatGPTPlan?.connected && chatGPTPlan.email
+                  ? t("chatgpt.connectedAs", { email: chatGPTPlan.email })
+                  : chatGPTPlan?.error || t("chatgpt.description")}
+              </p>
+              {chatGPTPlan?.connected && (
+                <a
+                  className="text-primary text-xs underline-offset-4 hover:underline"
+                  href="https://chatgpt.com/settings/usage"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("chatgpt.manageUsage")}
+                </a>
+              )}
+            </div>
+          </div>
+          {chatGPTPlan?.connected ? (
+            <Button size="sm" variant="outline" disabled={chatGPTBusy} onClick={disconnectChatGPT}>
+              {chatGPTBusy && <Loader2Icon className="animate-spin" />}
+              {t("chatgpt.disconnect")}
+            </Button>
+          ) : (
+            <Button size="sm" disabled={chatGPTBusy || chatGPTPlan?.available === false} onClick={connectChatGPT}>
+              {chatGPTBusy ? <Loader2Icon className="animate-spin" /> : <PlugZapIcon />}
+              {t("chatgpt.connect")}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={showChatGPTWelcome}
+        onOpenChange={(open) => {
+          if (!open) dismissChatGPTWelcome();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("chatgpt.welcomeTitle")}</DialogTitle>
+            <DialogDescription>{t("chatgpt.welcomeDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" asChild>
+              <a href="https://chatgpt.com/settings/usage" target="_blank" rel="noreferrer">
+                {t("chatgpt.manageUsage")}
+              </a>
+            </Button>
+            <Button onClick={dismissChatGPTWelcome}>{t("chatgpt.gotIt")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Tabs defaultValue="profiles" className="flex-1">
         <TabsList>

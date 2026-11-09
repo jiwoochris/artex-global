@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/Autumn-27/artex/agent"
+	"github.com/Autumn-27/artex/chatgptplan"
 	"github.com/Autumn-27/artex/config"
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/intercept"
@@ -115,6 +116,10 @@ type Server struct {
 
 	skillDir string // root directory for skill subdirectories
 	jwtKey   []byte // HS256 signing key loaded from / generated into dataDir/jwt.key
+	// chatGPTPlan owns the local Sign in with ChatGPT session. Refresh tokens are
+	// kept outside the browsable ARTEX workspace and never enter profile rows.
+	chatGPTPlan    *chatgptplan.Manager
+	chatGPTPlanErr string
 
 	// authMu guards the first-run setup token, the cached password hash (tokens
 	// are signed with a key derived from it — see auth.go signingKey) and the
@@ -236,6 +241,16 @@ func New(ctx context.Context, m *Manager, skillDir string, dataDir string, keyDi
 		profChatAgents: map[int64]*agent.ChatAgent{},
 		provByProfile:  map[int64]*provEntry{}, llmHealth: newLLMHealthRegistry(m.pg),
 		taskAgents: map[string]*taskAgentBundle{}, archiveWake: make(chan struct{}, 1)}
+	tokenPath := strings.TrimSpace(os.Getenv("ARTEX_CHATGPT_AUTH_FILE"))
+	if tokenPath == "" {
+		tokenPath = filepath.Join(keyDir, "chatgpt-plan-auth.json")
+	}
+	if plan, planErr := chatgptplan.New(tokenPath); planErr != nil {
+		s.chatGPTPlanErr = planErr.Error()
+		log.Printf("[chatgpt-plan] initialization failed: %v", planErr)
+	} else {
+		s.chatGPTPlan = plan
+	}
 	// First-run protection: cache the password hash and, while none is set, issue
 	// the console setup token (or apply ARTEX_ADMIN_PASSWORD) before any request.
 	s.bootstrapAuth()
@@ -444,7 +459,13 @@ func (s *Server) loadLLMConfig() (agent.Config, bool) {
 	cfg.MaxTokens, cfg.MaxTokensField = p.MaxTokens, p.MaxTokensField
 	cfg.SessionHeaderKey = p.SessionHeaderKey
 	s.applyProfileRetry(&cfg, p)
-	if cfg.APIKey == "" {
+	if cfg.ChatGPTPlan {
+		if s.chatGPTPlan == nil || !s.chatGPTPlan.Status().Connected {
+			return cfg, false
+		}
+		cfg.TokenSource = s.chatGPTPlan
+		cfg.Stream, cfg.MaxTokens = true, 0
+	} else if cfg.APIKey == "" {
 		return cfg, false
 	}
 	s.cfgMu.Lock()
@@ -615,7 +636,13 @@ func (s *Server) loadProfileConfig(id int64) (agent.Config, bool) {
 	cfg.MaxTokens, cfg.MaxTokensField = p.MaxTokens, p.MaxTokensField
 	cfg.SessionHeaderKey = p.SessionHeaderKey
 	s.applyProfileRetry(&cfg, p)
-	if cfg.APIKey == "" {
+	if cfg.ChatGPTPlan {
+		if s.chatGPTPlan == nil || !s.chatGPTPlan.Status().Connected {
+			return cfg, false
+		}
+		cfg.TokenSource = s.chatGPTPlan
+		cfg.Stream, cfg.MaxTokens = true, 0
+	} else if cfg.APIKey == "" {
 		return cfg, false
 	}
 	return cfg, true
@@ -766,6 +793,14 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/auth/init", s.authInit)
 	mux.HandleFunc("POST /api/auth/login", s.authLogin)
 	mux.HandleFunc("POST /api/auth/change-password", s.authChangePassword)
+	// The OAuth callback must be public so OpenAI can return to the local app.
+	// All routes that start, inspect or disconnect the session remain under the
+	// regular ARTEX admin JWT middleware.
+	mux.HandleFunc("GET /api/auth/chatgpt-plan/callback", s.chatGPTPlanCallback)
+	mux.HandleFunc("GET /api/chatgpt-plan/status", s.chatGPTPlanStatus)
+	mux.HandleFunc("POST /api/chatgpt-plan/connect", s.chatGPTPlanConnect)
+	mux.HandleFunc("GET /api/chatgpt-plan/models", s.chatGPTPlanModels)
+	mux.HandleFunc("DELETE /api/chatgpt-plan", s.chatGPTPlanDisconnect)
 
 	mux.HandleFunc("GET /api/health", s.health)
 	mux.HandleFunc("GET /api/stats", s.stats)
@@ -1432,6 +1467,14 @@ func (s *Server) setLLM(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cfg := agent.ConfigFrom(req.Provider, req.Model, req.BaseURL, req.APIKey, req.Proxy)
+	if cfg.ChatGPTPlan {
+		if s.chatGPTPlan == nil || !s.chatGPTPlan.Status().Connected {
+			writeJSON(w, 200, map[string]any{"ok": false, "error": "Connect a ChatGPT account before using this profile"})
+			return
+		}
+		cfg.TokenSource = s.chatGPTPlan
+		cfg.Stream = true
+	}
 	cfg.RatePerSecond, cfg.RatePerMinute = req.RatePerSecond, req.RatePerMinute
 	cfg.ThinkingType = req.ThinkingType
 	cfg.ReasoningEffort = req.ReasoningEffort
@@ -1441,12 +1484,12 @@ func (s *Server) setLLM(w http.ResponseWriter, r *http.Request) {
 		}
 		cfg.ContextWindowK = k
 	}
-	if cfg.APIKey == "" {
+	if cfg.APIKey == "" && !cfg.ChatGPTPlan {
 		s.cfgMu.Lock()
 		cfg.APIKey = s.llmCfg.APIKey // keep existing key if not re-entered
 		s.cfgMu.Unlock()
 	}
-	if cfg.APIKey == "" {
+	if cfg.APIKey == "" && !cfg.ChatGPTPlan {
 		writeErr(w, 400, "api_key required")
 		return
 	}
@@ -1491,6 +1534,13 @@ func (s *Server) testLLM(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cfg := agent.ConfigFrom(req.Provider, req.Model, req.BaseURL, req.APIKey, req.Proxy)
+	if cfg.ChatGPTPlan {
+		if s.chatGPTPlan == nil || !s.chatGPTPlan.Status().Connected {
+			writeJSON(w, 200, map[string]any{"ok": false, "error": "Connect a ChatGPT account before testing this profile"})
+			return
+		}
+		cfg.TokenSource = s.chatGPTPlan
+	}
 	// mirror production: send the SAME thinking params so a provider that rejects the
 	// reasoning_effort/thinking field fails the test too (no false "test ok, run 400").
 	cfg.ThinkingType = req.ThinkingType
@@ -1517,14 +1567,18 @@ func (s *Server) testLLM(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if cfg.APIKey == "" {
+	if cfg.APIKey == "" && !cfg.ChatGPTPlan {
 		s.cfgMu.Lock()
 		cfg.APIKey = s.llmCfg.APIKey
 		s.cfgMu.Unlock()
 	}
-	if cfg.APIKey == "" {
+	if cfg.APIKey == "" && !cfg.ChatGPTPlan {
 		writeJSON(w, 200, map[string]any{"ok": false, "error": trMsg(errLLMTestNoAPIKey)})
 		return
+	}
+	if cfg.ChatGPTPlan {
+		cfg.Stream = true
+		cfg.MaxTokens = 0
 	}
 	// 重试参数【不】带进连接测试:测试有 30s 硬超时,把配置的重试次数/长间隔叠上去
 	// 只会让一个本来能用的端点测成"超时失败"。测试看的是"这个端点通不通",重试节奏

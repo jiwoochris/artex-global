@@ -137,7 +137,7 @@ Upstream provides several methods: an install script (`./install.sh`), precompil
 }
 ```
 
-**LLM:** `export ANTHROPIC_API_KEY=sk-...` (or `OPENAI_API_KEY`), or enter it on the UI's "LLM settings" page. Optional environment variables: `ARTEX_LLM_PROVIDER` / `ARTEX_LLM_MODEL` / `ARTEX_LLM_BASE_URL` / `ARTEX_LLM_PROXY`. To use a domestic or open model, point `ARTEX_LLM_BASE_URL` at an OpenAI-compatible endpoint.
+**LLM:** `export ANTHROPIC_API_KEY=sk-...` (or `OPENAI_API_KEY`), or enter it on the UI's "LLM settings" page. An eligible ChatGPT plan can also be connected without an API key through **System → LLM → Continue with ChatGPT**; see the [ChatGPT plan integration guide](docs/chatgpt-plan-integration.md). Optional environment variables: `ARTEX_LLM_PROVIDER` / `ARTEX_LLM_MODEL` / `ARTEX_LLM_BASE_URL` / `ARTEX_LLM_PROXY`. To use a domestic or open model, point `ARTEX_LLM_BASE_URL` at an OpenAI-compatible endpoint.
 
 **Output language:** this edition forces user-facing output into the selected language (English by default) via a small, code-fixed directive appended to each role's system prompt (it does not translate the reasoning body). Switch languages in Settings, or adapt that directive in `agent/prompt.go` (`langDirective`).
 

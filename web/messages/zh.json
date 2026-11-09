@@ -3233,6 +3233,27 @@
     }
   },
   "llmPage": {
+    "chatgpt": {
+      "title": "ChatGPT 套餐",
+      "description": "无需 API Key，使用符合条件的 ChatGPT 套餐运行 ARTEX。登录会在本机打开。",
+      "connected": "正在使用 ChatGPT 套餐",
+      "disconnected": "未连接",
+      "connectedAs": "已连接为 {email}",
+      "connect": "使用 ChatGPT 继续",
+      "disconnect": "断开连接",
+      "manageUsage": "管理用量",
+      "welcomeTitle": "你正在使用 ChatGPT 套餐",
+      "welcomeDescription": "ARTEX 中符合条件的 AI 请求现在会使用你的 ChatGPT 套餐或积分余额。你可以在 ChatGPT 设置中查看用量并调整限制。",
+      "gotIt": "知道了",
+      "toast": {
+        "finishInWindow": "请在打开的窗口中完成登录",
+        "connected": "ChatGPT 已连接",
+        "connectFailed": "无法启动 ChatGPT 登录：{msg}",
+        "disconnected": "ChatGPT 已断开",
+        "disconnectedWarning": "本地已断开，但无法确认远程撤销",
+        "disconnectFailed": "无法断开 ChatGPT：{msg}"
+      }
+    },
     "page": {
       "subtitle": "全 Agent 共享的格式 / 模型 / 限速配置。点击卡片编辑，星标为当前激活配置。",
       "poolConfig": "轮询配置",
@@ -3262,6 +3283,10 @@
       "deleteAria": "删除配置"
     },
     "health": {
+      "noAccount": {
+        "label": "无 ChatGPT 账户",
+        "hint": "请在本页顶部连接 ChatGPT"
+      },
       "noKey": {
         "label": "未配置 Key",
         "hint": "未填 API Key，无法调用"
@@ -3376,7 +3401,8 @@
       "maxTokensFieldHint": {
         "openai": "上限发哪个键。max_tokens 是默认，绝大多数兼容网关只认它；OpenAI 官方推理模型（o 系列 / GPT-5）反过来只认 max_completion_tokens，收到 max_tokens 会直接报 unsupported_parameter。",
         "anthropic": "仅 openai 格式可选。Anthropic 的字段名固定为 max_tokens。",
-        "openai-responses": "仅 openai 格式可选。Responses API 的字段名固定为 max_output_tokens。"
+        "openai-responses": "仅 openai 格式可选。Responses API 的字段名固定为 max_output_tokens。",
+        "chatgpt-plan": "ChatGPT 套餐访问不接受输出 token 上限，ARTEX 会自动省略。"
       },
       "thinkingType": {
         "label": "思考开关 · thinking.type",
