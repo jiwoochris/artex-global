@@ -353,7 +353,7 @@ ones we cannot fix, so they go on the allowlist with a reason and are excluded f
 
 Pushing a version tag (`v*`) makes [`.github/workflows/release.yml`](.github/workflows/release.yml)
 build binaries for five platforms and, when a condition is met, a multi-architecture Docker image.
-This fork has never cut a release tag, so this workflow has never run. This section therefore records
+This fork has published stable release tags (`v0.3.15-global.1`, `v0.3.15-ko.1`), so this workflow has run. This section records
 what the pipeline assumes and produces, and whether those assumptions match the current repository
 structure. Because pushing a tag creates a GitHub Release on the public repository, cut a release only
 after the publishing decision is made.
@@ -369,7 +369,7 @@ git push origin v0.3.15
 
 ### 9.2 What the pipeline does
 
-The workflow is split into five jobs.
+The workflow is split into four jobs.
 
 - **frontend.** Statically exports the frontend once (`web/out`) and uploads that output as the
   `web-dist` artifact. The binaries job below downloads and reuses this output per target.

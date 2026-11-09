@@ -179,7 +179,7 @@ SSE 는 장시간 연결로 이벤트를 계속 밀어 주므로, 리버스 프�
 
 ## 시스템 아키텍처
 
-ARTEX 는 **LLM 멀티 에이전트가 구동하는 자율 침투 시스템**입니다. Go 단일 백엔드(Next.js 프런트엔드 내장)에 PostgreSQL 을 쓰고, 에이전트 기능은 [`norma`](https://github.com/Autumn-27/norma)(현재 접속 불가, 2026-10 확인) SDK 가 제공합니다. 핵심은 **이중 그래프 구조**와, 그것을 둘러싼 두 가지 자율성 장치(worker 사이의 과정 단위 정보 교환, planner 의 다중 라운드 공유 todolist)입니다.
+ARTEX 는 **LLM 멀티 에이전트가 구동하는 자율 침투 시스템**입니다. Go 단일 백엔드(Next.js 프런트엔드 내장)에 PostgreSQL 을 쓰고, 에이전트 기능은 [`norma`](https://github.com/Autumn-27/norma) SDK 가 제공합니다. 핵심은 **이중 그래프 구조**와, 그것을 둘러싼 두 가지 자율성 장치(worker 사이의 과정 단위 정보 교환, planner 의 다중 라운드 공유 todolist)입니다.
 
 ### 전체 계층
 
@@ -414,5 +414,5 @@ flowchart TB
 
 - 원본 저장소: [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX) (현재 접속 불가, 2026-10 확인)
 - 원본 README(중국어): [README.zh.md](README.zh.md)
-- 원본 온라인 데모(중국어 UI): [https://artex-demo.vercel.app/](https://artex-demo.vercel.app/) (현재 접속 불가, 2026-10 확인)
-- 에이전트 SDK: [Autumn-27/norma](https://github.com/Autumn-27/norma) (현재 접속 불가, 2026-10 확인)
+- 원본 온라인 데모(중국어 UI): [https://artex-demo.vercel.app/](https://artex-demo.vercel.app/)
+- 에이전트 SDK: [Autumn-27/norma](https://github.com/Autumn-27/norma)

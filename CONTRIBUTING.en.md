@@ -152,7 +152,7 @@ npm ci
 npm run dev          # dev server
 npm run build        # production build
 npm run build:static # static-export build (merge gate; includes TypeScript type checking)
-npm run check        # Biome lint/format check (informational; not a merge gate yet, due to pre-existing debt)
+npm run check        # Biome lint/format check (runs as a failing step in web.yml CI; must pass)
 npm run check:fix    # auto-fix
 ```
 
@@ -187,10 +187,10 @@ docker compose up -d     # start artex + postgres → http://localhost:8787
    the change, as in `feat/...`, `fix/...`, `docs/...`, `i18n/...`.
 3. Write the change and **run the relevant verification yourself.** For a Go change, make the
    `build`/`vet`/`test` above pass. For a web change, make `npm run build:static` pass (it also
-   performs the merge gate and the TypeScript type checking). `npm run check` (Biome) still has
-   pre-existing lint debt inherited from upstream and is not a merge gate yet — `web.yml` runs it
-   only as an informational step — so you do not need to make all of it pass. Instead, just
-   confirm that **your change does not add new errors** (when you commit, `lint-staged`
+   performs the merge gate and the TypeScript type checking). `npm run check` (Biome) now runs as an ordinary failing step in `web.yml` (it was
+   promoted from an informational step once the inherited lint debt was cleared to zero), so a
+   push or PR touching `web/**` must make it pass; confirm that **your change does not add new
+   errors** (when you commit, `lint-staged`
    automatically applies `biome check --write` to the files you staged). If you changed
    documentation (`.md`), run `python3 -I scripts/check-doc-links.py` to confirm that in-repo
    link/image references and document anchor (`#heading`) links are not broken. Anchors are built

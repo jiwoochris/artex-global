@@ -174,7 +174,7 @@ SSE は長時間の接続を保持してイベントを送り続けるので、�
 
 ## システムアーキテクチャ
 
-ARTEX は **LLM マルチエージェントが駆動する自律型ペネトレーションシステム** です。PostgreSQL の上で、単一の Go バックエンド（Next.js フロントエンドを埋め込み）を使い、エージェントの能力は [`norma`](https://github.com/Autumn-27/norma)（現在アクセス不可、2026-10 確認）SDK が提供します。その中核にあるのは **デュアルグラフ構造** と、それを取り巻く 2 つの自律メカニズム — ワーカー間のプロセスレベルの情報交換と、planner のマルチラウンド共有 todolist です。
+ARTEX は **LLM マルチエージェントが駆動する自律型ペネトレーションシステム** です。PostgreSQL の上で、単一の Go バックエンド（Next.js フロントエンドを埋め込み）を使い、エージェントの能力は [`norma`](https://github.com/Autumn-27/norma) SDK が提供します。その中核にあるのは **デュアルグラフ構造** と、それを取り巻く 2 つの自律メカニズム — ワーカー間のプロセスレベルの情報交換と、planner のマルチラウンド共有 todolist です。
 
 ### 全体のレイヤー
 
@@ -408,5 +408,5 @@ flowchart TB
 
 - 上流リポジトリ: [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX)（現在アクセス不可、2026-10 確認）
 - オリジナル README（中国語）: [README.zh.md](README.zh.md)
-- オリジナルのオンラインデモ（中国語 UI）: [https://artex-demo.vercel.app/](https://artex-demo.vercel.app/)（現在アクセス不可、2026-10 確認）
-- エージェント SDK: [Autumn-27/norma](https://github.com/Autumn-27/norma)（現在アクセス不可、2026-10 確認）
+- オリジナルのオンラインデモ（中国語 UI）: [https://artex-demo.vercel.app/](https://artex-demo.vercel.app/)
+- エージェント SDK: [Autumn-27/norma](https://github.com/Autumn-27/norma)
