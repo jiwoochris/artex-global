@@ -43,7 +43,7 @@ func (s *Server) hostTools() ([]actool.CoreTool, map[string][]string) {
 	tools = append(tools, s.platformTools()...) // 平台操作工具(建改 skill/工具/MCP，给 Auto 用)
 	custom, err := s.customTools()
 	if err != nil {
-		log.Printf("[custom-tool] 加载失败: %v", err)
+		log.Printf("[custom-tool] failed to load: %v", err)
 		return tools, nil
 	}
 	tools = append(tools, custom...)
@@ -543,7 +543,7 @@ func (s *Server) refreshBuiltinToolSchemas() {
 		}
 	}
 	_ = s.m.pg.SetSetting(flag, "true")
-	log.Print(logT("[tools] orchestration/platform 도구 스키마를 코드 기본값으로 새로고침(1회성)"))
+	log.Print("[tools] refreshed orchestration/platform tool schemas to code defaults (one-time)")
 }
 
 // unbindGoalMetDefault removes goal_met's default "planner" binding ONCE (guarded by
@@ -557,7 +557,7 @@ func (s *Server) unbindGoalMetDefault() {
 		return
 	}
 	if err := s.m.pg.RemoveAgentFromTool("planner", "goal_met"); err != nil {
-		log.Printf("[tools] goal_met 解绑 planner 失败: %v", err)
+		log.Printf("[tools] failed to unbind goal_met from planner: %v", err)
 		return
 	}
 	_ = s.m.pg.SetSetting(flag, "true")
@@ -587,10 +587,10 @@ func (s *Server) reseedGoalsPrompt() {
 		return
 	}
 	if _, err := s.m.pg.ResetPromptToDefault(a.ID, tmpl); err != nil {
-		log.Printf("[prompts] goals 提示词重刷为新默认失败: %v", err)
+		log.Printf("[prompts] failed to refresh goals prompt to the new default: %v", err)
 		return
 	}
-	log.Printf("[prompts] goals 提示词已追加新默认版本(加入抽操作约束步,一次性)")
+	log.Printf("[prompts] appended new default goals prompt version (adds the operational-constraint extraction step, one-time)")
 }
 
 // reseedMainAgentPrompt 把 mainagent 提示词刷成【当前代码默认】——默认正文新增了「目标全部
@@ -617,10 +617,10 @@ func (s *Server) reseedMainAgentPrompt() {
 		return
 	}
 	if _, err := s.m.pg.ResetPromptToDefault(a.ID, tmpl); err != nil {
-		log.Printf("[prompts] mainagent 提示词重刷为新默认失败: %v", err)
+		log.Printf("[prompts] failed to refresh mainagent prompt to the new default: %v", err)
 		return
 	}
-	log.Printf("[prompts] mainagent 提示词已追加新默认版本(加入目标达成后反问建目标,一次性)")
+	log.Printf("[prompts] appended new default mainagent prompt version (asks about new goals after goals are met, one-time)")
 }
 
 // reseedPlannerPrompt 把 planner 提示词刷成【当前代码默认】——默认正文做了精简重构,并把「克制」降级为
@@ -648,10 +648,10 @@ func (s *Server) reseedPlannerPrompt() {
 		return
 	}
 	if _, err := s.m.pg.ResetPromptToDefault(a.ID, tmpl); err != nil {
-		log.Printf("[prompts] planner 提示词重刷为新默认失败: %v", err)
+		log.Printf("[prompts] failed to refresh planner prompt to the new default: %v", err)
 		return
 	}
-	log.Printf("[prompts] planner 提示词已追加新默认版本(精简重构+克制降级去重+深度优先+否定复核上界,一次性)")
+	log.Printf("[prompts] appended new default planner prompt version (simplified structure, restrained dedupe downgrade, depth-first, capped negative rechecks, one-time)")
 }
 
 // reseedWorkerPrompt 把 worker 提示词刷成【当前代码默认】——默认正文 record_fact 段删掉了「否定类结论
@@ -678,10 +678,10 @@ func (s *Server) reseedWorkerPrompt() {
 		return
 	}
 	if _, err := s.m.pg.ResetPromptToDefault(a.ID, tmpl); err != nil {
-		log.Printf("[prompts] worker 提示词重刷为新默认失败: %v", err)
+		log.Printf("[prompts] failed to refresh worker prompt to the new default: %v", err)
 		return
 	}
-	log.Printf("[prompts] worker 提示词已追加新默认版本(查上下文段收敛为 list_assets/list_findings,去掉 list_facts/node_detail/asset_neighbors,一次性)")
+	log.Printf("[prompts] appended new default worker prompt version (context lookup narrowed to list_assets/list_findings, removes list_facts/node_detail/asset_neighbors, one-time)")
 }
 
 // reporterToolCallMessage 必须无条件要求先读一次 get_finding_traffic 再写报告。
@@ -712,7 +712,7 @@ func (s *Server) upgradeReporterTriggerMessage() {
 	defer func() { _ = s.m.pg.SetSetting(flag, "true") }() // 只尝试一次
 	triggers, err := s.m.pg.ListTriggersFor("reporter")
 	if err != nil {
-		log.Printf("[reporter] 读取触发器失败: %v", err)
+		log.Printf("[reporter] failed to read trigger: %v", err)
 		return
 	}
 	for _, t := range triggers {
@@ -721,10 +721,10 @@ func (s *Server) upgradeReporterTriggerMessage() {
 		}
 		t.ToolCallMessage = reporterToolCallMessage
 		if err := s.m.pg.UpdateTrigger(t); err != nil {
-			log.Printf("[reporter] 升级触发消息失败: %v", err)
+			log.Printf("[reporter] failed to upgrade trigger message: %v", err)
 			return
 		}
-		log.Printf("[reporter] 触发消息已升级为读取并回传 evidence_version")
+		log.Printf("[reporter] upgraded trigger message to read and return evidence_version")
 	}
 }
 
@@ -754,17 +754,17 @@ func (s *Server) seedReporterAgent() {
 	}
 	a, err := s.m.pg.CreateAgent("reporter", reporterAgentName, reporterAgentDescription)
 	if err != nil {
-		log.Printf("[reporter] 创建 agent 失败: %v", err)
+		log.Printf("[reporter] failed to create agent: %v", err)
 		return
 	}
 	if err := s.m.pg.SeedPromptIfEmpty(a.ID, agent.ReporterDefaultPrompt); err != nil {
-		log.Printf("[reporter] seed prompt 失败: %v", err)
+		log.Printf("[reporter] failed to seed prompt: %v", err)
 	}
 	// 触发运行策略：parallel + none —— 一漏洞一报告、多个 finding 并发各写各的。
 	// merge 必须为 none：否则(默认 all)一波 finding 会被合并成一次运行，并行就没意义。
 	// maxParallel=5：同时最多 5 个报告会话，避免瞬时太多 LLM 调用。
 	if err := s.m.pg.SetAgentTriggerBehavior("reporter", "parallel", "none", 5); err != nil {
-		log.Printf("[reporter] 设置触发运行策略失败: %v", err)
+		log.Printf("[reporter] failed to set trigger run policy: %v", err)
 	}
 	// 绑定它需要的工具：写报告 + 读证据/执行过程/态势。
 	if err := s.m.pg.AddAgentToToolBinding("reporter", []string{
@@ -772,7 +772,7 @@ func (s *Server) seedReporterAgent() {
 		"get_task_worker_trace", "list_task_worker_traces", "search_task_worker_traces",
 		"get_task_graph",
 	}); err != nil {
-		log.Printf("[reporter] 绑定工具失败: %v", err)
+		log.Printf("[reporter] failed to bind tools: %v", err)
 	}
 	// 触发器：report_finding 被调用即触发（工具返回 "finding recorded: <id>" 带上 finding_id，
 	// 任务 id 也在触发消息里）。
@@ -783,9 +783,9 @@ func (s *Server) seedReporterAgent() {
 		ToolNames:       []string{"report_finding"},
 		ToolCallMessage: reporterToolCallMessage,
 	}); err != nil {
-		log.Printf("[reporter] 创建触发器失败: %v", err)
+		log.Printf("[reporter] failed to create trigger: %v", err)
 	}
-	log.Printf(logT("[reporter] 「%s」 agent + finding 트리거 사전 구성"), reporterAgentName)
+	log.Print("[reporter] pre-configured the reporter agent + finding trigger")
 }
 
 // seedAutoReportFindingBinding adds "auto" to report_finding's binding ONCE so
@@ -796,7 +796,7 @@ func (s *Server) seedAutoReportFindingBinding() {
 		return
 	}
 	if err := s.m.pg.AddAgentToToolBinding("auto", []string{"report_finding"}); err != nil {
-		log.Printf("[auto] report_finding 默认绑定失败: %v", err)
+		log.Printf("[auto] failed to apply default report_finding binding: %v", err)
 		return
 	}
 	_ = s.m.pg.SetSetting(flag, "true")
@@ -812,7 +812,7 @@ func (s *Server) seedPlannerDefaultBindings() {
 		return
 	}
 	if err := s.m.pg.AddAgentToToolBinding("planner", []string{"report_finding"}); err != nil {
-		log.Printf("[planner] report_finding 默认绑定失败: %v", err)
+		log.Printf("[planner] failed to apply default report_finding binding: %v", err)
 		return
 	}
 	_ = s.m.pg.SetSetting(flag, "true")
@@ -829,7 +829,7 @@ func (s *Server) seedPlannerListAssetsBinding() {
 		return
 	}
 	if err := s.m.pg.AddAgentToToolBinding("planner", []string{"list_assets"}); err != nil {
-		log.Printf("[planner] list_assets 默认绑定失败: %v", err)
+		log.Printf("[planner] failed to apply default list_assets binding: %v", err)
 		return
 	}
 	_ = s.m.pg.SetSetting(flag, "true")
@@ -847,11 +847,11 @@ func (s *Server) seedCompanyScopeRebind() {
 		return
 	}
 	if err := s.m.pg.AddAgentToToolBinding("planner", []string{"add_company_scope"}); err != nil {
-		log.Printf("[planner] add_company_scope 默认绑定失败: %v", err)
+		log.Printf("[planner] failed to apply default add_company_scope binding: %v", err)
 		return
 	}
 	if err := s.m.pg.RemoveAgentFromTool("worker", "add_company_scope"); err != nil {
-		log.Printf("[worker] add_company_scope 解绑失败: %v", err)
+		log.Printf("[worker] failed to unbind add_company_scope: %v", err)
 		return
 	}
 	_ = s.m.pg.SetSetting(flag, "true")
@@ -878,7 +878,7 @@ func (s *Server) seedWorkerReadToolsUnbind() {
 		"list_facts", "list_companies", "list_worker_traces",
 	} {
 		if err := s.m.pg.RemoveAgentFromTool("worker", k); err != nil {
-			log.Printf("[worker] %s 从 worker 解绑失败: %v", k, err)
+			log.Printf("[worker] failed to unbind %s from worker: %v", k, err)
 			return // 出错则不落 flag，下次启动重试
 		}
 	}
@@ -899,7 +899,7 @@ func (s *Server) seedWorkerReadbackRebind() {
 	if err := s.m.pg.AddAgentToToolBinding("worker", []string{
 		"search_all_worker_traces", "get_worker_trace", "node_detail",
 	}); err != nil {
-		log.Printf("[worker] 回看/详情工具补绑失败: %v", err)
+		log.Printf("[worker] failed to backfill lookback/detail tool bindings: %v", err)
 		return // 出错则不落 flag，下次启动重试
 	}
 	_ = s.m.pg.SetSetting(flag, "true")
@@ -922,7 +922,7 @@ func (s *Server) seedAutoDefaultBindings() {
 	// 资产工具：Auto 操作平台常要看/登记资产、管理公司范围。
 	keys = append(keys, "insert_assets", "add_company_scope", "list_assets")
 	if err := s.m.pg.AddAgentToToolBinding("auto", keys); err != nil {
-		log.Printf("[auto] 默认绑定失败: %v", err)
+		log.Printf("[auto] failed to apply default bindings: %v", err)
 		return
 	}
 	_ = s.m.pg.SetSetting(flag, "true")

@@ -200,16 +200,16 @@ func SkillDir() string {
 // DSN came from (for startup logging).
 func PostgresDSN() (dsn, source string, err error) {
 	if v := strings.TrimSpace(os.Getenv("ARTEX_PG_DSN")); v != "" {
-		return v, trCfg("환경 변수 ARTEX_PG_DSN"), nil
+		return v, "environment variable ARTEX_PG_DSN", nil
 	}
 	db := Load().Database
 	if d := strings.TrimSpace(db.DSN); d != "" {
-		return d, fmt.Sprintf(trCfg("설정 파일 %s (database.dsn)"), Path()), nil
+		return d, fmt.Sprintf("config file %s (database.dsn)", Path()), nil
 	}
 	if db.Host != "" || db.DBName != "" || db.User != "" {
-		return db.buildDSN(), fmt.Sprintf(trCfg("설정 파일 %s (database 필드)"), Path()), nil
+		return db.buildDSN(), fmt.Sprintf("config file %s (database fields)", Path()), nil
 	}
-	return "", "", fmt.Errorf(trCfg("데이터베이스 설정을 찾을 수 없습니다: 환경 변수 ARTEX_PG_DSN 이 설정되어 있지 않고, 설정 파일 %s 에도 database (dsn 또는 host/user/dbname) 설정이 없습니다. 설정 파일을 만들거나 환경 변수를 설정한 뒤 다시 시도하세요"), Path())
+	return "", "", fmt.Errorf("database configuration not found: environment variable ARTEX_PG_DSN is not set, and config file %s has no database (dsn or host/user/dbname) configuration. Create a config file or set the environment variable, then try again", Path())
 }
 
 func (d Database) buildDSN() string {

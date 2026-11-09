@@ -164,7 +164,7 @@ docker compose up -d          # artex 이미지 + postgres 를 함께 기동
 
 관리자 계정은 하나(`ARTEX`)이고 비밀번호는 첫 접속 때 `/setup` 에서 만듭니다. 비밀번호가 아직 없는 인스턴스에 먼저 닿은 사람이 계정을 차지하지 못하도록 다음 보호가 걸려 있습니다.
 
-- **설정 토큰.** 비밀번호가 없는 상태로 기동하면 서버 콘솔 로그에 `[auth] … Setup token: …` 한 줄이 찍힙니다(기본 언어가 영어라 로그도 영어로 나옵니다. Docker 는 `docker compose logs artex`). `/setup` 화면과 `POST /api/auth/init`(`setup_token` 필드)은 이 값이 맞아야 비밀번호를 만들고, 틀린 시도는 횟수 제한에 걸립니다. 무인 배포라면 `ARTEX_SETUP_TOKEN` 으로 토큰을 고정하거나 `ARTEX_ADMIN_PASSWORD` 로 비밀번호를 바로 넣을 수 있습니다(8자 이상).
+- **설정 토큰.** 비밀번호가 없는 상태로 기동하면 서버 콘솔 로그에 `[auth] … Setup token: …` 한 줄이 찍힙니다(로그는 표시 언어와 관계없이 영어로 나옵니다. Docker 는 `docker compose logs artex`). `/setup` 화면과 `POST /api/auth/init`(`setup_token` 필드)은 이 값이 맞아야 비밀번호를 만들고, 틀린 시도는 횟수 제한에 걸립니다. 무인 배포라면 `ARTEX_SETUP_TOKEN` 으로 토큰을 고정하거나 `ARTEX_ADMIN_PASSWORD` 로 비밀번호를 바로 넣을 수 있습니다(8자 이상).
 - **기본 바인딩은 127.0.0.1 입니다.** `artex` 의 `-addr` 기본값과 `docker-compose.yml` 의 포트 게시 모두 호스트의 루프백에만 엽니다. 다른 기기에서 직접 접속하려면 `-addr :8787` 또는 `.env` 의 `ARTEX_BIND=0.0.0.0` 으로 바꾸되, 초기 설정을 먼저 마치고 가능하면 아래 리버스 프록시 구성을 쓰십시오. 비밀번호가 없는 채로 루프백이 아닌 주소에 바인딩하면 기동 로그에 경고가 찍힙니다.
 - **비밀번호를 바꾸면 기존 세션이 모두 끊깁니다.** 토큰 서명 키가 비밀번호 해시에 묶여 있어서, 화면의 비밀번호 변경·`reset-password.sh`·DB 직접 수정 어느 쪽이든 이전에 발급된 토큰은 몇 초 안에 무효가 됩니다. 계정이 유출된 뒤 복구할 때는 비밀번호를 바꾼 다음 커스텀 도구·MCP·LLM·알림 설정도 함께 점검하십시오.
 - **CORS.** `/api` 는 `ARTEX_CORS_ORIGINS`(쉼표 구분)에 적힌 출처에만 교차 출처 호출을 허용합니다. 내장 UI 는 동일 출처라 보통 비워 두고, 기본값은 `dev.sh` 의 `next dev`(`http://localhost:5173`)만 허용합니다.

@@ -25,10 +25,6 @@ func trMsg(ko string) string {
 	return ko
 }
 
-// logT translates an operator-facing console log template (config.T) so server
-// log.Printf sites can wrap a template without each file importing config.
-func logT(ko string) string { return config.T(ko) }
-
 // loadOutputLanguage resolves the user-facing output language from the source of
 // truth: the runtime setting (settings table) over config.Language() (ARTEX_LANG >
 // config file > ko). Call it only to (re)fill the cache; it does a DB query and a
