@@ -174,7 +174,7 @@ SSE mantiene una conexión de larga duración y sigue enviando eventos, por lo q
 
 ## Arquitectura del sistema
 
-ARTEX es un **sistema autónomo de penetración impulsado por multiagentes LLM.** Usa un único backend en Go (con el frontend de Next.js embebido) sobre PostgreSQL, y las capacidades de los agentes las provee el SDK [`norma`](https://github.com/Autumn-27/norma) (actualmente inaccesible, comprobado en 2026-10). En su núcleo está una **estructura de grafo doble** y los dos mecanismos de autonomía que la rodean: el intercambio de información a nivel de proceso entre workers y la todolist compartida multironda del planner.
+ARTEX es un **sistema autónomo de penetración impulsado por multiagentes LLM.** Usa un único backend en Go (con el frontend de Next.js embebido) sobre PostgreSQL, y las capacidades de los agentes las provee el SDK [`norma`](https://github.com/Autumn-27/norma). En su núcleo está una **estructura de grafo doble** y los dos mecanismos de autonomía que la rodean: el intercambio de información a nivel de proceso entre workers y la todolist compartida multironda del planner.
 
 ### Capas generales
 
@@ -408,5 +408,5 @@ Este proyecto se proporciona "TAL CUAL" (AS IS), sin garantía alguna, expresa o
 
 - Repositorio original: [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX) (actualmente inaccesible, comprobado en 2026-10)
 - README original (chino): [README.zh.md](README.zh.md)
-- Demo en línea original (interfaz en chino): [https://artex-demo.vercel.app/](https://artex-demo.vercel.app/) (actualmente inaccesible, comprobado en 2026-10)
-- SDK de agentes: [Autumn-27/norma](https://github.com/Autumn-27/norma) (actualmente inaccesible, comprobado en 2026-10)
+- Demo en línea original (interfaz en chino): [https://artex-demo.vercel.app/](https://artex-demo.vercel.app/)
+- SDK de agentes: [Autumn-27/norma](https://github.com/Autumn-27/norma)

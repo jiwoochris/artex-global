@@ -142,7 +142,7 @@ npm ci
 npm run dev          # 개발 서버
 npm run build        # 프로덕션 빌드
 npm run build:static # 정적 내보내기 빌드(머지 게이트 · TypeScript 타입 검사 포함)
-npm run check        # Biome 린트·포맷 검사(정보용 · 선재 부채로 아직 머지 게이트 아님)
+npm run check        # Biome 린트·포맷 검사(web.yml 에서 실패 단계로 도는 머지 게이트 · 통과 필요)
 npm run check:fix    # 자동 수정
 ```
 
@@ -178,9 +178,9 @@ docker compose up -d     # artex + postgres 기동 → http://localhost:8787
 3. 변경을 작성하고 **해당 범위의 검증을 직접 돌립니다.** Go 변경이면 위의
    `build`·`vet`·`test` 를 통과시킵니다. web 변경이면 `npm run build:static`
    (머지 게이트 · TypeScript 타입 검사를 함께 수행합니다)을 통과시킵니다.
-   `npm run check`(Biome)는 상류에서 딸려온 선재 린트 부채가 남아 있어 아직 머지
-   게이트가 아니고 `web.yml` 에서 정보용 단계로만 돌리므로, 전체를 통과시킬 필요는
-   없습니다. 대신 **내 변경이 새 오류를 더하지 않았는지**만 확인하면 됩니다(커밋할 때
+   `npm run check`(Biome)는 선재 린트 부채를 0 으로 정리한 뒤 정보용 단계에서 머지
+   게이트로 승격돼 `web.yml` 에서 실패 단계로 돌므로, `web/**` 를 건드리는 푸시·PR 은
+   이를 통과해야 합니다. **내 변경이 새 오류를 더하지 않았는지** 확인하세요(커밋할 때
    `lint-staged` 가 스테이징한 파일에만 `biome check --write` 를 자동으로 적용합니다).
    문서(`.md`)를 바꿨다면 `python3 -I scripts/check-doc-links.py` 로 저장소 안
    링크·이미지 참조와 문서 앵커(`#헤딩`) 링크가 깨지지 않았는지 확인합니다. 앵커는
