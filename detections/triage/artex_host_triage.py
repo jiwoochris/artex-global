@@ -63,11 +63,14 @@
 #                               a stronger signal than the bare listen port. Read from
 #                               /proc on the live Linux host, or from --proc-from FILE.
 #
-# Safety: pure Python standard library, no network, no writes anywhere except the
-# self-test's own temporary directory. It reads host state (open ports, a data
-# directory, log files, the environments of running processes via /proc, and — only
-# if you pass a DSN — the database) and prints what it found. Use it only on a host
-# you own or are authorized in writing to inspect.
+# Safety: pure Python standard library, no writes anywhere except the self-test's
+# own temporary directory. It makes no network connection of its own, with one
+# exception: the optional PostgreSQL schema check shells out to `psql` to connect to
+# the database when a DSN is supplied, either via --pg-dsn or the ARTEX_PG_DSN
+# environment variable (so it can run even when --pg-dsn is omitted). It reads host
+# state (open ports, a data directory, log files, the environments of running
+# processes via /proc, and — under that DSN condition — the database) and prints what
+# it found. Use it only on a host you own or are authorized in writing to inspect.
 #
 # Usage:
 #   detections/triage/artex_host_triage.py --data-dir /opt/artex/data \
