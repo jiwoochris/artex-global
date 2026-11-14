@@ -379,6 +379,23 @@ FROM notification_channels WHERE enabled ORDER BY id`)
 	return out, rows.Err()
 }
 
+// NotificationTaskName resolves a task id into its display name for push messages.
+//
+// Best effort by design: a missing row (deleted task, or an old snapshot without a
+// task id) returns an empty name and no error, so the caller omits the line instead
+// of failing the delivery. The task name is a presentation field, not evidence.
+func (d *DB) NotificationTaskName(ctx context.Context, taskID int64) (string, error) {
+	if taskID <= 0 {
+		return "", nil
+	}
+	var name string
+	err := d.QueryRowContext(ctx, `SELECT name FROM tasks WHERE id=$1`, taskID).Scan(&name)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	return name, err
+}
+
 // NotificationAssetNames 把资产 id 解析成简短展示名，供推送消息使用。
 //
 // 返回顺序与入参一致、长度可能小于入参（不存在的 id 被跳过）。保持入参顺序是
