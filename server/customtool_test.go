@@ -29,6 +29,53 @@ func TestRenderTemplateCommand(t *testing.T) {
 	}
 }
 
+func TestRenderTemplateQuotedPlaceholder(t *testing.T) {
+	// A placeholder the template already wraps in quotes must be escaped for
+	// that context: wrapping it in single quotes leaves the value's own quotes
+	// live inside the template's double quotes, so it closes them and runs a
+	// second command.
+	cases := []struct{ tmpl, val, want string }{
+		{`echo "{x}"`, `a"; id; echo "`, `echo "a\"; id; echo \""`},
+		{`echo '{x}'`, `a'; id; echo '`, `echo 'a'\''; id; echo '\'''`},
+		{`echo "{x}"`, `$(id)`, `echo "\$(id)"`},
+		{`echo "{x}"`, "`id`", "echo \"\\`id\\`\""},
+		{`ls -l "{x}" | wc -l`, `a"; id; echo "`, `ls -l "a\"; id; echo \"" | wc -l`},
+	}
+	for _, c := range cases {
+		if got := renderTemplate(c.tmpl, map[string]any{"x": c.val}, shellQuote); got != c.want {
+			t.Fatalf("renderTemplate(%q) = %q, want %q", c.tmpl, got, c.want)
+		}
+	}
+	// Unquoted placeholders keep the single-quote treatment.
+	if got := renderTemplate("nmap -p {ports} {target}", map[string]any{
+		"target": "10.0.0.1; rm -rf /",
+		"ports":  []any{80.0, 443.0},
+	}, shellQuote); !strings.Contains(got, `'10.0.0.1; rm -rf /'`) {
+		t.Fatalf("unquoted target not shell-quoted: %q", got)
+	}
+}
+
+// TestRunCommandToolCraftedParamNoInjection runs the real executor: a param
+// crafted to close the template's quote must stay one argument.
+func TestRunCommandToolCraftedParamNoInjection(t *testing.T) {
+	dir := t.TempDir()
+	s := &Server{m: &Manager{dir: dir}}
+	execRaw, _ := json.Marshal(map[string]any{
+		"command": `cat "/nonexistent/{x}"`, "timeout_ms": 20000,
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
+	defer cancel()
+	for _, val := range []string{`a"; id; echo "`, `$(id)`, "`id`"} {
+		res, err := s.runCommandTool(ctx, execRaw, map[string]any{"x": val}, nil)
+		if err != nil {
+			t.Fatalf("runCommandTool: %v", err)
+		}
+		if strings.Contains(res.Flatten(), "uid=") {
+			t.Fatalf("param %q was executed by the shell: %s", val, res.Flatten())
+		}
+	}
+}
+
 func TestRenderTemplateHTTP(t *testing.T) {
 	// http: identity (no shell quoting) — raw substitution into url/body.
 	got := renderTemplate("https://x/submit?flag={flag}", map[string]any{"flag": "CTF{abc}"}, identity)
