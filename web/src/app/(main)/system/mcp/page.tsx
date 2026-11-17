@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useAgentLabels } from "@/lib/agent-i18n";
 import { api } from "@/lib/api";
 import type { Agent, MCPServer, MCPTool } from "@/lib/types";
 
@@ -41,6 +42,7 @@ const emptyForm: FormState = {
 
 export default function MCPPage() {
   const t = useTranslations("mcpPage");
+  const agentLabels = useAgentLabels();
   const [servers, setServers] = React.useState<MCPServer[]>([]);
   const [agents, setAgents] = React.useState<Agent[]>([]);
   const [visibility, setVisibility] = React.useState<Record<number, string[]>>({});
@@ -361,7 +363,7 @@ export default function MCPPage() {
         <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <button
           type="button"
           onClick={openAdd}
@@ -381,7 +383,7 @@ export default function MCPPage() {
               <div className="flex items-center gap-2">
                 <ServerIcon className="text-muted-foreground size-4 shrink-0" />
                 <CardTitle className="truncate text-base">{s.name}</CardTitle>
-                <Badge variant="outline" className="uppercase">
+                <Badge variant="outline" className="shrink-0 uppercase">
                   {s.transport}
                 </Badge>
                 {/* biome-ignore lint/a11y/noStaticElementInteractions: 부모 카드로의 클릭 전파만 차단하는 컨테이너다. 이 div 자체는 상호작용 요소가 아니고, 안쪽 Switch·삭제 버튼은 각각 키보드로 접근된다 */}
@@ -407,9 +409,9 @@ export default function MCPPage() {
                     <label key={a.key} className="flex items-center gap-2 text-sm">
                       <Checkbox
                         checked={(visibility[s.id] ?? []).includes(a.id)}
-                        onCheckedChange={() => toggleVisibility(s.id, a.id, a.name)}
+                        onCheckedChange={() => toggleVisibility(s.id, a.id, agentLabels.name(a))}
                       />
-                      {a.name}
+                      {agentLabels.name(a)}
                     </label>
                   ))}
                 </div>

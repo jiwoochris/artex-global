@@ -34,6 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { useAgentLabels } from "@/lib/agent-i18n";
 import { api } from "@/lib/api";
 import type { Agent } from "@/lib/types";
 
@@ -41,6 +42,7 @@ import type { Agent } from "@/lib/types";
 // (non-builtin) agents get a delete button.
 function AgentGridCard({ agent, onOpen, onDeleted }: { agent: Agent; onOpen: () => void; onDeleted: () => void }) {
   const t = useTranslations("agentsPage");
+  const labels = useAgentLabels();
   async function del() {
     try {
       await api.deleteAgent(agent.key);
@@ -55,7 +57,7 @@ function AgentGridCard({ agent, onOpen, onDeleted }: { agent: Agent; onOpen: () 
       <button type="button" onClick={onOpen} className="flex flex-col gap-2 text-left">
         <div className="flex flex-wrap items-center gap-2">
           <Bot className="text-muted-foreground size-4" />
-          <span className="text-sm font-medium">{agent.name}</span>
+          <span className="text-sm font-medium">{labels.name(agent)}</span>
           <span className="text-muted-foreground font-mono text-xs">{agent.key}</span>
           {agent.builtin ? (
             <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
@@ -72,8 +74,10 @@ function AgentGridCard({ agent, onOpen, onDeleted }: { agent: Agent; onOpen: () 
             </Badge>
           )}
         </div>
-        {/* biome-ignore lint/nursery/useNullishCoalescing: 설명 폴백 — 빈 설명도 안내 문구로 대체해야 하므로 || 가 의도된 동작이다(?? 는 빈 문자열을 그대로 노출한다) */}
-        <p className="text-muted-foreground line-clamp-2 min-h-8 text-xs">{agent.description || t("noDescription")}</p>
+        {/* labels.description 은 string 을 돌려주므로(빈 설명은 "") || 로 폴백 문구를 붙인다. */}
+        <p className="text-muted-foreground line-clamp-2 min-h-8 text-xs">
+          {labels.description(agent) || t("noDescription")}
+        </p>
         <div className="text-muted-foreground flex flex-wrap gap-1.5 text-[10px]">
           <span className="rounded border px-1.5 py-0.5">MCP {agent.mcp_count ?? 0}</span>
           <span className="rounded border px-1.5 py-0.5">Skill {agent.skill_count ?? 0}</span>
@@ -193,6 +197,7 @@ function CreateAgentDialog({ onCreated }: { onCreated: (key: string) => void }) 
 
 export default function AgentsPage() {
   const t = useTranslations("agentsPage");
+  const labels = useAgentLabels();
   const [agents, setAgents] = React.useState<Agent[]>([]);
   const [editKey, setEditKey] = React.useState<string | null>(null);
 
@@ -250,7 +255,7 @@ export default function AgentsPage() {
             <>
               <SheetHeader className="px-4">
                 <SheetTitle className="flex items-center gap-2">
-                  {editing.name}
+                  {labels.name(editing)}
                   <span className="text-muted-foreground font-mono text-xs">{editing.key}</span>
                   {!editing.builtin && (
                     <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
@@ -258,7 +263,7 @@ export default function AgentsPage() {
                     </Badge>
                   )}
                 </SheetTitle>
-                <SheetDescription>{editing.description || t("editorDescFallback")}</SheetDescription>
+                <SheetDescription>{labels.description(editing) || t("editorDescFallback")}</SheetDescription>
               </SheetHeader>
               <AgentEditor agentKey={editing.key} onSaved={reload} />
             </>

@@ -24,6 +24,7 @@ import { Markdown } from "@/components/markdown";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { getDateLocale } from "@/i18n/datetime";
 import { api } from "@/lib/api";
 import type { Activity, InterceptPending } from "@/lib/types";
 
@@ -135,11 +136,11 @@ function ActivityTime({ ts }: { ts: string }) {
   return (
     <time
       dateTime={date.toISOString()}
-      title={date.toLocaleString("ko-KR")}
+      title={date.toLocaleString(getDateLocale())}
       className="text-[10px] text-muted-foreground tabular-nums"
       suppressHydrationWarning
     >
-      {date.toLocaleString("ko-KR", {
+      {date.toLocaleString(getDateLocale(), {
         month: "2-digit",
         day: "2-digit",
         hour: "2-digit",

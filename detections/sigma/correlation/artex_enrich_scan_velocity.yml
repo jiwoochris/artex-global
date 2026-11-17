@@ -11,10 +11,10 @@ description: |
     User-Agent, so a quiet result is inconclusive, not proof of safety; see the behaviour-based
     detection in the defense guide, section 4. Tune the count and window to your own baseline.
 references:
-    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
-    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
-    - https://github.com/jiwoochris/artex-ko
-author: artex-ko defense guide
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-en.md
+    - https://github.com/jiwoochris/artex-global
+author: artex-global defense guide
 date: 2026-10-05
 tags:
     - attack.reconnaissance

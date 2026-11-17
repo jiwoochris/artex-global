@@ -49,22 +49,26 @@ Static strings can be changed; behaviour is harder to hide. These Sigma **correl
 
 Thresholds and windows are conservative defaults — tune them to your baseline. The pure web multi-stage
 case in §4.2 (enumerate → probe → authenticate) still needs base rules specific to your environment,
-because the attack traffic itself carries no ARTEX-unique User-Agent.
+because that pattern does not reduce to a single ARTEX-unique User-Agent. A generic behavioral Sigma base
+template to start from is provided in [defense guide §4.2](../docs/defense-en.md#42-siem-correlation-rules);
+it is kept out of this tested rule tree because it cannot be grounded in ARTEX source.
 
 ## Network rules (Suricata)
 
-Sigma covers host and log telemetry. The one ARTEX artifact observable on the wire — the enrichment prober's
-`artex-enrich/1.0` HTTP User-Agent (`enrich/enrich.go`) — ships as [Suricata](https://suricata.io) rules in
-[`suricata/`](suricata/): a presence signature plus a high-rate enumeration variant. ARTEX's actual attack
-traffic carries no ARTEX-unique User-Agent, so the network layer is intentionally narrow; see
+Sigma covers host and log telemetry. The two ARTEX User-Agents observable on the wire both ship as
+[Suricata](https://suricata.io) rules in [`suricata/`](suricata/): the enrichment prober's `artex-enrich/1.0`
+(`enrich/enrich.go`) with a presence signature plus a high-rate enumeration variant (sid 1000001–1000002),
+and the norma SDK WebFetch tool's attack-phase `norma/0.4` (`github.com/Autumn-27/norma/tool/webfetch.go`) with a presence signature
+(sid 1000003). Other worker tools (Bash-run `curl`, `nmap`) use their own User-Agents and carry no
+ARTEX-unique fingerprint, so the network layer is intentionally narrow to these two UAs; see
 [`suricata/README.md`](suricata/README.md) for the scope, the TLS caveat, and how to validate with
 `suricata -T` and a reference pcap.
 
 ## ATT&CK coverage
 
 The techniques these rules tag are collected into a [MITRE ATT&CK](https://attack.mitre.org/) Navigator
-layer in [`attack/artex_navigator_layer.json`](attack/) — seven techniques across four tactics
-(Reconnaissance, Command and Control, Execution, Impact), each grounded in a rule's `attack.*` tags and
+layer in [`attack/artex_navigator_layer.json`](attack/) — eight techniques across six tactics
+(Reconnaissance, Command and Control, Execution, Impact, Credential Access, Collection), each grounded in a rule's `attack.*` tags and
 scored by detection strength (ARTEX-specific signature vs. generic hunting lead). Open it in the
 [ATT&CK Navigator](https://mitre-attack.github.io/attack-navigator/) to see which ARTEX behaviour each
 rule covers; see [`attack/README.md`](attack/README.md) for the scoring, the technique-to-rule map, and
@@ -83,9 +87,24 @@ ready-to-import [MISP](https://www.misp-project.org/) event
 ([`indicators/artex_indicators.misp.json`](indicators/)), so a defender running MISP (or exporting on to
 STIX from it) does not have to map the CSV columns by hand — the rule-backed fingerprints are flagged
 `to_ids`, the host-forensic ports and schema fingerprint are not. Generic hunting leads (the
-destructive commands) are deliberately kept out of the import-ready list to avoid false positives; see
+destructive commands) and the norma SDK's shared `norma/0.4` WebFetch User-Agent — a wire signature carried
+by Suricata sid 1000003, not an ARTEX-unique string — are deliberately kept out of the import-ready list to
+avoid false positives; see
 [`indicators/README.md`](indicators/README.md) for the columns, the MISP type mapping, the honest caveats,
 and the consistency test that keeps both the CSV and the MISP event from drifting.
+
+## Host triage
+
+The rules above serve defenders with a SIEM, a network sensor, or a threat-intel platform. For the other
+responder — the one at a single suspected host's shell, with no SIEM — [`triage/artex_host_triage.py`](triage/)
+is a read-only script that answers "did ARTEX run here?" from local state. It operationalizes the same
+fingerprints, **plus the three host/DB indicators the CSV deliberately carries without a Sigma rule**
+(the server listen port, the recording-proxy endpoint, and the PostgreSQL exploration schema),
+which are not log- or network-observable and can only be checked on the box. It also flags the recorder's
+subprocess env-injection — a running process carrying a proxy var together with a mitmproxy CA-trust var
+(`agent/worker.go`), read from `/proc` or a `--proc-from` dump. Every finding is a triage lead carrying the
+same caveat as its indicator row. See [`triage/README.md`](triage/README.md); a built-in `--self-test`
+runs as a merge-gate (below).
 
 ## Tests
 
@@ -101,6 +120,15 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   below as an executable test: it asserts 0 errors, that the whole tree compiles to a backend query, that each
   atomic indicator string survives into that query, and that a correlation rule fails to convert on its own —
   proving it genuinely depends on the atomic rule it references.
+- **Sigma live event-matching** ([`tests/sigma_match/run.sh`](tests/sigma_match/run.sh)) extends the Sigma suite
+  above from validity/compilation to actual firing, for both the atomic and the correlation rules: for every
+  atomic rule it asserts a representative malicious sample event matches and a benign one does not (for example,
+  a standalone CA file under `.mitmproxy/` does not trip the recording-proxy rule, whose `|all` also requires the
+  `_ca/` directory); for every correlation rule it asserts a positive timeline fires (threshold met inside the
+  window within one group) and negative ones stay quiet (below threshold, window exceeded, split group, or a
+  missing leg). pySigma does all parsing; the test only walks the compiled condition tree and aggregation spec,
+  deciding which events feed a referenced rule with the same atomic matcher. It brings "a detection you cannot
+  run is only a claim" to the Sigma side the way Suricata has it.
 - **ATT&CK layer** ([`tests/attack/run.sh`](tests/attack/run.sh)) checks that the ATT&CK coverage layer stays
   consistent with the rules: its scored techniques and tactics must be exactly the `attack.*` tags on the
   rule set, and each technique must name a rule file that exists. Adding a rule without updating the layer
@@ -128,7 +156,7 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   fails until the two agree.
 - **Sigma backend portability** ([`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh)) proves the rules
   convert beyond the single Splunk example: the whole tree (atomic + correlation) compiles on Splunk, the
-  Elasticsearch `eql` target, and Grafana Loki, and the four atomic rules still compile on backends that do not
+  Elasticsearch `eql` target, and Grafana Loki, and the five atomic rules still compile on backends that do not
   support Sigma correlations (Elasticsearch `lucene`, the Microsoft `kusto` backend). It backs the per-backend
   support matrix in [Validate and convert](#validate-and-convert) below with a re-runnable check.
 - **SigmaHQ convention lint** ([`tests/sigma_lint/run.sh`](tests/sigma_lint/run.sh)) runs the full SigmaHQ
@@ -137,6 +165,17 @@ The rules ship with reproducible tests in [`tests/`](tests/), each needing only 
   issues. It also checks that the full set actually ran and that only four deliberately excluded, documented
   checks remain, so a rule that picks up a new convention issue (a mis-cased title, an off-taxonomy field)
   fails the build.
+
+Alongside the eight rule suites, three non-suite gates run in the same CI workflow and in
+[`tests/run-all.sh`](tests/run-all.sh): a harness-sync check (that `run-all.sh`, CI, and the suite
+directories name the same suites in the same order); the [host-triage tool](triage/)'s `--self-test`
+([`tests/triage-selftest.sh`](tests/triage-selftest.sh)), which builds a synthetic host and asserts every
+triage check fires on it while a clean host produces zero findings; and a defense-template consistency
+check ([`tests/check-defense-template.sh`](tests/check-defense-template.sh)) that re-runs the facts the
+defense guide states about its inline Sigma correlation template — `sigma check` passes, it converts on
+splunk/eql/loki, lucene and kusto reject the correlation, and the Korean and English copies carry a
+byte-identical rule body — since that template lives as prose outside this rule tree and no suite would
+otherwise catch it going stale against an upstream sigma-cli.
 
 Each script exits non-zero on any failed assertion. See [`tests/README.md`](tests/README.md).
 
@@ -155,7 +194,9 @@ Each script exits non-zero on any failed assertion. See [`tests/README.md`](test
 - **Port indicators are host-forensic, not Sigma.** The ARTEX server default `:8787` and the recording
   proxy `127.0.0.1:8788` (`cmd/artex/main.go`) are best checked on a suspected host with `ss`/`netstat`,
   so they are documented in the defense guide and listed in the [indicator CSV](indicators/) for triage,
-  rather than shipped as a noisy network rule.
+  rather than shipped as a noisy network rule. The [host-triage script](triage/) runs exactly those
+  host-local checks (ports, recording-proxy artifacts, log markers, and the PostgreSQL schema) for a
+  responder who has shell access but no SIEM.
 
 ## Validate and convert
 
@@ -196,7 +237,7 @@ by [`tests/sigma_backends/run.sh`](tests/sigma_backends/run.sh):
   Grafana Loki (`-t loki`). Convert `detections/sigma/` directly and you get the correlation queries too.
 - **Atomic rules only (correlations not yet supported):** Elasticsearch Lucene (`-t lucene`), OpenSearch
   (`-t opensearch_lucene`), and the Microsoft `kusto` backend that targets Sentinel and Defender XDR
-  (`-t kusto`). On these, convert the four atomic rules and express the correlation window natively in the
+  (`-t kusto`). On these, convert the five atomic rules and express the correlation window natively in the
   product (e.g. a Sentinel scheduled-analytics `summarize ... by bin(TimeGenerated, 30m)`). Pass the whole
   directory and the conversion stops with "Backend does not support correlation rules."
 
@@ -207,6 +248,7 @@ sigma convert -t kusto --without-pipeline \
   detections/sigma/artex_enrich_user_agent.yml \
   detections/sigma/artex_selfupdate_egress.yml \
   detections/sigma/artex_guard_audit_framing.yml \
+  detections/sigma/artex_recording_proxy_ca.yml \
   detections/sigma/destructive_command_hunting.yml
 ```
 

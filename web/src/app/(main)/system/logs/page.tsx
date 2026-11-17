@@ -11,7 +11,7 @@ import { MOCK } from "@/lib/mock/enabled";
 import type { LogLine } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-// Mock demo：无后端 SSE，塞几行示例日志。
+// Mock 데모: 백엔드 SSE 가 없으므로 예시 로그 몇 줄을 채워 둔다.
 const MOCK_LOGS: LogLine[] = [
   {
     seq: 1,
@@ -32,28 +32,28 @@ const MOCK_LOGS: LogLine[] = [
     ts: "2026-07-26T03:56:10Z",
     level: "info",
     tag: "planner",
-    text: "task t-acme-web: 第 3 轮规划，生成意图 i-4",
+    text: "task t-acme-web: 계획 3라운드, 의도 i-4 생성",
   },
   {
     seq: 4,
     ts: "2026-07-26T03:57:00Z",
     level: "warn",
     tag: "guard",
-    text: "block bash: 目标越界 out.evil.example 不在 scope 内",
+    text: "block bash: 범위 이탈, out.evil.example 는 scope 밖",
   },
   {
     seq: 5,
     ts: "2026-07-26T03:57:30Z",
     level: "info",
     tag: "work#1",
-    text: "report_finding: Default Credentials (high) 已落库",
+    text: "report_finding: Default Credentials (high) 저장 완료",
   },
   {
     seq: 6,
     ts: "2026-07-26T03:58:20Z",
     level: "error",
     tag: "work#3",
-    text: "intercept: mysqldump 命中破坏性规则，等待人工审批",
+    text: "intercept: mysqldump 파괴적 규칙 적중, 사람 승인 대기",
   },
 ];
 

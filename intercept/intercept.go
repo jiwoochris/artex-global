@@ -506,24 +506,37 @@ func (i *Interceptor) Judge(ctx context.Context, tool string, arguments json.Raw
 }
 
 func judgeActionLabel(action string) string {
-	switch action {
-	case "allow":
-		return "허용"
-	case "deny":
-		return "차단"
-	case "ask":
-		return "확인 요청"
-	default:
-		return action
+	if v, ok := judgeActionLabels[judgeActionLang()][action]; ok {
+		return v
 	}
+	if v, ok := judgeActionLabels["ko"][action]; ok {
+		return v
+	}
+	return action
 }
 
 // Match evaluates the rule list (priority DESC) against a tool call.
 // Returns (Decision, true) for the first matching enabled rule, or
 // (Decision{}, false) if no rule matches.
+//
+// A read error is not the same thing as an empty rule set: an empty set is a
+// deliberate "no restrictions configured" and falls through to the caller's
+// existing behavior (ask the judge, else allow), same as always. A read
+// error means the configured rules — including the scope an operator set up
+// for the task — were simply not consulted; silently falling through to
+// allow there would let a transient DB hiccup (a cold rule cache racing a
+// pool hiccup right after a rule edit, for instance) drop the gate with
+// nothing in the log to tell the two cases apart. So this fails toward a
+// human instead, the same way BuildReviewInput's context error does below.
 func (i *Interceptor) Match(toolName string, input []byte) (Decision, bool) {
 	rules, err := i.rules()
-	if err != nil || len(rules) == 0 {
+	if err != nil {
+		return Decision{
+			Action:  "ask",
+			Message: "拦截规则读取失败，按失败安全策略转人工确认：" + err.Error(),
+		}, true
+	}
+	if len(rules) == 0 {
 		return Decision{}, false
 	}
 	for _, r := range rules {

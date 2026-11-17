@@ -1,14 +1,14 @@
 name: 🌐 번역·현지화 오류
-description: 한국어 번역이 어색하거나 틀렸거나, 번역이 빠진 부분을 신고합니다.
+description: 번역(한국어·영어·중국어·스페인어)이 어색하거나 틀렸거나, 빠진 부분을 신고합니다.
 title: "[번역] "
 labels: ["i18n"]
 body:
   - type: markdown
     attributes:
       value: |
-        한국어판의 품질을 높이는 데 도움을 주셔서 고맙습니다.
-        이 저장소의 현지화 방침은 **사용자에게 보이는 산출물만 한국어로 바꾸고, 에이전트의 내부 추론 프롬프트와 명령·페이로드·코드·로그 원문은 원문 그대로 둔다**는 것입니다.
-        자세한 원칙은 [CONTRIBUTING.md](https://github.com/jiwoochris/artex-ko/blob/main/CONTRIBUTING.md#현지화-방침)에 있습니다.
+        글로벌판의 번역 품질을 높이는 데 도움을 주셔서 고맙습니다.
+        이 저장소의 현지화 방침은 **사용자에게 보이는 산출물만 설정한 언어로 바꾸고, 에이전트의 내부 추론 프롬프트와 명령·페이로드·코드·로그 원문은 원문 그대로 둔다**는 것입니다.
+        자세한 원칙은 [CONTRIBUTING.md](https://github.com/jiwoochris/artex-global/blob/main/CONTRIBUTING.md#현지화-방침)에 있습니다.
   - type: dropdown
     id: kind
     attributes:

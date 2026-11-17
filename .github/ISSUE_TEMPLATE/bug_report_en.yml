@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thank you for the report. Filling in the fields below helps us reproduce and fix it faster.
-        **Do not use this template for security vulnerabilities. Report them through the private process in [SECURITY.en.md](https://github.com/jiwoochris/artex-ko/blob/main/SECURITY.en.md).**
+        **Do not use this template for security vulnerabilities. Report them through the private process in [SECURITY.en.md](https://github.com/jiwoochris/artex-global/blob/main/SECURITY.en.md).**
   - type: checkboxes
     id: preflight
     attributes:

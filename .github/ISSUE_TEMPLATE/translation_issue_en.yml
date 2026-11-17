@@ -1,14 +1,14 @@
 name: 🌐 Translation / localization issue
-description: Report a Korean translation that reads awkwardly, is wrong, or is missing.
+description: Report a translation (Korean, English, Chinese, or Spanish) that reads awkwardly, is wrong, or is missing.
 title: "[translation] "
 labels: ["i18n"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for helping improve the quality of the Korean edition.
-        This repository's localization policy: **translate only user-facing output into Korean, and leave the agent's internal reasoning prompts and the original commands, payloads, code, and logs unchanged.**
-        The full principles are in [CONTRIBUTING.en.md](https://github.com/jiwoochris/artex-ko/blob/main/CONTRIBUTING.en.md#localization-policy).
+        Thank you for helping improve the translation quality of the global edition.
+        This repository's localization policy: **translate only user-facing output into the selected language, and leave the agent's internal reasoning prompts and the original commands, payloads, code, and logs unchanged.**
+        The full principles are in [CONTRIBUTING.en.md](https://github.com/jiwoochris/artex-global/blob/main/CONTRIBUTING.en.md#localization-policy).
   - type: dropdown
     id: kind
     attributes:

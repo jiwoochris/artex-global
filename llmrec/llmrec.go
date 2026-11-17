@@ -17,6 +17,7 @@ import (
 )
 
 type taskIDContextKey struct{}
+type workerContextKey struct{}
 
 // WithTaskID attaches the owning task registry id to an LLM call. Session ids
 // are based on exploration ids, which are not interchangeable with task ids.
@@ -35,6 +36,28 @@ func TaskIDFrom(ctx context.Context) string {
 	}
 	taskID, _ := ctx.Value(taskIDContextKey{}).(string)
 	return strings.TrimSpace(taskID)
+}
+
+// WithWorker overrides the agent-lane ("worker") label for an LLM call. The lane
+// is normally parsed from the transcript session id (exp<N>-<role>); calls made
+// outside the engine's worker/planner sessions — e.g. the intercept fallback judge
+// — carry no such session, so they attach their lane explicitly here. This lets the
+// usage ledger single out that spend (worker='judge') for the config page.
+func WithWorker(ctx context.Context, worker string) context.Context {
+	worker = strings.TrimSpace(worker)
+	if worker == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, workerContextKey{}, worker)
+}
+
+// workerFrom returns the explicit lane override, or "" when none is set.
+func workerFrom(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	worker, _ := ctx.Value(workerContextKey{}).(string)
+	return strings.TrimSpace(worker)
 }
 
 // Recorder wraps an llm.Provider and records every completion call.
@@ -101,6 +124,9 @@ func (r *Recorder) Stream(ctx context.Context, req llm.CompletionRequest) iter.S
 	start := time.Now()
 	session := transcript.SessionIDFrom(ctx)
 	parsedID, worker := parseSession(session)
+	if ov := workerFrom(ctx); ov != "" {
+		worker = ov
+	}
 	expID := db.ParseExpID(parsedID)
 	taskID := TaskIDFrom(ctx)
 	if taskID == "" {
@@ -198,6 +224,9 @@ func (r *Recorder) Complete(ctx context.Context, req llm.CompletionRequest) (llm
 	start := time.Now()
 	session := transcript.SessionIDFrom(ctx)
 	parsedID, worker := parseSession(session)
+	if ov := workerFrom(ctx); ov != "" {
+		worker = ov
+	}
 	expID := db.ParseExpID(parsedID)
 	taskID := TaskIDFrom(ctx)
 	if taskID == "" {

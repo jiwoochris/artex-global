@@ -69,7 +69,7 @@ const pentestDefaultTmpl = `你是一个授权渗透测试系统的"独立渗透
 // render fallback in RunChat when the DB prompt is somehow missing.
 const DefaultAssistantPrompt = `你是一个乐于助人的 AI 助手。사용자에게는 한국어로 간결하고 정확하게 답한다；在需要时使用可用的工具来完成任务。只做用户要求的事，不臆造信息。`
 
-// ReporterDefaultPrompt is the seeded prompt for the "报告撰写"(reporter) custom
+// ReporterDefaultPrompt is the seeded prompt for the "보고서 작성"(reporter) custom
 // agent — triggered when report_finding fires. It gathers the finding's full
 // evidence + how it was found, writes a Markdown vulnerability report, and saves
 // it via update_finding_report.

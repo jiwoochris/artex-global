@@ -186,7 +186,7 @@ func (s *Server) abortTaskDelete(taskID string) {
 			state := task.lifecycleSnapshot()
 			keepPaused = state.Paused || state.Queued
 			if getErr != nil {
-				log.Printf("[task-delete] task %s 读取持久状态失败，使用内存状态恢复屏障: %v", taskID, getErr)
+				log.Printf("[task-delete] task %s failed to read persisted state, restoring barrier from memory: %v", taskID, getErr)
 			}
 		} else if getErr == nil {
 			// The request targeted a task that does not exist. Do not retain a
@@ -340,7 +340,7 @@ func (s *Server) pgCreateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	// starter prompt so the editor shows something editable from the start.
 	if err := pg.SeedPromptIfEmpty(a.ID, agent.DefaultAssistantPrompt); err != nil {
-		log.Printf("[agents] seed starter prompt for %s 失败: %v", a.Key, err)
+		log.Printf("[agents] failed to seed starter prompt for %s: %v", a.Key, err)
 	}
 	writeJSON(w, 200, agentDTO(a))
 }
@@ -388,10 +388,10 @@ func (s *Server) pgDeleteAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := pg.RemoveAgentFromToolBindings(a.Key); err != nil {
-		log.Printf("[agents] 清理 %s 工具绑定失败: %v", a.Key, err)
+		log.Printf("[agents] failed to clean up tool bindings for %s: %v", a.Key, err)
 	}
 	if err := pg.DeleteTriggersForAgent(a.Key); err != nil {
-		log.Printf("[agents] 清理 %s 触发器失败: %v", a.Key, err)
+		log.Printf("[agents] failed to clean up triggers for %s: %v", a.Key, err)
 	}
 	writeJSON(w, 200, map[string]any{"deleted": a.Key})
 }
@@ -824,7 +824,7 @@ func (s *Server) pgListTools(w http.ResponseWriter, r *http.Request) {
 	// catalog query, so agent assembly never pays for this aggregate.
 	counts, countErr := pg.ToolUsageCounts()
 	if countErr != nil {
-		log.Printf("[tools] 读取调用统计失败: %v", countErr)
+		log.Printf("[tools] failed to read call stats: %v", countErr)
 	} else {
 		for _, tool := range ts {
 			tool.Calls = counts[tool.Key]
@@ -950,7 +950,7 @@ func (s *Server) pgSaveMCP(w http.ResponseWriter, r *http.Request) {
 		m.ID = id
 		ctx, cancel := context.WithTimeout(r.Context(), 45*time.Second)
 		if derr := s.discoverAndCacheMCP(ctx, &m); derr != nil {
-			log.Printf("[mcp] %s 添加后工具发现失败: %v", m.Name, derr)
+			log.Printf("[mcp] tool discovery failed after adding %s: %v", m.Name, derr)
 		}
 		cancel()
 	}
@@ -1061,7 +1061,7 @@ func (s *Server) fsListSkills(w http.ResponseWriter, r *http.Request) {
 	if s.m.pg != nil {
 		stats, err := s.m.pg.SkillStats()
 		if err != nil {
-			log.Printf("[skills] 读取调用统计失败: %v", err)
+			log.Printf("[skills] failed to read call stats: %v", err)
 		}
 		for _, st := range stats {
 			statBySkill[st.Skill] = st
@@ -1592,14 +1592,15 @@ func skillRelPath(file string) (string, string) {
 		return "", "invalid path: '..' not allowed"
 	}
 	// 3. Reject leading slash and empty segments (double slash).
-	//    Leading slash would survive filepath.Clean as an absolute path.
+	//    Leading slash would survive path.Clean as an absolute path.
 	if strings.HasPrefix(file, "/") || strings.Contains(file, "//") {
 		return "", "invalid path: must be relative with no empty segments"
 	}
-	// 4. Normalize and final safety re-check after Clean.
-	//    filepath.Clean removes redundant separators and resolves single dots.
-	clean := filepath.Clean(file)
-	if clean == "." || filepath.IsAbs(clean) || strings.HasPrefix(clean, "..") {
+	// 4. Normalize with the slash-only "path" package (not filepath) so the result keeps
+	//    '/' separators on Windows too: backslashes were already rejected by the character
+	//    check above, and every caller feeds the result into filepath.Join.
+	clean := path.Clean(file)
+	if clean == "." || path.IsAbs(clean) || strings.HasPrefix(clean, "..") {
 		return "", "invalid path"
 	}
 	return clean, ""
@@ -1620,6 +1621,9 @@ func walkSkillFiles(root string) ([]string, error) {
 		if relErr != nil || rel == "." {
 			return nil
 		}
+		// Normalize to '/' so the frontend can round-trip these paths back through
+		// skillRelPath (which only accepts '/'), even on Windows.
+		rel = filepath.ToSlash(rel)
 		if d.IsDir() {
 			entries = append(entries, rel+"/")
 		} else {

@@ -66,8 +66,10 @@ Eight techniques across six tactics. Each maps to the rule(s) that tag it:
 ## Scope and honesty
 
 - **Coverage is not completeness.** A technique scored here means a rule tags it, not that every variant
-  of the technique is detected. ARTEX's actual attack traffic carries no ARTEX-unique fingerprint, so the
-  wire-level reconnaissance signal is the enrichment prober only; the durable detection is behavioural
+  of the technique is detected. Only two ARTEX-unique User-Agents are visible on the wire — the enrichment
+  prober (`artex-enrich/1.0`) in the reconnaissance phase and the norma SDK WebFetch tool (`norma/0.4`) in
+  the attack phase — while the rest of the attack traffic follows tool-default fingerprints; the durable
+  detection is behavioural
   (see the defense guide, [Korean](../../docs/defense-ko.md) · [English](../../docs/defense-en.md), sections 1–2 and 4.1–4.2). The pure web multi-stage
   case still needs base rules specific to your environment.
 - **Static indicators can be changed.** An operator can set a different User-Agent, so the absence of a

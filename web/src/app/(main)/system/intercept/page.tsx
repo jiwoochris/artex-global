@@ -20,7 +20,55 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import type { InterceptAction, InterceptRule, JudgeConfig, LLMProfile, Tool } from "@/lib/types";
+import { useBuiltinLabels } from "@/lib/builtin-i18n";
+import type {
+  InterceptAction,
+  InterceptRule,
+  JudgeConfig,
+  JudgeDayUsage,
+  JudgeUsage,
+  LLMProfile,
+  Tool,
+} from "@/lib/types";
+
+// fmtTokens 는 token 수를 짧은 표기(1.2k / 3.4M)로 줄인다. 판정 사용량 통계에 쓴다.
+function fmtTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+}
+
+// JudgeStat 은 통계 숫자 한 칸(라벨 + 값)이다.
+function JudgeStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border bg-muted/20 px-3 py-2">
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+      <div className="mt-0.5 text-lg font-semibold tabular-nums">{value}</div>
+    </div>
+  );
+}
+
+// JudgeSparkbars 는 최근 N일 일별 소비(입력+출력)를 차트 라이브러리 없이 div 로 그린 미니 막대 차트다.
+function JudgeSparkbars({ daily }: { daily: JudgeDayUsage[] }) {
+  const t = useTranslations("interceptPage");
+  const max = Math.max(1, ...daily.map((d) => d.input_tokens + d.output_tokens));
+  return (
+    <div className="flex h-16 items-end gap-0.5">
+      {daily.map((d) => {
+        const total = d.input_tokens + d.output_tokens;
+        const h = Math.max(2, Math.round((total / max) * 100));
+        return (
+          <div
+            key={d.date}
+            title={t("judge.usageBarTitle", { date: d.date, calls: d.calls, tokens: fmtTokens(total) })}
+            className="min-w-[2px] flex-1 rounded-sm bg-violet-500/60 hover:bg-violet-500"
+            style={{ height: `${h}%` }}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 // ---- tool scope ----
 
@@ -112,6 +160,16 @@ function JudgeCard() {
   const [profiles, setProfiles] = React.useState<LLMProfile[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [usage, setUsage] = React.useState<JudgeUsage | null>(null);
+
+  // 판정 사용량 통계: 실패해도 설정 화면을 막지 않으며, 켜져 있을 때만 불러온다.
+  const loadUsage = React.useCallback(async () => {
+    try {
+      setUsage(await api.interceptJudgeUsage(30));
+    } catch {
+      // 무시: 통계를 못 불러와도 설정 편집에는 영향이 없어야 한다
+    }
+  }, []);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -129,6 +187,11 @@ function JudgeCard() {
   React.useEffect(() => {
     void load();
   }, [load]);
+
+  // 켜졌을 때(처음 불러온 설정이 켜짐인 경우 포함) 판정 사용량 통계를 불러온다.
+  React.useEffect(() => {
+    if (cfg.enabled) void loadUsage();
+  }, [cfg.enabled, loadUsage]);
 
   function patch(p: Partial<JudgeConfig>) {
     setCfg((c) => ({ ...c, ...p }));
@@ -189,6 +252,38 @@ function JudgeCard() {
           <Switch checked={cfg.enabled} disabled={loading} onCheckedChange={(v) => patch({ enabled: v })} />
         </div>
       </div>
+
+      {/* 판정 Token 사용량 통계(전역 누적, 모델 프로필별 통계와 별도) */}
+      {cfg.enabled && usage && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("judge.usageTitle")}</p>
+                <p className="text-xs text-muted-foreground">{t("judge.usageDesc")}</p>
+              </div>
+              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => void loadUsage()}>
+                {t("judge.usageRefresh")}
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <JudgeStat label={t("judge.usageCalls")} value={usage.calls.toLocaleString()} />
+              <JudgeStat label={t("judge.usageInput")} value={fmtTokens(usage.input_tokens)} />
+              <JudgeStat label={t("judge.usageOutput")} value={fmtTokens(usage.output_tokens)} />
+              <JudgeStat label={t("judge.usageCacheRead")} value={fmtTokens(usage.cache_read_tokens)} />
+              <JudgeStat label={t("judge.usageCacheWrite")} value={fmtTokens(usage.cache_write_tokens)} />
+            </div>
+            {usage.daily.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {t("judge.usageDaily")}
+                </p>
+                <JudgeSparkbars daily={usage.daily} />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {cfg.enabled && (
         <div className="grid gap-4 lg:grid-cols-5">
@@ -317,6 +412,7 @@ function JudgeCard() {
 
 export default function InterceptPage() {
   const t = useTranslations("interceptPage");
+  const builtinLabels = useBuiltinLabels();
   const [rules, setRules] = React.useState<InterceptRule[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [open, setOpen] = React.useState(false);
@@ -622,7 +718,7 @@ export default function InterceptPage() {
                         <TableCell>
                           <span className="font-mono text-xs tabular-nums">{rule.priority}</span>
                         </TableCell>
-                        <TableCell className="font-medium text-sm">{rule.name}</TableCell>
+                        <TableCell className="font-medium text-sm">{builtinLabels.ruleName(rule.name)}</TableCell>
                         <TableCell>
                           <span className="text-xs text-muted-foreground">
                             {rule.match_target === "tool_name" ? t("target.tool_name") : t("target.tool_input")}

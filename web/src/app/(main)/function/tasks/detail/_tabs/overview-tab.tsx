@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
+import { getDateLocale } from "@/i18n/datetime";
 import { api } from "@/lib/api";
 import type {
   AssetInterceptKind,
@@ -903,7 +904,7 @@ export function OverviewTab({ taskId }: { taskId: string }) {
             <div className="text-xs text-muted-foreground">{t("heartbeat.lastActivity")}</div>
             <div className="mt-1 inline-flex items-center gap-1 text-sm">
               <ClockIcon className="size-3.5" />
-              {task?.last_activity ? new Date(task.last_activity).toLocaleTimeString("ko-KR") : "—"}
+              {task?.last_activity ? new Date(task.last_activity).toLocaleTimeString(getDateLocale()) : "—"}
             </div>
           </div>
           <div>
@@ -917,7 +918,7 @@ export function OverviewTab({ taskId }: { taskId: string }) {
               <div className="text-xs text-muted-foreground">{t("heartbeat.completedAt")}</div>
               <div className="mt-1 inline-flex items-center gap-1 text-sm">
                 <ClockIcon className="size-3.5" />
-                {new Date(task.completed_unix * 1000).toLocaleString("ko-KR")}
+                {new Date(task.completed_unix * 1000).toLocaleString(getDateLocale())}
               </div>
             </div>
           ) : null}

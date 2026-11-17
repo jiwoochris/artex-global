@@ -11,10 +11,10 @@ description: |
     event. This remains a host and forensic indicator, not a target-side signal. Tune the count
     and window to your environment.
 references:
-    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
-    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
-    - https://github.com/jiwoochris/artex-ko
-author: artex-ko defense guide
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-en.md
+    - https://github.com/jiwoochris/artex-global
+author: artex-global defense guide
 date: 2026-10-05
 tags:
     - attack.execution

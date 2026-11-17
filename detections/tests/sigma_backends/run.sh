@@ -12,7 +12,7 @@
 #
 #   1. correlations are portable    the whole tree converts on splunk, the
 #                                   Elasticsearch eql target, and Grafana loki
-#   2. the atomic-only fallback     the four atomic rules convert on lucene and
+#   2. the atomic-only fallback     the five atomic rules convert on lucene and
 #      works                        kusto (Microsoft Sentinel / Defender), which
 #                                   do not support Sigma correlation conversion
 #

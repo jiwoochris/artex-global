@@ -2,12 +2,12 @@
 
 [한국어](CONTRIBUTING.md) · English
 
-Thank you for your interest in the Korean edition of ARTEX (`artex-ko`). This document
+Thank you for your interest in the global edition of ARTEX (`artex-global`). This document
 gathers the scope, policies, and procedures you should know before you start contributing.
 Before you send a contribution, please read [Authorized use and legal responsibility](#authorized-use-and-legal-responsibility)
 and [Localization policy](#localization-policy) first.
 
-- To report a bug or suggest a feature → use the [issue templates](https://github.com/jiwoochris/artex-ko/issues/new/choose).
+- To report a bug or suggest a feature → use the [issue templates](https://github.com/jiwoochris/artex-global/issues/new/choose).
 - If you find a translation or localization error → use the "translation/localization error" issue template.
 - If you find a security vulnerability → **do not open a public issue**; follow the procedure in [SECURITY.en.md](SECURITY.en.md).
 - Everyone who takes part must follow the [Code of Conduct (CODE_OF_CONDUCT.en.md)](CODE_OF_CONDUCT.en.md).
@@ -28,7 +28,7 @@ testing **autonomously**. Contributors are bound by the same scope limits as use
   network without authorization, or causing a disruption to it, violates the Act on Promotion
   of Information and Communications Network Utilization and Information Protection; and any
   personal data collected or exposed falls under the Personal Information Protection Act. The
-  full notice is in the [README](README.en.md#️-read-first--authorized-use-and-legal-notice).
+  full notice is in the [README](README.md#️-read-first--authorized-use-and-legal-notice).
 
 Legal responsibility for how the code or documentation you contribute is used rests with the
 user who runs it. This repository is provided "AS IS."
@@ -38,7 +38,7 @@ user who runs it. This repository is provided "AS IS."
 ## Localization policy
 
 The reason this repository exists is to **preserve the original
-[Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX)'s judgment performance exactly while
+[Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX) (currently unreachable, checked 2026-10) judgment performance exactly while
 changing only the user-facing output to Korean**. Translation contributions that depart from
 this policy can degrade performance, so we do not accept them.
 
@@ -46,7 +46,7 @@ this policy can degrade performance, so we do not accept them.
   The behavior benchmarked in the original language (Chinese) must be preserved. This body
   lives in `agent/promptcatalog.go` and the DB seed (`agent_prompts`). Translating it causes
   drift in the agent's judgment.
-- **Only user-facing output is forced into Korean.** This covers detection findings
+- **Only user-facing output is forced into the selected language (English by default).** This covers detection findings
   (`report_finding`), fact summaries (`record_fact`), the final report, and chat responses.
   The enforcement is a code-fixed tail called `langDirective()` in `agent/prompt.go`, appended
   to the end of each role's system prompt. To change the output language, modify this function.
@@ -63,7 +63,7 @@ this policy can degrade performance, so we do not accept them.
   reports and summaries to the original language (Chinese), so do not judge whether a translation
   is applied correctly from a cheap model's output alone. The `max_tokens` pitfall when using
   OpenAI-family models is covered in the
-  [README's "Model selection and output language" section](README.en.md#model-selection-and-output-language).
+  [README's "Model selection and output language" section](README.md#model-selection-and-output-language).
 - **The procedure for keeping up with upstream changes is in the maintainer document.** When
   the original ARTEX is updated, the runbook for distinguishing preserved assets from
   translation targets, reflecting them, and checking translation symmetry and drift is in
@@ -152,8 +152,19 @@ npm ci
 npm run dev          # dev server
 npm run build        # production build
 npm run build:static # static-export build (merge gate; includes TypeScript type checking)
-npm run check        # Biome lint/format check (informational; not a merge gate yet, due to pre-existing debt)
+npm run check        # Biome lint/format check (runs as a failing step in web.yml CI; must pass)
 npm run check:fix    # auto-fix
+```
+
+If you do not have Node (version 20+) locally, or the installed native dependencies do not
+match your platform, you can verify the same way with Docker. Keeping `node_modules` in a named
+volume avoids clashing with your host's platform binaries (for example `@parcel/watcher` and
+Biome) and makes re-runs faster. This repository verifies web the same way as CI.
+
+```bash
+docker run --rm -v "$PWD":/src -w /src/web \
+  -v artexko-web-nm:/src/web/node_modules \
+  node:22 bash -c 'npm ci && npm run build:static'
 ```
 
 Formatting and linting before commit are managed with Biome. `lint-staged` automatically runs
@@ -176,10 +187,10 @@ docker compose up -d     # start artex + postgres → http://localhost:8787
    the change, as in `feat/...`, `fix/...`, `docs/...`, `i18n/...`.
 3. Write the change and **run the relevant verification yourself.** For a Go change, make the
    `build`/`vet`/`test` above pass. For a web change, make `npm run build:static` pass (it also
-   performs the merge gate and the TypeScript type checking). `npm run check` (Biome) still has
-   pre-existing lint debt inherited from upstream and is not a merge gate yet — `web.yml` runs it
-   only as an informational step — so you do not need to make all of it pass. Instead, just
-   confirm that **your change does not add new errors** (when you commit, `lint-staged`
+   performs the merge gate and the TypeScript type checking). `npm run check` (Biome) now runs as an ordinary failing step in `web.yml` (it was
+   promoted from an informational step once the inherited lint debt was cleared to zero), so a
+   push or PR touching `web/**` must make it pass; confirm that **your change does not add new
+   errors** (when you commit, `lint-staged`
    automatically applies `biome check --write` to the files you staged). If you changed
    documentation (`.md`), run `python3 -I scripts/check-doc-links.py` to confirm that in-repo
    link/image references and document anchor (`#heading`) links are not broken. Anchors are built
@@ -265,12 +276,13 @@ this contract, so if you change only a rule and do not update the tests/layer, t
   maintains a defense/detection posture only. We do not accept write-ups that aid an attack, such as
   how to carry out an exploit or techniques for evading detection.
 
-The seven test suites run as-is with only Docker, and do not commit their artifacts to the repository.
+The eight test suites run as-is with only Docker, and do not commit their artifacts to the repository.
 Each script exits with a non-zero code if any single assertion fails, so it can be dropped straight
 into CI or a pre-commit hook.
 
 ```bash
 detections/tests/sigma/run.sh           # Sigma: sigma check + backend conversion + indicator preservation
+detections/tests/sigma_match/run.sh     # Sigma: atomic rules fire on malicious sample events, stay quiet on benign
 detections/tests/sigma_lint/run.sh      # Sigma: full SigmaHQ-convention validators + documented criteria
 detections/tests/sigma_backends/run.sh  # Sigma portability: does a correlation rule convert across backends
 detections/tests/suricata/run.sh        # Suricata: synthesize pcap → suricata -r → assert alert counts
@@ -279,8 +291,8 @@ detections/tests/indicators/run.sh      # Indicators: rule's pinned indicators �
 detections/tests/misp/run.sh            # MISP: indicator CSV ↔ MISP event sync + pymisp validity
 ```
 
-To run all seven at once, use [`detections/tests/run-all.sh`](detections/tests/run-all.sh). It runs the
-seven sequentially in the same order as CI, runs the rest to the end even if an earlier suite fails, then
+To run all eight at once, use [`detections/tests/run-all.sh`](detections/tests/run-all.sh). It runs the
+eight sequentially in the same order as CI, runs the rest to the end even if an earlier suite fails, then
 prints a per-suite PASS/FAIL summary, and exits with a non-zero code if any one fails. An example of
 wiring this runner directly as a pre-commit hook is in the repository root's
 [`.pre-commit-config.yaml`](.pre-commit-config.yaml). If you install it with `pip install pre-commit &&
@@ -289,7 +301,7 @@ those rules pin (the same scope as CI), catching rule/test mismatches before pus
 also includes the `docs` hook that checks in-repo link/image/anchor references (the `check-doc-links.py`
 from step 3 of the contribution flow above).
 
-These seven tests are run by the repository CI
+These eight tests are run by the repository CI
 ([`.github/workflows/detections.yml`](.github/workflows/detections.yml)) on every push/PR that changes
 anything under `detections/`. The indicator-match test also runs when the upstream source files those
 indicators point to (`enrich/`, `selfupdate/`, `guard/`, `db/`, `cmd/artex/main.go`) change, catching the
