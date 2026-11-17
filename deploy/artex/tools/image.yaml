@@ -1,5 +1,5 @@
-# sourceCommit: 4c8b9ef5c9468a2b2a269ff380700bfda4545499
+# sourceCommit: e7d3cd4e27647526bce2ac70cd22b15edb11eb53
 image:
   repository: yny.ocir.io/axbhyh1fdkqm/noraneko/artex
-  tag: 0.1.0-build.202610080829
-  digest: sha256:b664e6f3c5ab53559b3d0808f83d4e511e20bac35823e6e60bff9b95c28eba5a
+  tag: 0.3.15-build.202611172252
+  digest: sha256:ee713439d2161199fe60fbbbbef0695bafab5ed7827be08f34fac624e851bfb8
