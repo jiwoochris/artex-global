@@ -54,7 +54,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { useSideQuestions } from "@/hooks/use-side-questions";
+import { getDateLocale } from "@/i18n/datetime";
 import { mergeActivities } from "@/lib/activity-merge";
+import { useAgentLabels } from "@/lib/agent-i18n";
 import { api } from "@/lib/api";
 import { shouldSubmitOnKey, useChatSendMode } from "@/lib/chat-send-mode";
 import { getLocalStorageValue, setLocalStorageValue } from "@/lib/local-storage.client";
@@ -113,14 +115,14 @@ interface AgentGroup {
 // groupByAgent buckets conversations by agent, preserving the incoming order
 // both inside a group and across groups. The server already sorts by updated_at
 // DESC, so first-appearance order == most-recently-active group first.
-function groupByAgent(conversations: Conversation[], agentByKey: Map<string, Agent>): AgentGroup[] {
+function groupByAgent(conversations: Conversation[], nameOf: (agentKey: string) => string): AgentGroup[] {
   const groups = new Map<string, AgentGroup>();
   for (const conversation of conversations) {
     let group = groups.get(conversation.agent_key);
     if (!group) {
       group = {
         key: conversation.agent_key,
-        name: agentByKey.get(conversation.agent_key)?.name || conversation.agent_key,
+        name: nameOf(conversation.agent_key),
         conversations: [],
         runningCount: 0,
       };
@@ -392,6 +394,7 @@ function DraftChat({
   onStarted: (c: Conversation, pending?: { input?: string; attachments?: ChatAttachment[] }) => void;
 }) {
   const t = useTranslations("chat");
+  const draftLabels = useAgentLabels();
   const [agentKey, setAgentKey] = React.useState("");
   const [llmProfileId, setLlmProfileId] = React.useState<number | null>(null);
   const [input, setInput] = React.useState("");
@@ -448,7 +451,7 @@ function DraftChat({
             <SelectItem key={a.key} value={a.key}>
               <span className="flex items-center gap-2">
                 <Bot className="size-3.5" />
-                {a.name}
+                {draftLabels.name(a)}
                 {!a.builtin && (
                   <Badge variant="outline" className="px-1 py-0 text-[9px]">
                     {t("custom")}
@@ -469,8 +472,12 @@ function DraftChat({
         <div className="bg-primary/10 flex size-12 items-center justify-center rounded-full">
           <Bot className="text-primary size-6" />
         </div>
-        <div className="text-sm font-medium">{t("emptyStart", { agent: agent?.name ?? "에이전트" })}</div>
-        {agent?.description && <p className="text-muted-foreground max-w-md text-xs">{agent.description}</p>}
+        <div className="text-sm font-medium">
+          {t("emptyStart", { agent: agent ? draftLabels.name(agent) : "에이전트" })}
+        </div>
+        {agent && draftLabels.description(agent) && (
+          <p className="text-muted-foreground max-w-md text-xs">{draftLabels.description(agent)}</p>
+        )}
       </div>
 
       <Composer
@@ -514,6 +521,7 @@ function ChatView({
   onConvUpdated: () => void;
 }) {
   const t = useTranslations("chat");
+  const convLabels = useAgentLabels();
   const approvalFocus = useApprovalFocus({ conversationId: conv.id });
   const [messages, setMessages] = React.useState<Activity[]>([]);
   const [running, setRunning] = React.useState(false);
@@ -789,19 +797,21 @@ function ChatView({
   }
 
   return (
-    <SideQuestionWorkspace side={side} label={agent?.name ?? conv.agent_key} composerLayout="inline">
+    <SideQuestionWorkspace side={side} label={agent ? convLabels.name(agent) : conv.agent_key} composerLayout="inline">
       {/* header: which agent + live + token meta */}
       <div className="flex min-w-0 flex-wrap items-center gap-2 border-b px-4 py-2.5">
         <Bot className="text-muted-foreground size-4 shrink-0" />
-        <span className="min-w-0 max-w-48 truncate text-sm font-medium">{agent?.name ?? conv.agent_key}</span>
+        <span className="min-w-0 max-w-48 truncate text-sm font-medium">
+          {agent ? convLabels.name(agent) : conv.agent_key}
+        </span>
         <span className="text-muted-foreground hidden shrink-0 font-mono text-xs sm:inline">{conv.agent_key}</span>
         {agent && !agent.builtin && (
           <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px]">
             {t("custom")}
           </Badge>
         )}
-        {agent?.description && (
-          <span className="text-muted-foreground min-w-0 truncate text-xs">{agent.description}</span>
+        {agent && convLabels.description(agent) && (
+          <span className="text-muted-foreground min-w-0 truncate text-xs">{convLabels.description(agent)}</span>
         )}
         {running && <LiveBadge />}
         <SideQuestionButton side={side} />
@@ -982,7 +992,7 @@ const ConversationItem = React.memo(function ConversationItem({
               </>
             )}
             <span className="shrink-0">
-              {new Date(conv.created_at).toLocaleDateString("ko-KR", {
+              {new Date(conv.created_at).toLocaleDateString(getDateLocale(), {
                 month: "numeric",
                 day: "numeric",
                 hour: "2-digit",
@@ -1221,6 +1231,12 @@ export default function ChatPage() {
 
   const selected = React.useMemo(() => convs.find((c) => c.id === selectedId) ?? null, [convs, selectedId]);
   const agentByKey = React.useMemo(() => new Map(agents.map((agent) => [agent.key, agent])), [agents]);
+  const pageLabels = useAgentLabels();
+  // 대화 그룹·필터 라벨용: key → 표시 이름(기본 에이전트는 번역, 없으면 key).
+  const agentNameOf = React.useCallback(
+    (key: string) => pageLabels.nameByKey(key, (k) => agentByKey.get(k)),
+    [agentByKey, pageLabels],
+  );
   const filteredConversations = React.useMemo(
     () => (agentFilter === null ? convs : convs.filter((conversation) => conversation.agent_key === agentFilter)),
     [convs, agentFilter],
@@ -1239,9 +1255,9 @@ export default function ChatPage() {
     () =>
       groupByAgent(
         visibleConversations.filter((c) => !conversationIsPinned(c)),
-        agentByKey,
+        agentNameOf,
       ),
-    [visibleConversations, agentByKey],
+    [visibleConversations, agentNameOf],
   );
   // conversation agents: custom agents + conversational built-ins (role=assistant,
   // e.g. Auto / 침투 테스트). The orchestration built-ins (goals/planner/mainagent/worker)
@@ -1256,9 +1272,9 @@ export default function ChatPage() {
     const keys = new Set([...chatAgents.map((agent) => agent.key), ...counts.keys()]);
     if (agentFilter !== null) keys.add(agentFilter);
     return [...keys]
-      .map((key) => ({ key, name: agentByKey.get(key)?.name || key, count: counts.get(key) ?? 0 }))
+      .map((key) => ({ key, name: agentNameOf(key), count: counts.get(key) ?? 0 }))
       .sort((a, b) => a.name.localeCompare(b.name, "ko"));
-  }, [convs, chatAgents, agentByKey, agentFilter]);
+  }, [convs, chatAgents, agentNameOf, agentFilter]);
   const conversationCountLabel =
     agentFilter === null
       ? t("totalCount", { count: convs.length })

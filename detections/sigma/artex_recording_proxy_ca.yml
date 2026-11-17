@@ -14,10 +14,10 @@ description: |
     go-mitmproxy / mitmproxy, so treat a hit as a host-triage lead to correlate with the loopback proxy
     endpoint and server port (see the indicators list), not a standalone alert.
 references:
-    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
-    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
-    - https://github.com/jiwoochris/artex-ko
-author: artex-ko defense guide
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-en.md
+    - https://github.com/jiwoochris/artex-global
+author: artex-global defense guide
 date: 2026-10-07
 tags:
     - attack.credential-access

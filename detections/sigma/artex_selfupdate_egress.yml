@@ -8,10 +8,10 @@ description: |
     service suggests an ARTEX binary is installed on that host. This is primarily an operator and
     forensic indicator on a (possibly compromised relay) host, not a target-side signal.
 references:
-    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
-    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
-    - https://github.com/jiwoochris/artex-ko
-author: artex-ko defense guide
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-en.md
+    - https://github.com/jiwoochris/artex-global
+author: artex-global defense guide
 date: 2026-10-05
 tags:
     - attack.command-and-control

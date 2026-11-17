@@ -35,6 +35,8 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { getDateLocale } from "@/i18n/datetime";
+import { useAgentLabels } from "@/lib/agent-i18n";
 import { api } from "@/lib/api";
 import type {
   Agent,
@@ -58,6 +60,7 @@ const TRAFFIC_TOOL_KEYS = new Set(["traffic_search", "traffic_get"]);
 // Tools. Config + prompt save as before; visibility + tool bindings toggle live.
 export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?: () => void }) {
   const tr = useTranslations("agentEditor");
+  const agentLabels = useAgentLabels();
   const [detail, setDetail] = React.useState<AgentDetail | null>(null);
   const [versions, setVersions] = React.useState<PromptVersion[]>([]);
   const [variables, setVariables] = React.useState<PromptVar[]>([]);
@@ -441,7 +444,9 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
                     </button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    <p className="font-medium">{v.description}</p>
+                    <p className="font-medium">
+                      {agentLabels.varLabel(agentKey, !!detail?.agent?.builtin, v.name, v.description)}
+                    </p>
                     <p className="text-muted-foreground mt-1">{tr("prompt.example", { example: v.example })}</p>
                   </TooltipContent>
                 </Tooltip>
@@ -503,7 +508,7 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
                   <span className="text-muted-foreground truncate flex-1">{ver.note}</span>
                   {ver.ts && (
                     <span className="text-muted-foreground/60 shrink-0 tabular-nums">
-                      {new Date(ver.ts).toLocaleDateString("ko-KR", {
+                      {new Date(ver.ts).toLocaleDateString(getDateLocale(), {
                         month: "2-digit",
                         day: "2-digit",
                         hour: "2-digit",
@@ -546,7 +551,7 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
                   {viewVer?.note || tr("version.noNote")}
                   {viewVer?.ts && (
                     <span className="ml-2 text-muted-foreground/60">
-                      {new Date(viewVer.ts).toLocaleString("ko-KR")}
+                      {new Date(viewVer.ts).toLocaleString(getDateLocale())}
                     </span>
                   )}
                 </DialogDescription>

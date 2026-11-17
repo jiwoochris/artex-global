@@ -3,13 +3,13 @@
 [한국어](MAINTAINING.md) · English
 
 This document lays out the procedure a **maintainer** follows to keep up with changes in the
-upstream repository [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX) while maintaining the
-Korean localization. Contribution scope, legal responsibility, and the localization policy live in
-[CONTRIBUTING.en.md](CONTRIBUTING.en.md); user-facing guidance lives in [README.en.md](README.en.md).
+upstream repository [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX) (currently unreachable, checked 2026-10) while maintaining the
+the global (multilingual) edition. Contribution scope, legal responsibility, and the localization policy live in
+[CONTRIBUTING.en.md](CONTRIBUTING.en.md); user-facing guidance lives in [README.md](README.md).
 This document therefore focuses solely on **how that policy is actually enforced**.
 
 The core goal of the localization can be summed up in one sentence: **preserve the original's
-judgment performance exactly, while translating only the user-facing output into Korean**. That
+judgment performance exactly, while translating only the user-facing output into the selected language (English by default)**. That
 boundary is easy to blur every time upstream updates, so the procedures and checks below prevent
 translation drift.
 
@@ -17,7 +17,7 @@ translation drift.
 
 ## 1. The localization structure at a glance
 
-This repository **forks** upstream ARTEX and stacks Korean localization commits on top of its
+This repository **forks** upstream ARTEX and stacks multilingual-localization commits on top of its
 history. Every commit on upstream `main` is contained in this repository's history, with the
 localization commits added above them. Bringing in an upstream change therefore becomes a matter of
 "inspecting the difference against upstream `main`, then separating what to preserve from what to
@@ -28,8 +28,8 @@ The deliverables fall into three groups.
 - **Assets kept in the original language** (section 2). Translating them breaks performance or the
   ability to diff against upstream.
 - **Output-language enforcement fixed in code.** `langDirective()` in `agent/prompt.go` appends to
-  the end of each role's system prompt the instruction "write user-facing output in Korean."
-- **User-facing strings that are translated into Korean.** The UI lives in `web/messages/ko.json`;
+  the end of each role's system prompt the instruction "write user-facing output in the selected language."
+- **User-facing strings translated for each display language.** The UI strings live in `web/messages/{en,ko,zh,es}.json`;
   the server's user-facing response strings live in named constants in each Go file.
 
 ---
@@ -279,7 +279,7 @@ reverts.
 ### 8.1 Check the repository's CI status by specifying the repository
 
 This repository is a fork of upstream ARTEX, so the local `git remote` has both `origin`
-(jiwoochris/artex-ko) and `upstream` (Autumn-27/ARTEX) registered (see section 3). In this state, if
+(jiwoochris/artex-global) and `upstream` (Autumn-27/ARTEX) registered (see section 3). In this state, if
 you do not specify a repository in a `gh` command, `gh` **picks the upstream repository as the
 default** and shows you run results from upstream, which does not have our workflows. You can then see
 upstream CI green and **mistakenly think our CI passed**, or judge our workflows (`ci.yml`,
@@ -288,8 +288,8 @@ upstream CI green and **mistakenly think our CI passed**, or judge our workflows
 So when checking CI, always name the repository explicitly.
 
 ```bash
-gh run list -R jiwoochris/artex-ko --workflow ci.yml --limit 5
-gh run list -R jiwoochris/artex-ko --workflow detections.yml --limit 5
+gh run list -R jiwoochris/artex-global --workflow ci.yml --limit 5
+gh run list -R jiwoochris/artex-global --workflow detections.yml --limit 5
 ```
 
 Once set, you can make `gh` default to our repository even when you omit `-R`. Note, however, that
@@ -297,8 +297,8 @@ this setting is a **local gh setting** and is not committed to the repository, s
 again on a new machine or a new checkout.
 
 ```bash
-gh repo set-default jiwoochris/artex-ko
-gh repo set-default --view   # check that jiwoochris/artex-ko shows up
+gh repo set-default jiwoochris/artex-global
+gh repo set-default --view   # check that jiwoochris/artex-global shows up
 ```
 
 ### 8.2 Check external links in documents with GET, like a browser
@@ -329,3 +329,108 @@ suspect that the link is not broken but that **your checking method was blocked 
 policy**, and re-check by eliminating factors one at a time: HEAD, the default UA, and not following
 redirects. (As of the 2026-10-06 check, all three links return 200 with the method above, with
 pipc.go.kr returning 200 after two redirects.)
+
+This manual procedure is automated as-is by `scripts/check-external-links.py`. It gathers the external
+links outside code fences and inline code from every tracked `.md` (excluding reserved and placeholder
+hosts), checks their status with a browser UA, GET, and redirect-following as above, and retries on
+network errors, 5xx, and 429 to separate transient flakes from real outages. It sorts results into four
+classes: OK (2xx/3xx) · RESTRICTED (401/403/405/429 — the host is alive, only the checking method is
+blocked) · ALLOWED (a known upstream-inherited dead link we cannot fix, listed in
+`scripts/external-links-allowlist.txt`) · DOWN (404/410/5xx/connection error — likely broken).
+
+- Preview the targets without the network: `python3 -I scripts/check-external-links.py --list`
+- Release/periodic check (exits non-zero on a newly broken link): `python3 -I scripts/check-external-links.py --strict`
+
+External-link liveness is flaky, so it is **not a merge gate**. Instead the non-blocking
+[`external-links`](.github/workflows/external-links.yml) workflow runs `--strict` every Monday and on
+manual dispatch, turning red when a DOWN not on the allowlist newly appears. Dead links inherited by
+upstream-preserved files (for example a vanished contributor account credited in `CHANGELOG.zh.md`) are
+ones we cannot fix, so they go on the allowlist with a reason and are excluded from the strict check.
+
+---
+
+## 9. The release pipeline
+
+Pushing a version tag (`v*`) makes [`.github/workflows/release.yml`](.github/workflows/release.yml)
+build binaries for five platforms and, when a condition is met, a multi-architecture Docker image.
+This fork has published stable release tags (`v0.3.15-global.1`, `v0.3.15-ko.1`), so this workflow has run. This section records
+what the pipeline assumes and produces, and whether those assumptions match the current repository
+structure. Because pushing a tag creates a GitHub Release on the public repository, cut a release only
+after the publishing decision is made.
+
+### 9.1 How to cut a release
+
+Pushing a tag that starts with `v` fires the workflow.
+
+```bash
+git tag v0.3.15
+git push origin v0.3.15
+```
+
+### 9.2 What the pipeline does
+
+The workflow is split into four jobs.
+
+- **frontend.** Statically exports the frontend once (`web/out`) and uploads that output as the
+  `web-dist` artifact. The binaries job below downloads and reuses this output per target.
+- **binaries.** Cross-compiles five targets (linux amd64/arm64, darwin amd64/arm64, windows amd64) and
+  packages a zip per target. On the linux amd64 binary it runs an `artex -h` smoke test to confirm the
+  binary actually runs.
+- **release.** Gathers all zips, generates a `SHA256SUMS` checksum file, and creates a GitHub Release
+  with the zips and the checksum attached.
+- **docker.** Takes the linux binaries cross-compiled by binaries, builds a multi-architecture
+  (amd64/arm64) image, and pushes it to GitHub Container Registry as `ghcr.io/jiwoochris/artex-global`
+  with the release tag and `latest`. It logs in with the workflow's built-in `GITHUB_TOKEN` (job
+  permission `packages: write`), so no extra secrets are needed.
+
+### 9.3 Do the build assumptions match the repository structure
+
+The pipeline runs on the following three assumptions, and all three were confirmed to match the
+current repository structure by reproducing the binaries job locally.
+
+- **Frontend embed.** The binaries job receives the `web-dist` (the contents of `web/out`) uploaded by
+  the frontend job into `server/webui/dist`, and `//go:embed all:webui/dist` in `server/webui_embed.go`
+  embeds that location into the binary. The binaries job therefore does not rebuild the frontend; it
+  calls [`build.sh`](build.sh) with `ARTEX_SKIP_FRONTEND=1`.
+- **Binary and package paths.** `build.sh --target <os>/<arch>` produces the `dist/artex-<os>-<arch>/artex`
+  binary and a zip package under `dist/`. The zip contains the binary together with a start script
+  (`start.sh` on Linux/macOS, `start.bat` on Windows), `skills/`, `config.example.json`, and
+  `README.md`.
+- **Copying the binary into the Docker image.** The binaries job uploads the linux binary separately as
+  the `bin-linux-<arch>` artifact, and the docker job receives it as `dist/<arch>/artex`. The
+  `COPY dist/${TARGETARCH}/artex` in [`Dockerfile`](Dockerfile) picks up that path via the `TARGETARCH`
+  that buildx fills in per platform during a multi-architecture build. [`.dockerignore`](.dockerignore)
+  does not exclude `dist/`, so the binary is included in the build context.
+
+### 9.4 The Docker image namespace
+
+Images are published to `ghcr.io/jiwoochris/artex-global`, a namespace this fork owns, and
+`docker-compose.yml` pulls that image (decided 2026-10-11, `work/DECISIONS-FOR-JIWOO.md`, item 8).
+Upstream's `autumn27/artex` has been taken down from Docker Hub and this fork has no push access to
+it, so it is no longer used. A GHCR package may be created as private on its first publish, so after
+the first release check in the package settings that it is public; if it is private,
+`docker compose pull` fails with an authentication error.
+
+### 9.5 Verifying locally without a tag
+
+To check only the pipeline assumptions without cutting a public release, reproduce the binaries job
+locally. If you do not have Go locally, you can run the same thing under Docker.
+
+```bash
+# 1) Static frontend export (corresponds to the frontend job in release.yml)
+cd web && npm ci && npm run build:static && cd ..
+# 2) Place it where the binaries job receives the artifact
+rm -rf server/webui/dist && mkdir -p server/webui/dist && cp -a web/out/. server/webui/dist/
+# 3) Build one target with the same environment as the binaries job
+docker run --rm -v "$PWD":/app -w /app \
+  -e ARTEX_SKIP_FRONTEND=1 -e ARTEX_SKIP_NPM_CI=1 \
+  -e ARTEX_COMPRESS=0 -e ARTEX_PACKAGE=1 -e ARTEX_PACKAGE_DIR=dist \
+  -e ARTEX_BUILD_VERSION=v0.0.0-local \
+  golang:1.26 bash -c 'apt-get update && apt-get install -y zip && ./build.sh --target linux/amd64'
+# 4) Confirm the outputs: dist/artex-linux-amd64/artex · dist/*.zip · dist/SHA256SUMS
+```
+
+`dist/artex-linux-amd64/artex` is a statically linked ELF, and given `-h` it prints usage and exits
+with code 0. This is the behavior the binaries job's smoke test confirms. Build outputs
+(`dist/`, `server/webui/dist/`) are not committed to the repository (they are excluded by
+`.gitignore`).

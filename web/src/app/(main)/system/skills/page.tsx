@@ -37,13 +37,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api";
+import { getDateLocale } from "@/i18n/datetime";
+import { useAgentLabels } from "@/lib/agent-i18n";
+import { ApiError, api } from "@/lib/api";
 import type { Agent, MCPServer, MissingSkill, SkillCall, SkillItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 function fmtTime(ts: string | undefined, never: string) {
   if (!ts) return never;
-  return new Date(ts).toLocaleString("ko-KR", {
+  return new Date(ts).toLocaleString(getDateLocale(), {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
@@ -302,6 +304,7 @@ function SkillsOverview({
 // ── Page ──────────────────────────────────────────────────────────────────
 export default function SkillsPage() {
   const t = useTranslations("skillsPage");
+  const agentLabels = useAgentLabels();
   const [skills, setSkills] = React.useState<SkillItem[]>([]);
   const [agents, setAgents] = React.useState<Agent[]>([]);
   const [selected, setSelected] = React.useState<Selected | null>(null);
@@ -399,9 +402,9 @@ export default function SkillsPage() {
       load();
     } catch (e) {
       const msg = (e as Error).message;
-      // offer overwrite when the skill already exists
-      // (server_mgmt.go errMgmtSkillExistsPre 와 짝 맞춘 교차 스택 마커)
-      if (!overwrite && msg.includes("이미 존재")) {
+      // offer overwrite when the skill already exists (server_mgmt.go 가 409 로 응답).
+      // 문구는 표시 언어에 따라 달라지므로 status 로 판정한다.
+      if (!overwrite && e instanceof ApiError && e.status === 409) {
         if (window.confirm(t("overwriteConfirm", { msg }))) {
           await uploadZip(file, true);
           return;
@@ -700,9 +703,18 @@ export default function SkillsPage() {
         return (
           <div key={node.path}>
             <div
+              role="treeitem"
+              tabIndex={0}
+              aria-expanded={open}
               className="group relative flex cursor-pointer select-none items-center gap-1 rounded py-0.5 pr-1 text-sm hover:bg-muted"
               style={{ paddingLeft: baseIndent }}
               onClick={() => toggleExpanded(key)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleExpanded(key);
+                }
+              }}
             >
               <ChevronRightIcon className={cn("size-3.5 shrink-0 transition-transform", open && "rotate-90")} />
               {open ? (
@@ -768,12 +780,21 @@ export default function SkillsPage() {
       return (
         <div
           key={node.path}
+          role="treeitem"
+          tabIndex={0}
+          aria-selected={isSelected}
           className={cn(
             "group relative flex cursor-pointer select-none items-center gap-1 rounded py-0.5 pr-1 text-sm",
             isSelected ? "bg-accent text-accent-foreground" : "hover:bg-muted",
           )}
           style={{ paddingLeft: baseIndent + 16 }}
           onClick={() => setSelected({ skill, path: node.path })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setSelected({ skill, path: node.path });
+            }
+          }}
         >
           <FileTextIcon className="size-3.5 shrink-0 text-muted-foreground" />
           <span className="min-w-0 flex-1 truncate font-mono text-xs" title={node.path}>
@@ -882,6 +903,10 @@ export default function SkillsPage() {
                   <div key={s.name}>
                     {/* skill 根节点 */}
                     <div
+                      role="treeitem"
+                      tabIndex={0}
+                      aria-expanded={isOpen}
+                      aria-selected={isSkillSelected}
                       className={cn(
                         "group relative flex cursor-pointer select-none items-center gap-1 rounded px-2 py-1 text-sm",
                         isSkillSelected ? "bg-accent text-accent-foreground" : "hover:bg-muted",
@@ -889,6 +914,13 @@ export default function SkillsPage() {
                       onClick={() => {
                         toggleExpanded(s.name);
                         setSelected({ skill: s.name, path: null });
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggleExpanded(s.name);
+                          setSelected({ skill: s.name, path: null });
+                        }
                       }}
                     >
                       <ChevronRightIcon
@@ -1100,9 +1132,9 @@ export default function SkillsPage() {
                         <label key={a.key} className="flex cursor-pointer items-center gap-2 text-sm">
                           <Checkbox
                             checked={(visibility[selectedSkill.name] ?? []).includes(a.id)}
-                            onCheckedChange={() => toggleVisibility(selectedSkill.name, a.id, a.name)}
+                            onCheckedChange={() => toggleVisibility(selectedSkill.name, a.id, agentLabels.name(a))}
                           />
-                          {a.name}
+                          {agentLabels.name(a)}
                         </label>
                       ))}
                       {agents.length === 0 && <span className="text-xs text-muted-foreground">{t("noAgents")}</span>}
@@ -1303,7 +1335,7 @@ export default function SkillsPage() {
                           setNewVisibility((cur) => (on ? [...cur, a.id] : cur.filter((id) => id !== a.id)))
                         }
                       />
-                      {a.name}
+                      {agentLabels.name(a)}
                     </label>
                   ))}
                 </div>

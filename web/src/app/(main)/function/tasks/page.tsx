@@ -119,7 +119,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { getLocalStorageValue, setLocalStorageValue } from "@/lib/local-storage.client";
 import { type SortDirection, useStoredSortPreference } from "@/lib/sort-preference";
 import type {
@@ -934,81 +934,88 @@ export default function TasksPage() {
                 {t("empty.noMatch")}
               </div>
             ) : (
-              <Table className="**:data-[slot='table-cell']:px-4 **:data-[slot='table-head']:px-4">
-                <TableHeader className="[&_tr]:border-t">
-                  <TableRow>
-                    <TableHead className="w-10">
-                      <Checkbox
-                        checked={headerChecked}
-                        onCheckedChange={(checked) => toggleSelectedPage(checked === true)}
-                        aria-label={t("table.selectAllAria")}
+              /* @container 로 표가 차지하는 "본문" 폭에 반응한다(뷰포트가 아니라).
+                 사이드바가 펼쳐지면 같은 뷰포트라도 본문이 좁아지므로, 뷰포트 기준
+                 반응형으로는 중간 폭에서 열이 겹친다. 폭이 좁아지면 우선순위 낮은 열
+                 (설명·목표 진행도·Worker·생성/실행 시각·Token)부터 숨겨, 고정된 「동작」
+                 열이 다른 열 위에 겹치지 않게 한다. */
+              <div className="@container">
+                <Table className="**:data-[slot='table-cell']:px-4 **:data-[slot='table-head']:px-4">
+                  <TableHeader className="[&_tr]:border-t">
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={headerChecked}
+                          onCheckedChange={(checked) => toggleSelectedPage(checked === true)}
+                          aria-label={t("table.selectAllAria")}
+                        />
+                      </TableHead>
+                      <SortableTaskHead
+                        field="id"
+                        label="ID"
+                        activeField={sortField}
+                        direction={sortDirection}
+                        className="font-mono"
+                        onSort={sortTasksBy}
                       />
-                    </TableHead>
-                    <SortableTaskHead
-                      field="id"
-                      label="ID"
-                      activeField={sortField}
-                      direction={sortDirection}
-                      className="font-mono"
-                      onSort={sortTasksBy}
-                    />
-                    <TableHead>{t("table.name")}</TableHead>
-                    <TableHead>{t("table.description")}</TableHead>
-                    <TableHead>{t("table.target")}</TableHead>
-                    <SortableTaskHead
-                      field="status"
-                      label={t("table.status")}
-                      activeField={sortField}
-                      direction={sortDirection}
-                      onSort={sortTasksBy}
-                    />
-                    <TableHead className="text-center">{t("table.goalProgress")}</TableHead>
-                    <TableHead className="text-center" title={t("table.findingsTitle")}>
-                      {t("table.findings")}{" "}
-                      <span className="text-muted-foreground font-normal">{t("table.findingsSub")}</span>
-                    </TableHead>
-                    <TableHead className="text-center">{t("table.runningWorker")}</TableHead>
-                    <SortableTaskHead
-                      field="created"
-                      label={t("table.created")}
-                      activeField={sortField}
-                      direction={sortDirection}
-                      align="right"
-                      onSort={sortTasksBy}
-                    />
-                    <SortableTaskHead
-                      field="duration"
-                      label={t("table.duration")}
-                      activeField={sortField}
-                      direction={sortDirection}
-                      align="right"
-                      onSort={sortTasksBy}
-                    />
-                    <TableHead className="text-right">Token</TableHead>
-                    <TableHead className="sticky right-0 z-10 bg-card text-right shadow-[-1px_0_0_0_hsl(var(--border))]">
-                      {t("table.actions")}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginated.map((task) => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      // running 任务才吃 nowSec;其余行传 0 —— props 不变,memo 就能拦下每秒 tick
-                      // 带来的整表重渲染,只让在跑的那几行走时长。
-                      nowSec={task.status === "running" ? nowSec : 0}
-                      onDelete={deleteTask}
-                      onControl={controlTask}
-                      onRename={renameTask}
-                      onTogglePinned={toggleTaskPinned}
-                      onArchive={queueTaskArchive}
-                      selected={selectedIds.has(task.id)}
-                      onSelectedChange={toggleSelected}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
+                      <TableHead>{t("table.name")}</TableHead>
+                      <TableHead className="hidden @5xl:table-cell">{t("table.description")}</TableHead>
+                      <TableHead>{t("table.target")}</TableHead>
+                      <SortableTaskHead
+                        field="status"
+                        label={t("table.status")}
+                        activeField={sortField}
+                        direction={sortDirection}
+                        onSort={sortTasksBy}
+                      />
+                      <TableHead className="hidden text-center @3xl:table-cell">{t("table.goalProgress")}</TableHead>
+                      <TableHead className="text-center" title={t("table.findingsTitle")}>
+                        {t("table.findings")}{" "}
+                        <span className="text-muted-foreground font-normal">{t("table.findingsSub")}</span>
+                      </TableHead>
+                      <TableHead className="hidden text-center @4xl:table-cell">{t("table.runningWorker")}</TableHead>
+                      <SortableTaskHead
+                        field="created"
+                        label={t("table.created")}
+                        activeField={sortField}
+                        direction={sortDirection}
+                        align="right"
+                        className="hidden @6xl:table-cell"
+                        onSort={sortTasksBy}
+                      />
+                      <SortableTaskHead
+                        field="duration"
+                        label={t("table.duration")}
+                        activeField={sortField}
+                        direction={sortDirection}
+                        align="right"
+                        className="hidden @6xl:table-cell"
+                        onSort={sortTasksBy}
+                      />
+                      <TableHead className="hidden text-right @7xl:table-cell">Token</TableHead>
+                      <TableHead className="text-right">{t("table.actions")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginated.map((task) => (
+                      <TaskRow
+                        key={task.id}
+                        task={task}
+                        // running 任务才吃 nowSec;其余行传 0 —— props 不变,memo 就能拦下每秒 tick
+                        // 带来的整表重渲染,只让在跑的那几行走时长。
+                        nowSec={task.status === "running" ? nowSec : 0}
+                        onDelete={deleteTask}
+                        onControl={controlTask}
+                        onRename={renameTask}
+                        onTogglePinned={toggleTaskPinned}
+                        onArchive={queueTaskArchive}
+                        selected={selectedIds.has(task.id)}
+                        onSelectedChange={toggleSelected}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
             <TablePagination
               page={page}
@@ -1211,7 +1218,7 @@ const TaskRow = React.memo(function TaskRow({
           {taskIsPinned(task) && <PinIcon className="text-primary size-4 shrink-0" aria-label={t("row.pinnedBadge")} />}
         </div>
       </TableCell>
-      <TableCell className="text-muted-foreground max-w-40">
+      <TableCell className="text-muted-foreground hidden max-w-40 @5xl:table-cell">
         <Link
           href={`/function/tasks/detail?id=${encodeURIComponent(task.id)}`}
           className="block truncate rounded-sm hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -1226,7 +1233,7 @@ const TaskRow = React.memo(function TaskRow({
       <TableCell>
         <StatusBadge domain="task" value={task.status} dot />
       </TableCell>
-      <TableCell className="text-muted-foreground text-center text-xs tabular-nums">
+      <TableCell className="text-muted-foreground hidden text-center text-xs tabular-nums @3xl:table-cell">
         {typeof task.goals_total === "number" && task.goals_total > 0 ? (
           `${task.goals_met}/${task.goals_total}`
         ) : (
@@ -1252,17 +1259,17 @@ const TaskRow = React.memo(function TaskRow({
           );
         })()}
       </TableCell>
-      <TableCell className="text-center text-xs tabular-nums">
+      <TableCell className="hidden text-center text-xs tabular-nums @4xl:table-cell">
         {task.in_flight && task.in_flight > 0 ? (
           <span className="text-foreground font-medium">{task.in_flight}</span>
         ) : (
           <span className="text-muted-foreground">0</span>
         )}
       </TableCell>
-      <TableCell className="text-muted-foreground text-right text-xs whitespace-nowrap tabular-nums">
+      <TableCell className="text-muted-foreground hidden text-right text-xs whitespace-nowrap tabular-nums @6xl:table-cell">
         {fmtDateTime(task.created_unix)}
       </TableCell>
-      <TableCell className="text-right text-xs whitespace-nowrap tabular-nums">
+      <TableCell className="hidden text-right text-xs whitespace-nowrap tabular-nums @6xl:table-cell">
         {(() => {
           const secs = taskDuration(task, nowSec);
           if (secs <= 0) return <span className="text-muted-foreground">—</span>;
@@ -1274,7 +1281,7 @@ const TaskRow = React.memo(function TaskRow({
         })()}
       </TableCell>
       <TableCell
-        className="text-right text-xs whitespace-nowrap tabular-nums"
+        className="hidden text-right text-xs whitespace-nowrap tabular-nums @7xl:table-cell"
         title={
           task.tokens
             ? t("row.tokenTitle", {
@@ -1297,7 +1304,7 @@ const TaskRow = React.memo(function TaskRow({
           "—"
         )}
       </TableCell>
-      <TableCell className="sticky right-0 z-10 bg-card text-right shadow-[-1px_0_0_0_hsl(var(--border))] group-hover:bg-muted/50">
+      <TableCell className="text-right">
         <div className="flex items-center justify-end gap-0.5">
           <Button size="icon" variant="ghost" asChild aria-label={t("row.viewDetail")} title={t("row.viewDetail")}>
             <Link href={`/function/tasks/detail?id=${encodeURIComponent(task.id)}`}>
@@ -1689,8 +1696,9 @@ function TaskArchivesPanel({ onChanged }: { onChanged: () => void }) {
         const states = await Promise.allSettled(pending.map((id) => api.taskArchive(id)));
         let restored = false;
         states.forEach((state, index) => {
-          if (state.status !== "rejected" || !(state.reason instanceof Error)) return;
-          if (!state.reason.message.includes("보관을 찾을 수 없습니다")) return;
+          // 복원이 끝나면 보관 항목이 사라져 404 가 된다(문구는 표시 언어에 따라 달라짐).
+          if (state.status !== "rejected" || !(state.reason instanceof ApiError)) return;
+          if (state.reason.status !== 404) return;
           pendingRestoreIDs.current.delete(pending[index]);
           restored = true;
         });

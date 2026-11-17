@@ -2,13 +2,13 @@
 
 한국어 · [English](MAINTAINING.en.md)
 
-이 문서는 **메인테이너**가 원본 저장소 [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX)의
-변경을 따라잡으면서 한국어 현지화를 유지하는 절차를 정리한 것입니다. 기여 범위·법적 책임·
-현지화 방침은 [CONTRIBUTING.md](CONTRIBUTING.md)에, 사용자용 안내는 [README.md](README.md)에
+이 문서는 **메인테이너**가 원본 저장소 [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX)(현재 접속 불가, 2026-10 확인)의
+변경을 따라잡으면서 다국어 현지화를 유지하는 절차를 정리한 것입니다. 기여 범위·법적 책임·
+현지화 방침은 [CONTRIBUTING.md](CONTRIBUTING.md)에, 사용자용 안내는 [README.ko.md](README.ko.md)에
 있으므로, 이 문서는 그 방침을 **실제로 어떻게 집행하는지**에만 집중합니다.
 
 현지화의 핵심 목표는 한 문장으로 요약됩니다. 원본의 **판단 성능을 그대로 보존하면서 사용자에게
-보이는 산출물만 한국어로 바꾸는 것**입니다. 상류가 갱신될 때마다 이 경계가 흐트러지기 쉬우므로,
+보이는 산출물만 설정한 언어로 바꾸는 것**입니다. 상류가 갱신될 때마다 이 경계가 흐트러지기 쉬우므로,
 아래 절차와 검사로 번역 드리프트를 막습니다.
 
 ---
@@ -254,7 +254,7 @@ chore(upstream): 상류 d003372..b55ceb1 반영 (intercept 토큰 계량) + 신�
 
 ### 8.1 저장소 CI 상태는 저장소를 지정해서 확인합니다
 
-이 저장소는 상류 ARTEX 의 포크라서, 로컬 `git remote` 에 `origin`(jiwoochris/artex-ko)과
+이 저장소는 상류 ARTEX 의 포크라서, 로컬 `git remote` 에 `origin`(jiwoochris/artex-global)과
 `upstream`(Autumn-27/ARTEX)이 함께 등록되어 있습니다(3절 참조). 이 상태에서 `gh` 명령에
 저장소를 지정하지 않으면, `gh` 가 **상류 저장소를 기본값으로 골라** 우리 워크플로가 없는
 상류의 실행 결과를 보여 줍니다. 그러면 상류 CI 가 초록인 것을 보고 **우리 CI 가 통과했다고
@@ -264,8 +264,8 @@ chore(upstream): 상류 d003372..b55ceb1 반영 (intercept 토큰 계량) + 신�
 그래서 CI 를 확인할 때는 항상 저장소를 명시합니다.
 
 ```bash
-gh run list -R jiwoochris/artex-ko --workflow ci.yml --limit 5
-gh run list -R jiwoochris/artex-ko --workflow detections.yml --limit 5
+gh run list -R jiwoochris/artex-global --workflow ci.yml --limit 5
+gh run list -R jiwoochris/artex-global --workflow detections.yml --limit 5
 ```
 
 한 번 설정해 두면 `-R` 를 생략해도 우리 저장소를 기본으로 보도록 바꿀 수 있습니다. 다만 이
@@ -273,8 +273,8 @@ gh run list -R jiwoochris/artex-ko --workflow detections.yml --limit 5
 지정해야 합니다.
 
 ```bash
-gh repo set-default jiwoochris/artex-ko
-gh repo set-default --view   # jiwoochris/artex-ko 가 보이는지 확인
+gh repo set-default jiwoochris/artex-global
+gh repo set-default --view   # jiwoochris/artex-global 가 보이는지 확인
 ```
 
 ### 8.2 문서의 외부 링크는 브라우저처럼 GET 으로 확인합니다
@@ -304,3 +304,106 @@ done
 것이 아니라 **확인 방법이 서버의 접근 정책에 막힌 것**은 아닌지 먼저 의심하고, HEAD·기본
 UA·리다이렉트 미추적 같은 요인을 하나씩 제거해 다시 확인합니다. (2026-10-06 확인 기준으로
 세 링크 모두 위 방법에서 200 이며, pipc.go.kr 은 2회 리다이렉트 뒤 200 입니다.)
+
+이 수동 절차는 `scripts/check-external-links.py` 가 그대로 자동화합니다. 추적되는 모든 `.md`
+에서 코드펜스·인라인 코드 밖의 외부 링크를 모으고(예약·플레이스홀더 호스트는 제외), 위와
+같이 브라우저 UA·GET·리다이렉트 추적으로 상태를 확인하며 네트워크 오류·5xx·429 는 재시도해
+일시적 깜빡임과 진짜 장애를 가릅니다. 결과를 네 가지로 나눕니다: OK(2xx·3xx) ·
+RESTRICTED(401·403·405·429, 호스트는 살아 있고 확인 방법만 막힘) · ALLOWED
+(`scripts/external-links-allowlist.txt` 에 적힌, 우리가 고칠 수 없는 상류 상속 죽은 링크) ·
+DOWN(404·410·5xx·연결 오류, 깨졌을 가능성 높음).
+
+- 네트워크 없이 점검 대상만 미리 보기: `python3 -I scripts/check-external-links.py --list`
+- 릴리스·주기 점검(새로 깨진 링크가 있으면 비정상 종료): `python3 -I scripts/check-external-links.py --strict`
+
+외부 링크 생존은 flaky 하므로 **머지 게이트에 넣지 않습니다**. 대신 비차단 워크플로
+[`external-links`](.github/workflows/external-links.yml) 가 매주 월요일과 수동 실행으로
+`--strict` 를 돌려, allowlist 에 없는 DOWN 이 새로 생기면 빨갛게 드러냅니다. 상류 원문 보존
+파일이 물려받은 죽은 링크(예: `CHANGELOG.zh.md` 가 크레딧한, 사라진 기여자 계정)는 우리가
+고칠 수 없으므로 allowlist 에 사유와 함께 적어 strict 점검에서 뺍니다.
+
+---
+
+## 9. 릴리스 발행 파이프라인
+
+버전 태그(`v*`)를 밀면 [`.github/workflows/release.yml`](.github/workflows/release.yml) 이 다섯
+플랫폼용 바이너리와, 조건을 만족할 때 멀티아키텍처 Docker 이미지를 만듭니다. 이 포크는 안정 릴리스 태그(`v0.3.15-global.1`, `v0.3.15-ko.1`)를 발행해 이 워크플로가 실행된 적이 있으며, 이 절은 파이프라인이
+무엇을 전제하고 무엇을 산출하는지, 그리고 그 전제가 지금 저장소 구조와 맞는지를 정리합니다.
+태그를 밀면 공개 저장소에 GitHub Release 가 생기므로, 릴리스를 끊는 일은 발행 결정이 선 뒤에
+합니다.
+
+### 9.1 릴리스를 끊는 법
+
+`v` 로 시작하는 태그를 밀면 워크플로가 발화합니다.
+
+```bash
+git tag v0.3.15
+git push origin v0.3.15
+```
+
+### 9.2 파이프라인이 하는 일
+
+워크플로는 잡 네 개로 나뉩니다.
+
+- **frontend.** 프런트엔드를 정적으로 한 번 내보내고(`web/out`) 그 산출물을 `web-dist`
+  아티팩트로 올립니다. 아래 binaries 잡이 대상마다 이 산출물을 다시 받아 재사용합니다.
+- **binaries.** 다섯 대상(linux amd64·arm64, darwin amd64·arm64, windows amd64)을 교차
+  컴파일하고 대상마다 zip 으로 묶습니다. linux amd64 바이너리에는 `artex -h` 스모크 테스트를
+  돌려 바이너리가 실제로 실행되는지 확인합니다.
+- **release.** 모든 zip 을 모아 `SHA256SUMS` 체크섬을 만들고, GitHub Release 를 생성해 zip 과
+  체크섬을 첨부합니다.
+- **docker.** binaries 가 교차 컴파일한 linux 바이너리를 받아 멀티아키텍처(amd64·arm64) 이미지를
+  빌드하고 GitHub Container Registry 의 `ghcr.io/jiwoochris/artex-global` 에 릴리스 태그와 `latest`
+  로 올립니다. 로그인은 워크플로 기본 `GITHUB_TOKEN`(잡 권한 `packages: write`)으로 하므로 따로
+  둘 시크릿이 없습니다.
+
+### 9.3 빌드 전제가 저장소 구조와 맞는가
+
+파이프라인은 다음 세 가지 전제 위에서 동작하며, 이 전제가 지금 저장소 구조와 모두 맞는지를
+로컬에서 binaries 잡을 직접 재현해 확인했습니다.
+
+- **프런트엔드 임베드.** frontend 잡이 올린 `web-dist`(= `web/out` 의 내용)를 binaries 잡이
+  `server/webui/dist` 로 받고, `server/webui_embed.go` 의 `//go:embed all:webui/dist` 가 그 자리를
+  바이너리에 임베드합니다. 그래서 binaries 잡은 프런트엔드를 다시 빌드하지 않고
+  `ARTEX_SKIP_FRONTEND=1` 로 [`build.sh`](build.sh) 를 호출합니다.
+- **바이너리·패키지 경로.** `build.sh --target <os>/<arch>` 는 `dist/artex-<os>-<arch>/artex`
+  바이너리와 `dist/` 아래 zip 패키지를 만듭니다. zip 에는 바이너리와 함께 시작 스크립트(리눅스·
+  macOS 는 `start.sh`, 윈도우는 `start.bat`), `skills/`, `config.example.json`, `README.md` 가
+  들어갑니다.
+- **Docker 이미지의 바이너리 복사.** binaries 잡은 linux 바이너리를 `bin-linux-<arch>`
+  아티팩트로 따로 올리고, docker 잡이 이것을 `dist/<arch>/artex` 로 받습니다.
+  [`Dockerfile`](Dockerfile) 의 `COPY dist/${TARGETARCH}/artex` 가, 멀티아키텍처 빌드에서 buildx
+  가 각 플랫폼에 맞춰 채워 주는 `TARGETARCH` 로 그 경로를 집습니다.
+  [`.dockerignore`](.dockerignore) 는 `dist/` 를 제외하지 않으므로 바이너리가 빌드 컨텍스트에
+  포함됩니다.
+
+### 9.4 Docker 이미지 네임스페이스
+
+이미지는 이 포크가 소유한 `ghcr.io/jiwoochris/artex-global` 로 발행하고, `docker-compose.yml` 도 이
+이미지를 받습니다(2026-10-11 결정, `work/DECISIONS-FOR-JIWOO.md` 8번 항목). 상류의
+`autumn27/artex` 는 Docker Hub 에서 내려갔고 이 포크에는 push 권한도 없어 쓰지 않습니다.
+GHCR 패키지는 처음 발행될 때 비공개로 만들어질 수 있으니, 첫 릴리스 뒤 패키지 설정에서 공개
+(public)인지 확인합니다. 비공개면 `docker compose pull` 이 인증 오류로 실패합니다.
+
+### 9.5 태그 없이 로컬에서 미리 검증하기
+
+공개 릴리스를 끊지 않고 파이프라인 전제만 확인하려면, binaries 잡을 로컬에서 재현합니다.
+로컬에 Go 가 없으면 Docker 로 동일하게 돌릴 수 있습니다.
+
+```bash
+# 1) 프런트엔드 정적 내보내기(release.yml 의 frontend 잡에 해당)
+cd web && npm ci && npm run build:static && cd ..
+# 2) binaries 잡이 아티팩트를 받는 자리에 배치
+rm -rf server/webui/dist && mkdir -p server/webui/dist && cp -a web/out/. server/webui/dist/
+# 3) 한 대상만 binaries 잡과 같은 환경으로 빌드
+docker run --rm -v "$PWD":/app -w /app \
+  -e ARTEX_SKIP_FRONTEND=1 -e ARTEX_SKIP_NPM_CI=1 \
+  -e ARTEX_COMPRESS=0 -e ARTEX_PACKAGE=1 -e ARTEX_PACKAGE_DIR=dist \
+  -e ARTEX_BUILD_VERSION=v0.0.0-local \
+  golang:1.26 bash -c 'apt-get update && apt-get install -y zip && ./build.sh --target linux/amd64'
+# 4) 산출물 확인: dist/artex-linux-amd64/artex · dist/*.zip · dist/SHA256SUMS
+```
+
+`dist/artex-linux-amd64/artex` 는 정적 링크된 ELF 이고, `-h` 를 주면 사용법을 출력한 뒤 종료
+코드 0 으로 끝납니다. 이것이 binaries 잡의 스모크 테스트가 확인하는 동작입니다. 빌드 산출물
+(`dist/`·`server/webui/dist/`)은 저장소에 커밋하지 않습니다(`.gitignore` 로 제외됩니다).

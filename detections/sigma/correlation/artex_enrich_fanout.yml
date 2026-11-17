@@ -12,10 +12,10 @@ description: |
     User-Agent can be changed; the durable signal is the fan-out behaviour, so pair this with the
     defense guide section 4 and tune the distinct-host threshold and window to your environment.
 references:
-    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
-    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
-    - https://github.com/jiwoochris/artex-ko
-author: artex-ko defense guide
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-en.md
+    - https://github.com/jiwoochris/artex-global
+author: artex-global defense guide
 date: 2026-10-05
 tags:
     - attack.reconnaissance

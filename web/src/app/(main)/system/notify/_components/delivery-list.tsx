@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getDateLocale } from "@/i18n/datetime";
 import { api } from "@/lib/api";
 import type { NotificationChannel, NotificationDelivery } from "@/lib/types";
 
@@ -183,5 +184,5 @@ export function DeliveryList({ channels }: { channels: NotificationChannel[] }) 
 function formatTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("ko-KR", { hour12: false });
+  return d.toLocaleString(getDateLocale(), { hour12: false });
 }

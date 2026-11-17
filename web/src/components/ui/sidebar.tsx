@@ -4,7 +4,7 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
 
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile, useIsTablet } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -66,6 +66,7 @@ function SidebarProvider({
   onOpenChange?: (open: boolean) => void
 }) {
   const isMobile = useIsMobile()
+  const isTablet = useIsTablet()
   const [openMobile, setOpenMobile] = React.useState(false)
 
   // This is the internal state of the sidebar.
@@ -86,6 +87,28 @@ function SidebarProvider({
     },
     [setOpenProp, open]
   )
+
+  // 태블릿 폭(768~1279px)에서는 사이드바를 아이콘 모드로 자동 접어 본문 폭을 확보하고,
+  // 데스크톱 폭으로 넓어지면 다시 펼친다. 모바일(<768px)은 offcanvas 로 따로 처리되므로 제외한다.
+  //
+  // 초기 로드 시에는 태블릿 폭일 때만 접는다(본문이 좁아 겹침을 막아야 하므로). 데스크톱 폭에서는
+  // 쿠키에 저장된 사용자 선택(접힘/펼침)을 그대로 존중해 강제로 펼치지 않는다. 이후 데스크톱↔태블릿
+  // 경계를 넘을 때만 자동 전환하므로, 같은 구간 안에서 사용자가 직접 토글한 상태는 덮어쓰지 않는다.
+  const prevIsTablet = React.useRef<boolean | undefined>(undefined)
+  React.useEffect(() => {
+    if (isTablet === undefined || isMobile) {
+      prevIsTablet.current = isTablet
+      return
+    }
+    const firstResolve = prevIsTablet.current === undefined
+    if (firstResolve) {
+      // 첫 측정: 태블릿이면 접고, 데스크톱이면 저장된 상태를 유지한다.
+      if (isTablet) setOpen(false)
+    } else if (prevIsTablet.current !== isTablet) {
+      setOpen(!isTablet)
+    }
+    prevIsTablet.current = isTablet
+  }, [isTablet, isMobile, setOpen])
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {

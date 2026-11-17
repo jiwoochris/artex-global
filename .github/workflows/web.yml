@@ -23,10 +23,11 @@ jobs:
   # typescript.ignoreBuildErrors 설정이 없어 TypeScript 타입 검사까지 함께 수행하므로,
   # 타입 오류나 내보내기 실패가 있으면 이 잡이 빨갛게 멈춰 머지를 막는다.
   #
-  # biome 린트는 저장소에 상류에서 딸려온 선재 린트 부채가 남아 있어(G7) 아직 머지
-  # 게이트로 세우지 못한다. 지금 게이트로 두면 기존 변경과 무관한 오류로 모든 PR 이
-  # 빨개지기 때문이다. 그래서 기여자에게 결과만 보여 주는 정보용 단계로 두고
-  # (continue-on-error), 선재 오류가 0 이 되면 이 단계를 게이트로 승격한다.
+  # biome 린트도 머지 게이트다. 상류에서 딸려온 선재 린트 부채(G7)를 0 으로 정리한
+  # 뒤(오류 8→0: skills 트리 a11y 6 + package.json 포매터 1 + logo.svg noSvgWithoutTitle 1),
+  # 정보용 단계를 게이트로 승격했다. 이제 `npm run check`(biome check)가 오류를 내면 이
+  # 잡이 빨갛게 멈춰 머지를 막아, 깨끗해진 상태가 다시 더럽혀지는 회귀를 방지한다.
+  # 경고·정보는 종료 코드에 영향이 없어(biome 은 error 레벨에서만 비-0) 머지를 막지 않는다.
   web:
     runs-on: ubuntu-latest
     defaults:
@@ -41,9 +42,19 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: npm ci
         run: npm ci
+      - name: 단위 테스트 (머지 게이트 · vitest)
+        # 순수 로직(getInitials/formatCurrency, i18n config, statusMeta)과 i18n 키 정합성 회귀를 머지 전에 잡는다.
+        run: npm run test -- --run
+      - name: i18n 로케일 키 정합성 (머지 게이트 · ko 기준 5개 로케일 일치)
+        # ko.json 을 기준으로 en/zh/es/ja 의 키 집합이 완전히 같은지 검사한다(누락·추가 모두 실패).
+        run: npm run check:i18n
       - name: build:static (머지 게이트 · 타입 검사 포함)
         run: npm run build:static
-      - name: biome check (정보용 · 선재 린트 부채로 아직 머지 게이트 아님)
+      - name: UI 한자 누출 가드 (머지 게이트 · out HTML 에 중국어 0)
+        # 이 포크의 핵심 성과는 "사용자에게 보이는 화면에 중국어가 없다"는 것이다.
+        # 기여자가 중국어를 하드코딩하거나 번역이 누락되는 회귀를 머지 전에 막는다.
+        # 스크립트는 git 루트의 web/out 를 스스로 찾으므로 작업 디렉터리와 무관하다.
+        run: python3 -I ../scripts/check-web-cjk.py
+      - name: biome check (머지 게이트 · lint·format·a11y 오류 0 유지)
         if: always()
-        continue-on-error: true
         run: npm run check

@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	actool "github.com/Autumn-27/norma/tool"
 )
@@ -198,4 +199,90 @@ func scalarDefaults(schema map[string]any) map[string]json.RawMessage {
 func isEmptyJSON(raw json.RawMessage) bool {
 	s := string(raw)
 	return s == "null" || s == `""`
+}
+
+// aliasTool is a CoreTool decorator that overrides only Name(): it lets a
+// CamelCase built-in (e.g. Bash) also answer to the lowercase/snake_case spelling
+// a model drifts into (bash, web_fetch). Handler, description, schema, prompt and
+// permission all delegate to the wrapped tool, so an alias is behaviourally
+// identical — it only repairs exact-match dispatch lookup (norma's execOne does
+// reg.Get(use.Name), no case folding). See issue #19.
+type aliasTool struct {
+	actool.CoreTool
+	name string
+}
+
+func (a *aliasTool) Name() string { return a.name }
+
+// toolAliasNames returns the lowercase / snake_case / UPPER spellings a CamelCase
+// tool name is commonly confused with, dropping the original and duplicates. A
+// name already in lower/snake form yields nothing (no drift to defend against).
+func toolAliasNames(name string) []string {
+	if name == strings.ToLower(name) {
+		return nil
+	}
+	candidates := []string{strings.ToLower(name), camelToSnake(name), strings.ToUpper(name)}
+	out := make([]string, 0, len(candidates))
+	seen := map[string]bool{name: true}
+	for _, v := range candidates {
+		if v == "" || seen[v] {
+			continue
+		}
+		seen[v] = true
+		out = append(out, v)
+	}
+	return out
+}
+
+// camelToSnake converts CamelCase to snake_case (WebFetch → web_fetch,
+// TodoWrite → todo_write) while leaving an all-caps run intact (LS → ls).
+func camelToSnake(s string) string {
+	runes := []rune(s)
+	var b strings.Builder
+	for i, r := range runes {
+		if r >= 'A' && r <= 'Z' {
+			if i > 0 {
+				prev := runes[i-1]
+				var next rune
+				if i+1 < len(runes) {
+					next = runes[i+1]
+				}
+				if (prev >= 'a' && prev <= 'z') || (next >= 'a' && next <= 'z') {
+					b.WriteByte('_')
+				}
+			}
+			b.WriteRune(r + ('a' - 'A'))
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+// addToolAliases registers drift-tolerant aliases for every CamelCase tool. Each
+// alias is added to the returned tool list (so exact-match dispatch finds it) and
+// its name is appended to deferred (so the schema is withheld and the model keeps
+// seeing only the official CamelCase names — no duplicate exposure, no token
+// waste). Names already taken by a real tool are skipped, so nothing is shadowed.
+func addToolAliases(tools []actool.CoreTool, deferred []string) ([]actool.CoreTool, []string) {
+	taken := map[string]bool{}
+	for _, t := range tools {
+		taken[t.Name()] = true
+	}
+	for _, n := range deferred {
+		taken[n] = true
+	}
+	out := tools
+	extra := deferred
+	for _, t := range tools {
+		for _, alias := range toolAliasNames(t.Name()) {
+			if taken[alias] {
+				continue
+			}
+			taken[alias] = true
+			out = append(out, &aliasTool{CoreTool: t, name: alias})
+			extra = append(extra, alias)
+		}
+	}
+	return out, extra
 }

@@ -29,7 +29,7 @@ ARTEX is an offensive-security tool. Using these community spaces (issues, pull 
 
 - Requesting, sharing, or encouraging attacks against unauthorized real or production systems.
 - Exchanging actionable information meant to attack a specific target.
-- Helping anyone use the tool beyond the [usage scope](README.en.md#️-read-first--authorized-use-and-legal-notice) and domestic law.
+- Helping anyone use the tool beyond the [usage scope](README.md#️-read-first--authorized-use-and-legal-notice) and domestic law.
 
 ## Responsibilities and enforcement
 

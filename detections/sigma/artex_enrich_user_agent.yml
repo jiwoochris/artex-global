@@ -10,10 +10,10 @@ description: |
     change this User-Agent, so its ABSENCE does not imply safety. Treat it as a supporting
     indicator and combine it with the behaviour-based detection in the defense guide, section 4.
 references:
-    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-ko.md
-    - https://github.com/jiwoochris/artex-ko/blob/main/docs/defense-en.md
-    - https://github.com/jiwoochris/artex-ko
-author: artex-ko defense guide
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-ko.md
+    - https://github.com/jiwoochris/artex-global/blob/main/docs/defense-en.md
+    - https://github.com/jiwoochris/artex-global
+author: artex-global defense guide
 date: 2026-10-05
 tags:
     - attack.reconnaissance

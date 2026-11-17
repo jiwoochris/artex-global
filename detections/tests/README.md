@@ -18,17 +18,25 @@ repository.
 
 ## Run every suite at once — [`run-all.sh`](run-all.sh)
 
-[`run-all.sh`](run-all.sh) runs all seven suites below in one command, in the same order as CI, so you do not
-have to invoke the seven `run.sh` scripts by hand. Each suite runs to completion even if an earlier one fails,
+[`run-all.sh`](run-all.sh) runs all eight suites below in one command, in the same order as CI, so you do not
+have to invoke the eight `run.sh` scripts by hand. Each suite runs to completion even if an earlier one fails,
 the script prints a one-line PASS/FAIL summary per suite at the end, and it exits non-zero if any suite failed.
 
 Before the suites, it runs a harness self-check ([`check-harness-sync.sh`](check-harness-sync.sh)) that fails
 the run if this suite list, the per-suite steps in [CI](../../.github/workflows/detections.yml), and the suite
-directories on disk ever name different suites or a different order. That is the one gap the seven suites
+directories on disk ever name different suites or a different order. That is the one gap the eight suites
 cannot see on their own: a suite wired into only one of the three (a new CI step with no `run-all.sh` entry, or
 a directory never added to either) would otherwise pass every per-suite test while a green local `run-all.sh`
-quietly stopped meaning a green CI. The check is a gate, not an eighth suite: it stays out of the summary
-below, so the seven detection suites stay seven.
+quietly stopped meaning a green CI. The check is a gate, not a ninth suite: it stays out of the summary
+below, so the eight detection suites stay eight.
+
+Two more gates run the same way — before the suite loop, out of the summary, and never counted as suites:
+the [host-triage tool](../triage/)'s `--self-test` ([`triage-selftest.sh`](triage-selftest.sh)) and the
+defense-template consistency check ([`check-defense-template.sh`](check-defense-template.sh)). The latter
+re-runs the facts the defense guide states about its inline Sigma correlation template (`sigma check`
+passes, it converts on splunk/eql/loki, lucene and kusto reject the correlation, and the Korean and English
+copies carry a byte-identical rule body); that template is prose outside the [`../sigma/`](../sigma/) rule
+tree, so no suite would otherwise catch it going stale against an upstream sigma-cli.
 
 ```sh
 detections/tests/run-all.sh
@@ -39,6 +47,7 @@ Expected output (abridged):
 ```
 ===== detection suites summary =====
   PASS  sigma
+  PASS  sigma_match
   PASS  sigma_lint
   PASS  sigma_backends
   PASS  suricata
@@ -58,15 +67,18 @@ are inherited by the runner, so exporting any of them applies to every suite at 
 ## Suricata — [`suricata/`](suricata/)
 
 [`suricata/run.sh`](suricata/run.sh) exercises the network rules in
-[`../suricata/artex.rules`](../suricata/artex.rules) end to end and asserts four properties:
+[`../suricata/artex.rules`](../suricata/artex.rules) end to end and asserts five properties:
 
 - **Valid** — the whole rules file loads under `suricata -T --init-errors-fatal`, so a rule that fails to
   parse or initialise is caught even when no capture below exercises it. Plain `suricata -r` skips such a
   rule and still exits 0, so this load check is the Suricata analogue of the Sigma suite's `sigma check`
   validity assertion.
-- **Presence** — sid `1000001` fires exactly once per enrichment probe.
+- **Presence (enrich)** — sid `1000001` fires exactly once per enrichment probe.
 - **Velocity** — sid `1000002` fires once the `detection_filter` rate of 30 requests in 300 s per source is
   crossed.
+- **Presence (WebFetch)** — sid `1000003` fires exactly once per norma WebFetch request, and the enrich sids
+  stay silent on that same capture — so the two network signatures are mutually specific, not just each
+  present.
 - **Specificity** — an identical capture whose only change is a benign browser User-Agent produces **zero**
   ARTEX alerts.
 
@@ -89,6 +101,8 @@ Expected output (abridged):
   PASS  ruleset loads with zero parse/init errors (suricata -T)
   PASS  sid 1000001 presence: one alert per probe  (got 35, want eq 35)
   PASS  sid 1000002 velocity: fires past 30-in-300s  (got 5, want ge 1)
+  PASS  sid 1000003 presence: one alert per WebFetch request  (got 8, want eq 8)
+  PASS  enrich sids stay silent on norma traffic (specificity)  (got 0, want eq 0)
   PASS  benign browser UA produces no ARTEX alerts  (got 0, want eq 0)
 RESULT: PASS
 ```
@@ -98,8 +112,9 @@ Override the images with `SURICATA_IMAGE` / `PYTHON_IMAGE` if you mirror them in
 
 ### Why the velocity count is a floor, not an exact match
 
-`run.sh` asserts the presence count (`1000001 == 35`) and the benign count (`== 0`) exactly, because those
-are engine-version-independent: one alert per matching request, and no match on a different User-Agent. The
+`run.sh` asserts the presence counts (`1000001 == 35`, `1000003 == 8`) and the benign count (`== 0`) exactly,
+because those are engine-version-independent: one alert per matching request, and no match on a different
+User-Agent. The
 velocity rule's count depends on how a given Suricata release resolves the `detection_filter` threshold at
 the boundary, so the test asserts `>= 1` and records the reference value separately. On **Suricata 8.0.7**
 the reference run produces **5** alerts on sid `1000002` (flows 31–35, after the 30-in-300 s threshold is
@@ -122,11 +137,12 @@ compilation with [sigma-cli](https://github.com/SigmaHQ/sigma-cli) (pySigma), an
   Suricata specificity assertion above.
 
 This is the structural + compilation validation documented in [`../README.md`](../README.md), made executable
-and assertive. A live event-matching harness for the generic `webserver` / `proxy` / `application` log sources
-is still intentionally not shipped: matching those authoritatively needs a backend that normalizes the fields,
-and a weak matcher would undercut the rules rather than support them. Network rules are different — Suricata
-reads a pcap offline and emits the alert record directly — which is why the reproducible *matching* test lives
-on the Suricata side, while Sigma gets a reproducible *validation* test.
+and assertive. The companion [`sigma_match/`](sigma_match/) suite below adds the *matching* half for both the
+atomic and the correlation rules — a representative malicious event (or timeline) fires each rule and a benign
+one does not — so the Sigma rules now get both a reproducible validation test and a reproducible matching test,
+the way the Suricata rule does. (The
+earlier concern that a weak hand-written matcher would undercut the rules is addressed by delegating all parsing
+to pySigma; see the trust model in the next section.)
 
 ### Run it
 
@@ -149,6 +165,68 @@ RESULT: PASS
 The script exits non-zero if any assertion fails, so it drops straight into CI or a pre-commit hook. sigma-cli
 is pinned to a reference version (`3.1.0`); override it with `SIGMA_CLI_VERSION`, or the image with
 `PYTHON_IMAGE`, if you mirror them internally.
+
+## Sigma live event-matching — [`sigma_match/`](sigma_match/)
+
+[`sigma_match/run.sh`](sigma_match/run.sh) proves the Sigma rules under [`../sigma/`](../sigma/) — both the
+atomic rules and the correlation rules under [`../sigma/correlation/`](../sigma/correlation/) — actually *fire*
+on a matching event (or timeline) and stay quiet on a benign one — the "a detection you cannot run is only a
+claim" guarantee the Suricata suite gives the network rule, extended here to the host/log-layer rules. It
+asserts six properties, three for the atomic rules and three for the correlations:
+
+- **Rule/sample pairing** — every atomic rule has an [`events/<name>.json`](sigma_match/events/) sample file and
+  every sample file maps back to a rule, so a rule added without samples fails here rather than going untested.
+- **True positives** — each rule matches every one of its malicious sample events.
+- **True negatives** — each rule matches none of its benign sample events. For example, a standalone
+  `mitmproxy-ca-cert.pem` under `.mitmproxy/` does **not** trip the recording-proxy rule, because its `|all`
+  modifier also requires the `_ca/` directory ARTEX writes — the matching test is what proves that discrimination.
+- **Correlation rule/timeline pairing** — every correlation rule has an
+  [`events/correlation/<name>.json`](sigma_match/events/correlation/) timeline file and every timeline maps back
+  to a rule. Each timeline event carries a `ts` field in relative seconds.
+- **Correlation true positives** — each rule fires on a positive timeline where the threshold is met inside the
+  window within one group. For example, requests from one source (`c-ip`) fanning out to 20 distinct hosts
+  within 10 minutes trip the enrichment fan-out rule.
+- **Correlation true negatives** — each rule stays quiet when the threshold is not met, when it is met but the
+  events are spread beyond the window, when they are split across groups, or when a temporal rule is missing a
+  leg. In particular a high-volume, low-breadth burst does **not** trip the fan-out rule: breadth, not volume, is
+  the signal, and the matching test is what proves that discrimination.
+
+The trust model is that pySigma — not hand-written code — parses each rule: an atomic rule into a condition tree
+(`|contains` → a wildcard value, `|all` → an AND, `1 of selection_*` → an OR), and a correlation rule into its
+aggregation spec (type, group-by, timespan, threshold, and the resolved references to the atomic base rules).
+[`check.py`](sigma_match/check.py) only walks that tree and spec, deciding which events feed a referenced rule
+with the very same atomic matcher, so the authoritative Sigma logic stays in pySigma; it raises rather than
+passing on any construct it does not explicitly support (fail-closed). Scope and limits are stated in the script
+header: the correlation window is the standard sliding-window interpretation (a `timespan`-second window
+anchored at each matching event) and a real SIEM's windowing may differ; matching is **case-insensitive** (the
+splunk-backend default the `sigma/` suite targets, which the destructive rule's own false-positive note
+assumes); and keyword matching is a full-text substring search. It is a regression test for the rules'
+field/value/condition/aggregation logic, not a substitute for validating in your own SIEM, whose field
+normalization may differ.
+
+### Run it
+
+Needs only Docker; pySigma runs in a container and nothing is written to the repo.
+
+```sh
+detections/tests/sigma_match/run.sh
+```
+
+Expected output (abridged):
+
+```
+  PASS  rule/sample pairing: 5 atomic rules, 5 event files, no orphans
+  PASS  artex_enrich_user_agent: 1/1 positive events matched
+  PASS  artex_recording_proxy_ca: 2/2 benign events correctly not matched
+  PASS  rule/timeline pairing: 4 correlation rules, 4 timeline files, no orphans
+  PASS  artex_enrich_fanout: fired — 20 distinct hosts from one source within the 10-minute window
+  PASS  artex_enrich_fanout: quiet — high volume, low breadth: 25 requests from one source but only 4 distinct hosts
+RESULT: PASS
+```
+
+The script exits non-zero if any assertion fails, so it drops straight into CI or a pre-commit hook. pySigma is
+pinned to a reference version (`2.0.0`); override it with `PYSIGMA_VERSION`, or the image with `PYTHON_IMAGE`,
+if you mirror them internally.
 
 ## Sigma backend portability — [`sigma_backends/`](sigma_backends/)
 
@@ -261,8 +339,8 @@ detections/tests/attack/run.sh
 Expected output (abridged):
 
 ```
-  PASS  scored techniques match the rule set exactly (7: T1059, T1105, T1485, T1489, T1561.002, T1592, T1595)
-  PASS  scored tactics match the rule set exactly (command-and-control, execution, impact, reconnaissance)
+  PASS  scored techniques match the rule set exactly (8: T1059, T1105, T1485, T1489, T1557, T1561.002, T1592, T1595)
+  PASS  scored tactics match the rule set exactly (collection, command-and-control, credential-access, execution, impact, reconnaissance)
 RESULT: PASS
 ```
 
@@ -347,7 +425,7 @@ defender actually loads into a threat-intelligence platform, from drifting away 
   here, so "valid MISP" is proven by the library a MISP server uses, not asserted.
 - **Row-for-row sync with the CSV** — every CSV row maps to exactly one MISP attribute with the intended type
   and category (`http.user-agent` → `user-agent`, the guard marker `string` → `pattern-in-file`, `port` →
-  `port`, `ip-dst|port` → `ip-dst|port` with the composite `ip|port` value), and no MISP attribute is left
+  `port`, `ip-dst|port` → `ip-dst|port` with the composite `ip|port` value, and the exploration-schema `other` → `other`), and no MISP attribute is left
   without a CSV row. The event is hand-maintained alongside the CSV, so adding, removing, or retyping a CSV
   row without updating `artex_indicators.misp.json` to match in the same commit fails.
 - **`to_ids` mirrors the `rule` column** — a rule-backed indicator is `to_ids: true`; a host-forensic row
@@ -378,7 +456,7 @@ deterministically, assert engine-version-independent properties exactly (and sof
 recorded reference), and avoid any content that reads as attack guidance. See
 [`../../CONTRIBUTING.en.md`](../../CONTRIBUTING.en.md) and the rule indexes in [`../README.md`](../README.md).
 
-All seven suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
+All eight suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
 on every push or pull request that touches `detections/` — and the indicator test also runs when the upstream
 source files it pins (`enrich/`, `selfupdate/`, `guard/`, `db/`, `cmd/artex/main.go`) change — so a rule
 change that drops an indicator, drifts from the ATT&CK layer, stops converting on a documented backend,

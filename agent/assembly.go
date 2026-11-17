@@ -61,6 +61,11 @@ func AugmentTools(ctx context.Context, agentKey string, base []actool.CoreTool) 
 		out = ToolResolve(ctx, agentKey, out)
 	}
 	out, def.FindingGuidance = findingWorkflowTools(agentKey, out)
+	// Register lowercase/snake_case aliases for the CamelCase built-ins (Bash →
+	// bash, WebFetch → web_fetch) and defer them, so a model that drifts to the
+	// model-conventional spelling still hits the handler while the model keeps
+	// seeing only the official names. See issue #19.
+	out, def.Deferred = addToolAliases(out, def.Deferred)
 	for i, t := range out {
 		out[i] = guardPanic(t)
 	}

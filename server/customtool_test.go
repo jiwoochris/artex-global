@@ -82,11 +82,21 @@ func TestShellQuote(t *testing.T) {
 
 // TestExecPython runs a real Python script end-to-end: it must read params from
 // stdin JSON and the mirrored env var, then print — verifying the whole script
-// param-passing path. Skips if no python3.
+// param-passing path. Skips if no runnable python3/python is on PATH.
 func TestExecPython(t *testing.T) {
-	interp, err := exec.LookPath("python3")
-	if err != nil {
-		t.Skip("python3 unavailable")
+	// LookPath alone is not enough on Windows: the Store "python3" App Execution
+	// Alias is found but dies with exit status 9009, so probe that it actually runs.
+	interp := ""
+	for _, c := range []string{"python3", "python"} {
+		if p, err := exec.LookPath(c); err == nil {
+			if exec.Command(p, "-c", "").Run() == nil {
+				interp = p
+				break
+			}
+		}
+	}
+	if interp == "" {
+		t.Skip("python unavailable")
 	}
 	code := `import json,sys,os
 a = json.load(sys.stdin)

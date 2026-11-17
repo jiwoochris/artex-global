@@ -24,9 +24,6 @@ web/next-env.d.ts
 *.swp
 *.swo
 
-# docs
-/docs/
-
 # os
 .DS_Store
 Thumbs.db
@@ -58,11 +55,14 @@ Thumbs.db
 /bench/
 /Dockerfile.bench
 /Dockerfile.bench.v2
-# --- artex-ko 로컬 운영: 커밋 금지 (소유자 지시: 테스트/스캔 결과 비공개) ---
+# --- artex-global 로컬 운영: 커밋 금지 (소유자 지시: 테스트/스캔 결과 비공개) ---
 work/
 test-results/
 scan-output/
 evidence-local/
+# 데모 앱을 로컬에서 기동하면 생기는 런타임 데이터(녹화 프록시 트래픽 인덱스 DB·
+# mitmproxy CA 개인키 등)라 공개 저장소에 커밋하지 않는다(BRIEF 경계 #2).
+/demo-data/
 *.local.env
 # D2 모델 비교 라이브 테스트: package agent 내부라 work/ 밖에 둘 수밖에 없고,
 # OPENROUTER_API_KEY·네트워크를 소비하는 로컬 전용 산출물이라 공개 저장소에
@@ -72,3 +72,14 @@ agent/d2_models_live_test.go
 # API 키·비밀: 어디에 두든 커밋 금지
 *.env
 secrets.env
+
+# --- Windows 소스 빌드 로컬 산출물: 커밋 금지 ---
+# go build -o artex.exe 로 생기는 Windows 단일 바이너리(유닉스판 /artex 와 대응)
+/artex.exe
+# 로컬 설정에 쓴 비밀(예: PostgreSQL 비밀번호). 절대 커밋하지 않는다.
+/.secrets/
+# SWC_NATIVE_BINDING_CACHE 를 프로젝트 하위로 돌릴 때 생기는 네이티브 바인딩 캐시
+/.swc-cache/
+# artex.exe 를 포그라운드로 띄울 때 리다이렉트한 런타임 로그
+/artex.out.log
+/artex.err.log

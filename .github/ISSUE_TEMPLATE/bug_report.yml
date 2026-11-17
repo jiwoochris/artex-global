@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         신고해 주셔서 고맙습니다. 아래 항목을 채워 주시면 재현과 수정이 빨라집니다.
-        **보안 취약점은 이 템플릿이 아니라 [SECURITY.md](https://github.com/jiwoochris/artex-ko/security/policy)의 비공개 절차로 신고해 주십시오.**
+        **보안 취약점은 이 템플릿이 아니라 [SECURITY.md](https://github.com/jiwoochris/artex-global/security/policy)의 비공개 절차로 신고해 주십시오.**
   - type: checkboxes
     id: preflight
     attributes:

@@ -2,11 +2,11 @@
 
 한국어 · [English](CONTRIBUTING.en.md)
 
-ARTEX 한국어판(`artex-ko`)에 관심을 가져 주셔서 고맙습니다. 이 문서는 기여를 시작하기 전에
+ARTEX 글로벌판(`artex-global`)에 관심을 가져 주셔서 고맙습니다. 이 문서는 기여를 시작하기 전에
 알아 두어야 할 범위·방침·절차를 한국어로 정리한 것입니다. 기여를 보내기 전에 반드시
 [사용 범위와 법적 책임](#사용-범위와-법적-책임)과 [현지화 방침](#현지화-방침)을 먼저 읽어 주십시오.
 
-- 버그를 신고하거나 기능을 제안하려면 → [이슈 템플릿](https://github.com/jiwoochris/artex-ko/issues/new/choose)을 사용하십시오.
+- 버그를 신고하거나 기능을 제안하려면 → [이슈 템플릿](https://github.com/jiwoochris/artex-global/issues/new/choose)을 사용하십시오.
 - 번역·현지화 오류를 발견했다면 → "번역·현지화 오류" 이슈 템플릿을 사용하십시오.
 - 보안 취약점을 발견했다면 → **공개 이슈로 올리지 말고** [SECURITY.md](SECURITY.md)의 절차를 따라 주십시오.
 - 모든 참여자는 [행동 강령(CODE_OF_CONDUCT.md)](CODE_OF_CONDUCT.md)을 지켜야 합니다.
@@ -25,7 +25,7 @@ ARTEX 는 LLM 멀티 에이전트가 **자율적으로** 침투 테스트를 수
   또는 그런 사용을 조장하는 변경은 받지 않습니다.
 - 대한민국에서 권한 없이 타인의 정보통신망에 침입하거나 장애를 일으키는 행위는
   「정보통신망 이용촉진 및 정보보호 등에 관한 법률」 위반이며, 수집·노출되는 개인정보는
-  「개인정보 보호법」의 적용을 받습니다. 자세한 고지는 [README](README.md#️-먼저-읽어-주세요--사용-범위와-국내법-고지)에 있습니다.
+  「개인정보 보호법」의 적용을 받습니다. 자세한 고지는 [README](README.ko.md#️-먼저-읽어-주세요--사용-범위와-국내법-고지)에 있습니다.
 
 기여로 제출한 코드·문서가 어떻게 쓰이는지에 대한 법적 책임은 그것을 실행하는 사용자 본인이
 부담합니다. 이 저장소는 "있는 그대로(AS IS)" 제공됩니다.
@@ -34,14 +34,14 @@ ARTEX 는 LLM 멀티 에이전트가 **자율적으로** 침투 테스트를 수
 
 ## 현지화 방침
 
-이 저장소의 존재 이유는 원본 [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX)의
-**판단 성능을 그대로 보존하면서 사용자에게 보이는 산출물만 한국어로 바꾸는 것**입니다.
+이 저장소의 존재 이유는 원본 [Autumn-27/ARTEX](https://github.com/Autumn-27/ARTEX)(현재 접속 불가, 2026-10 확인)의
+**판단 성능을 그대로 보존하면서 사용자에게 보이는 산출물만 설정한 언어로 바꾸는 것**입니다.
 이 방침을 벗어나는 번역 기여는 성능을 떨어뜨릴 수 있으므로 받지 않습니다.
 
 - **에이전트의 내부 추론 프롬프트(행동 지침 본문)는 번역하지 마십시오.** 원문(중국어)으로
   벤치마크된 동작을 유지해야 합니다. 이 본문은 `agent/promptcatalog.go` 와 DB 시드
   (`agent_prompts`)에 있습니다. 번역은 에이전트의 판단에 드리프트를 일으킵니다.
-- **사용자에게 노출되는 산출물만 한국어로 강제합니다.** 탐지 결과(`report_finding`),
+- **사용자에게 노출되는 산출물만 설정한 언어로 강제합니다.** 탐지 결과(`report_finding`),
   사실 요약(`record_fact`), 최종 리포트, 대화 응답이 여기에 해당합니다. 이 강제는
   `agent/prompt.go` 의 `langDirective()` 라는 코드 고정 꼬리로 각 역할의 system
   프롬프트 말미에 붙습니다. 출력 언어를 바꾸려면 이 함수를 수정하십시오.
@@ -52,11 +52,11 @@ ARTEX 는 LLM 멀티 에이전트가 **자율적으로** 침투 테스트를 수
   번역은 `web/messages/ko.json` 에 채웁니다.
 - UI 문자열을 새로 번역할 때는 하드코딩하지 말고 메시지 파일의 키로 추가하십시오.
 - **출력 언어 강제는 하드 캡이 아니라 프롬프트 유도입니다.** `langDirective()` 는 출력 언어를
-  한국어로 **지시**할 뿐, 강제로 고정하지는 않습니다. 그래서 한국어 충실도는 모델 역량·역할·
+  설정한 언어로 **지시**할 뿐, 강제로 고정하지는 않습니다. 그래서 언어 충실도는 모델 역량·역할·
   맥락에 따라 달라집니다. 현지화 변경을 검증할 때는 역량 있는 모델(프런티어급)을 쓰십시오.
   저가·소형 모델은 리포트·요약이 원문(중국어)으로 되돌아갈 수 있으므로, 번역이 제대로 적용됐는지를
   저가 모델의 출력만으로 판단하지 마십시오. OpenAI 계열 모델을 쓸 때의 `max_tokens` 설정 함정은
-  [README 의 "모델 선택과 출력 언어" 절](README.md#모델-선택과-출력-언어)에 정리되어 있습니다.
+  [README 의 "모델 선택과 출력 언어" 절](README.ko.md#모델-선택과-출력-언어)에 정리되어 있습니다.
 - **상류(upstream) 변경을 따라잡는 절차는 메인테이너 안내 문서에 있습니다.** 원본 ARTEX 가
   갱신됐을 때 보존 자산과 번역 대상을 가려서 반영하고, 번역 대칭과 드리프트를 검사하는 런북은
   [MAINTAINING.md](MAINTAINING.md)에 정리되어 있습니다.
@@ -142,8 +142,19 @@ npm ci
 npm run dev          # 개발 서버
 npm run build        # 프로덕션 빌드
 npm run build:static # 정적 내보내기 빌드(머지 게이트 · TypeScript 타입 검사 포함)
-npm run check        # Biome 린트·포맷 검사(정보용 · 선재 부채로 아직 머지 게이트 아님)
+npm run check        # Biome 린트·포맷 검사(web.yml 에서 실패 단계로 도는 머지 게이트 · 통과 필요)
 npm run check:fix    # 자동 수정
+```
+
+로컬에 Node(요구 버전 20+)가 없거나 설치된 네이티브 의존성이 플랫폼과 맞지 않으면 Docker
+로 동일하게 검증할 수 있습니다. `node_modules` 를 named volume 에 두면 호스트의 플랫폼용
+바이너리(예: `@parcel/watcher`·Biome)와 섞이지 않고 재실행도 빨라집니다. 이 저장소의 web
+검증은 CI 와 같은 이 방식으로 합니다.
+
+```bash
+docker run --rm -v "$PWD":/src -w /src/web \
+  -v artexko-web-nm:/src/web/node_modules \
+  node:22 bash -c 'npm ci && npm run build:static'
 ```
 
 커밋 전 포맷·린트는 Biome 으로 관리합니다. `lint-staged` 가 스테이징된 파일에 대해
@@ -167,9 +178,9 @@ docker compose up -d     # artex + postgres 기동 → http://localhost:8787
 3. 변경을 작성하고 **해당 범위의 검증을 직접 돌립니다.** Go 변경이면 위의
    `build`·`vet`·`test` 를 통과시킵니다. web 변경이면 `npm run build:static`
    (머지 게이트 · TypeScript 타입 검사를 함께 수행합니다)을 통과시킵니다.
-   `npm run check`(Biome)는 상류에서 딸려온 선재 린트 부채가 남아 있어 아직 머지
-   게이트가 아니고 `web.yml` 에서 정보용 단계로만 돌리므로, 전체를 통과시킬 필요는
-   없습니다. 대신 **내 변경이 새 오류를 더하지 않았는지**만 확인하면 됩니다(커밋할 때
+   `npm run check`(Biome)는 선재 린트 부채를 0 으로 정리한 뒤 정보용 단계에서 머지
+   게이트로 승격돼 `web.yml` 에서 실패 단계로 돌므로, `web/**` 를 건드리는 푸시·PR 은
+   이를 통과해야 합니다. **내 변경이 새 오류를 더하지 않았는지** 확인하세요(커밋할 때
    `lint-staged` 가 스테이징한 파일에만 `biome check --write` 를 자동으로 적용합니다).
    문서(`.md`)를 바꿨다면 `python3 -I scripts/check-doc-links.py` 로 저장소 안
    링크·이미지 참조와 문서 앵커(`#헤딩`) 링크가 깨지지 않았는지 확인합니다. 앵커는
@@ -208,7 +219,7 @@ i18n(web): 대시보드 네비게이션 라벨 한국어 번역
 [Suricata](https://suricata.io) 규칙([`detections/suricata/`](detections/suricata/)),
 [MITRE ATT&CK](https://attack.mitre.org/) 커버리지 레이어([`detections/attack/`](detections/attack/)), 그리고
 이 규칙들이 실제로 발화하는지 재현 가능하게 증명하는 테스트([`detections/tests/`](detections/tests/))로
-이루어져 있습니다. 탐지 규칙을 새로 보내거나 고칠 때는 아래 계약을 지켜 주십시오. 일곱 테스트 스위트가 이
+이루어져 있습니다. 탐지 규칙을 새로 보내거나 고칠 때는 아래 계약을 지켜 주십시오. 여덟 테스트 스위트가 이
 계약의 상당 부분을 기계적으로 강제하므로, 규칙만 바꾸고 테스트·레이어를 갱신하지 않으면 테스트가 실패합니다.
 
 - **모든 지표를 관측 가능한 사실에 접지합니다.** 규칙이 쓰는 문자열·User-Agent·행동 임계값은 이 저장소
@@ -243,11 +254,12 @@ i18n(web): 대시보드 네비게이션 라벨 한국어 번역
 - **공격 안내로 읽히는 내용을 넣지 않습니다.** 이 저장소의 탐지 자료는 방어·탐지 포지셔닝만 유지합니다.
   익스플로잇 수행 방법이나 탐지 우회 기법처럼 공격을 돕는 서술은 받지 않습니다.
 
-일곱 테스트 스위트는 Docker 만 있으면 그대로 돌릴 수 있고, 생성물을 저장소에 커밋하지 않습니다. 각 스크립트는
+여덟 테스트 스위트는 Docker 만 있으면 그대로 돌릴 수 있고, 생성물을 저장소에 커밋하지 않습니다. 각 스크립트는
 단언이 하나라도 실패하면 0 이 아닌 코드로 끝나므로 CI 나 pre-commit 훅에 바로 넣을 수 있습니다.
 
 ```bash
 detections/tests/sigma/run.sh           # Sigma: sigma check + 백엔드 변환 + 지표 보존
+detections/tests/sigma_match/run.sh     # Sigma: 원자 규칙이 악성 샘플에 발화·정상 샘플에 침묵
 detections/tests/sigma_lint/run.sh      # Sigma: SigmaHQ 관례 전체 검증기 + 문서화된 기준
 detections/tests/sigma_backends/run.sh  # Sigma 이식성: 상관 규칙이 여러 백엔드에서 변환되는지
 detections/tests/suricata/run.sh        # Suricata: pcap 합성 → suricata -r → 경보 수 단언
@@ -256,15 +268,15 @@ detections/tests/indicators/run.sh      # 지표: 규칙의 고정 지표 ↔ �
 detections/tests/misp/run.sh            # MISP: 지표 CSV ↔ MISP 이벤트 동기화 + pymisp 유효성
 ```
 
-일곱을 한 번에 돌리려면 [`detections/tests/run-all.sh`](detections/tests/run-all.sh)를 쓰십시오. CI 와 같은
-순서로 일곱을 순차 실행하고, 앞선 스위트가 실패해도 나머지를 끝까지 돌린 뒤 스위트별 PASS/FAIL 요약을
+여덟을 한 번에 돌리려면 [`detections/tests/run-all.sh`](detections/tests/run-all.sh)를 쓰십시오. CI 와 같은
+순서로 여덟을 순차 실행하고, 앞선 스위트가 실패해도 나머지를 끝까지 돌린 뒤 스위트별 PASS/FAIL 요약을
 출력하며, 하나라도 실패하면 0 이 아닌 코드로 끝납니다. 이 러너를 pre-commit 훅으로 바로 거는 설정 예시가
 저장소 루트의 [`.pre-commit-config.yaml`](.pre-commit-config.yaml)에 있습니다. `pip install pre-commit &&
 pre-commit install` 로 설치하면, 탐지 규칙이나 그 규칙이 고정한 상류 소스가 바뀌는 커밋에서만(CI 와 같은
 범위) 러너가 돌아 규칙·테스트 불일치를 푸시 전에 잡습니다. 같은 설정 파일에는 문서 내부 링크·이미지·앵커를
 검사하는 `docs` 훅(위 기여 절차 3번의 `check-doc-links.py`)도 함께 들어 있습니다.
 
-이 일곱 테스트는 저장소 CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))가
+이 여덟 테스트는 저장소 CI([`.github/workflows/detections.yml`](.github/workflows/detections.yml))가
 `detections/` 아래가 바뀐 푸시·PR 마다 돌립니다. 지표 일치 테스트는 그 지표가 가리키는 상류 소스 파일
 (`enrich/`·`selfupdate/`·`guard/`·`db/`·`cmd/artex/main.go`)이 바뀔 때도 돌아, 상류 재동기화가 User-Agent·
 마커·기본 포트를 바꿔 규칙이 조용히 낡는 경우를 함께 잡습니다. 따라서 규칙만 바꾸고 테스트·레이어를 갱신하지 않은 변경, SigmaHQ 관례를
