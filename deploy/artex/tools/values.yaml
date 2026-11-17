@@ -5,7 +5,9 @@ enabled: true
 nameOverride: artex
 partOf: artex
 replicaCount: 1
-releaseVersion: 0.1.0
+# two Pods must never share the SQLite files on the RWO volume during a rollout
+strategy: Recreate
+releaseVersion: 0.3.15
 containerPort: 8787
 nodeSelector:
   noraneko.cc/member: anon
@@ -21,6 +23,8 @@ health:
 env:
   # Go 의 time.Local 과 로그 타임스탬프를 KST 로. DB(timestamptz)는 이미 +09.
   TZ: Asia/Seoul
+  # upstream's default UI and agent language became English (artex-global); this instance stays Korean
+  ARTEX_LANG: ko
   ARTEX_KEY_DIR: /app/state
   ARTEX_DATA_DIR: /app/state/data
 envFrom:
@@ -34,6 +38,8 @@ dataPersistence:
   storageClass: oci-bv-retain
   size: 50Gi
   sharedWithPostgres: true
+  # chart 3.0.0: every PVC states its backup. none = operator decision (infra-platform D-023)
+  backup: none
 resources:
   requests:
     cpu: 100m
@@ -53,6 +59,7 @@ postgres:
   persistence:
     storageClass: oci-bv-retain
     size: 50Gi
+    backup: none
 redis:
   enabled: false
 # artex 는 FLB 가 아니라 Cloudflare Tunnel 로 들어온다. 차트 Ingress 는 끈다.

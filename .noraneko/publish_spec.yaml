@@ -13,7 +13,7 @@ steps:
     command: |
       set -euo pipefail
       export OCIR_REPOSITORY IMAGE_TAG BUILDRUN_HASH
-      export DEPLOY_ENV="${DEPLOY_ENV:-production}"
+      export DEPLOY_ENV="${DEPLOY_ENV:-tools}"
       OCI_COMPARTMENT_ID="$(oci devops build-run get --build-run-id "$OCI_BUILD_RUN_ID" --query 'data."compartment-id"' --raw-output)"
       export OCI_COMPARTMENT_ID
       export DEPLOY_IMAGE_REPOSITORY="yny.ocir.io/axbhyh1fdkqm/${OCIR_REPOSITORY}"

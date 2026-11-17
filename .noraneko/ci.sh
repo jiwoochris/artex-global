@@ -17,10 +17,10 @@ publish_image() {
   : "${DEPLOY_SVC:?DEPLOY_SVC is required}"
   : "${DEPLOY_REPO_URL:?DEPLOY_REPO_URL is required}"
   : "${DEPLOY_IMAGE_REPOSITORY:?DEPLOY_IMAGE_REPOSITORY is required}"
-  local env="${DEPLOY_ENV:-development}" branch
+  # artex is an internal tool: one scope (tools), one branch (infra-platform docs/guide/naming.md).
+  local env="${DEPLOY_ENV:-tools}" branch
   case "$env" in
-    development) branch=main ;;
-    production) branch=main ;;
+    tools) branch=main ;;
     *) echo "unknown DEPLOY_ENV ${env}" >&2; exit 1 ;;
   esac
 
