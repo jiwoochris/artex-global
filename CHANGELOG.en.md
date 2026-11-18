@@ -17,6 +17,7 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 
 ### Fixed
 
+- **A worker that only *thinks* no longer stalls the whole task (#70).** Some reasoning models (e.g. Claude Fable/Opus/Sonnet) sometimes end a turn after thinking without calling any tool or writing any text; the single empty-turn nudge was not enough to get them moving, so the run finished as a successful `done` having done nothing, and the planner treated the direction as covered — the task looked connected but never progressed (lighter models such as Haiku acted on the first turn and were unaffected). The worker now re-prompts such a thinking-only run to force it to act, and if it still does nothing the intent is marked `exhausted` (not `done`) so the planner re-approaches it.
 - Distinguish task report loading failures from empty reports and offer a retry button. Late responses from a previous task cannot replace the current task report.
 
 ## [0.3.15-global.1] · 2026-10-14 · ARTEX-global transition release
