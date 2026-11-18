@@ -12,7 +12,16 @@
       "submitting": "Logging in…",
       "title": "Log in",
       "username": "Username",
-      "welcome": "Welcome back. Enter your password to continue using ARTEX."
+      "welcome": "Welcome back. Enter your password to continue using ARTEX.",
+      "sso": "Sign in with SSO",
+      "ssoError": {
+        "state": "The sign-in request expired or was invalid. Please try again",
+        "denied": "Sign-in was denied by SSO",
+        "exchange": "Could not finish the SSO sign-in. Please try again",
+        "token": "Could not verify the SSO response",
+        "forbidden": "This account is not allowed to use ARTEX",
+        "unavailable": "SSO is unavailable. Please try again later"
+      }
     },
     "setup": {
       "confirmPassword": "Confirm password",

@@ -761,11 +761,12 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.registerSideRoutes(mux)
 
-	// Auth routes — exempt from JWT check (handled in requireAuth)
+	// Auth routes — exempt from JWT check (handled in requireAuth). This deployment
+	// signs in only through the platform SSO (oidc.go); the password routes
+	// (init, login, change-password) are deliberately not registered.
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)
-	mux.HandleFunc("POST /api/auth/init", s.authInit)
-	mux.HandleFunc("POST /api/auth/login", s.authLogin)
-	mux.HandleFunc("POST /api/auth/change-password", s.authChangePassword)
+	mux.HandleFunc("GET /api/auth/oidc/start", s.oidcStart)
+	mux.HandleFunc("GET /api/auth/oidc/callback", s.oidcCallback)
 
 	mux.HandleFunc("GET /api/health", s.health)
 	mux.HandleFunc("GET /api/stats", s.stats)

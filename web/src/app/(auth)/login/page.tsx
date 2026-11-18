@@ -2,23 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { useRouter } from "next/navigation";
-
 import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { api } from "@/lib/api";
 import { auth } from "@/lib/auth";
 
+// 서버가 SSO 콜백 실패 때 붙이는 ?sso_error= 코드(server/oidc.go oidcFail).
+const SSO_ERRORS = ["state", "denied", "exchange", "token", "forbidden", "unavailable"] as const;
+
 export default function LoginPage() {
-  const router = useRouter();
   const t = useTranslations("auth");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -43,6 +40,14 @@ export default function LoginPage() {
   }, [termsOpen]);
 
   useEffect(() => {
+    // SSO 콜백은 세션 토큰을 URL fragment 로 돌려준다(서버 로그에 남지 않게). 받으면 저장하고 주소에서 지운다.
+    const fromSso = new URLSearchParams(window.location.hash.slice(1)).get("token");
+    if (fromSso) {
+      window.history.replaceState(null, "", window.location.pathname);
+      auth.setToken(fromSso);
+      window.location.replace("/function/tasks");
+      return;
+    }
     // 已登录直接进主界面（静态导出下无 middleware 代劳这层跳转）。
     const token = auth.getToken();
     if (token) {
@@ -52,16 +57,15 @@ export default function LoginPage() {
       window.location.replace("/function/tasks");
       return;
     }
-    api
-      .authStatus()
-      .then(({ initialized }) => {
-        if (!initialized) router.replace("/setup");
-      })
-      .catch(() => setError(t("login.errorBackend")))
-      .finally(() => setChecking(false));
-  }, [router, t]);
+    const code = new URLSearchParams(window.location.search).get("sso_error");
+    if (code) {
+      const known = (SSO_ERRORS as readonly string[]).includes(code) ? code : "unavailable";
+      setError(t(`login.ssoError.${known}` as "login.ssoError.unavailable"));
+    }
+    setChecking(false);
+  }, [t]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSso(e: React.FormEvent) {
     e.preventDefault();
     if (!agreed) {
       setError(t("login.errorAgree"));
@@ -69,15 +73,7 @@ export default function LoginPage() {
     }
     setLoading(true);
     setError("");
-    try {
-      const { token } = await api.login("ARTEX", password);
-      auth.setToken(token);
-      window.location.replace("/function/tasks");
-    } catch {
-      setError(t("login.errorCredential"));
-    } finally {
-      setLoading(false);
-    }
+    window.location.href = "/api/auth/oidc/start";
   }
 
   if (checking) {
@@ -108,23 +104,7 @@ export default function LoginPage() {
             <h2 className="text-2xl font-medium tracking-tight">{t("login.title")}</h2>
             <p className="mx-auto max-w-xl text-muted-foreground">{t("login.welcome")}</p>
           </div>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="username">{t("login.username")}</Label>
-              <Input id="username" value="ARTEX" readOnly className="bg-muted text-muted-foreground" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">{t("login.password")}</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t("login.passwordPlaceholder")}
-                autoFocus
-                autoComplete="current-password"
-              />
-            </div>
+          <form onSubmit={handleSso} className="flex flex-col gap-4">
             <div className="flex items-start gap-2">
               <Checkbox
                 id="agree-terms"
@@ -147,8 +127,8 @@ export default function LoginPage() {
               </Label>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading || !password || !agreed}>
-              {loading ? t("login.submitting") : t("login.submit")}
+            <Button type="submit" className="w-full" disabled={loading || !agreed}>
+              {loading ? t("login.submitting") : t("login.sso")}
             </Button>
           </form>
         </div>

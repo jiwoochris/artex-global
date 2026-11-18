@@ -12,7 +12,16 @@
       "submitting": "로그인 중…",
       "title": "로그인",
       "username": "사용자 이름",
-      "welcome": "다시 오신 것을 환영합니다. 비밀번호를 입력하면 ARTEX 를 계속 사용할 수 있습니다."
+      "welcome": "다시 오신 것을 환영합니다. 비밀번호를 입력하면 ARTEX 를 계속 사용할 수 있습니다.",
+      "sso": "SSO 로 로그인",
+      "ssoError": {
+        "state": "로그인 요청이 만료되었거나 올바르지 않습니다. 다시 시도해 주세요",
+        "denied": "SSO 에서 로그인이 거부되었습니다",
+        "exchange": "SSO 로그인을 마치지 못했습니다. 다시 시도해 주세요",
+        "token": "SSO 응답을 확인하지 못했습니다",
+        "forbidden": "이 계정은 ARTEX 를 쓸 수 없습니다",
+        "unavailable": "SSO 를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요"
+      }
     },
     "setup": {
       "confirmPassword": "비밀번호 확인",

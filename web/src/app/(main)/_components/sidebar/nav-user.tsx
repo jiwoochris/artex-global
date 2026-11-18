@@ -1,8 +1,6 @@
 "use client";
 
-import * as React from "react";
-
-import { EllipsisVertical, KeyRound, LogOut } from "lucide-react";
+import { EllipsisVertical, LogOut } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,8 +16,6 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/c
 import { auth } from "@/lib/auth";
 import { getInitials } from "@/lib/utils";
 
-import { ChangePasswordDialog } from "./change-password-dialog";
-
 export function NavUser({
   user,
 }: {
@@ -31,7 +27,6 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const t = useTranslations("userMenu");
-  const [pwOpen, setPwOpen] = React.useState(false);
 
   function handleLogout() {
     auth.clearToken();
@@ -79,11 +74,6 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setPwOpen(true)}>
-              <KeyRound />
-              {t("changePassword")}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
               <LogOut />
               {t("logout")}
@@ -91,7 +81,6 @@ export function NavUser({
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
-      <ChangePasswordDialog open={pwOpen} onOpenChange={setPwOpen} />
     </SidebarMenu>
   );
 }

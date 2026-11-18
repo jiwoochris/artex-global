@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Check, KeyRound, LogOut } from "lucide-react";
+import { Check, LogOut } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,8 +15,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { auth } from "@/lib/auth";
 import { cn, getInitials } from "@/lib/utils";
-
-import { ChangePasswordDialog } from "./change-password-dialog";
 
 export function AccountSwitcher({
   users,
@@ -31,7 +29,6 @@ export function AccountSwitcher({
 }) {
   const t = useTranslations("userMenu");
   const [activeUser, setActiveUser] = useState(users[0]);
-  const [pwOpen, setPwOpen] = useState(false);
 
   function handleLogout() {
     auth.clearToken();
@@ -80,17 +77,12 @@ export function AccountSwitcher({
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setPwOpen(true)}>
-            <KeyRound />
-            {t("changePassword")}
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
             <LogOut />
             {t("logout")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <ChangePasswordDialog open={pwOpen} onOpenChange={setPwOpen} />
     </>
   );
 }

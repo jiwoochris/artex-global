@@ -12,7 +12,16 @@
       "submitting": "登录中...",
       "title": "登录",
       "username": "用户名",
-      "welcome": "欢迎回来，请输入密码以继续使用 ARTEX"
+      "welcome": "欢迎回来，请输入密码以继续使用 ARTEX",
+      "sso": "使用 SSO 登录",
+      "ssoError": {
+        "state": "登录请求已过期或无效，请重试",
+        "denied": "SSO 拒绝了登录",
+        "exchange": "无法完成 SSO 登录，请重试",
+        "token": "无法验证 SSO 响应",
+        "forbidden": "此账号无权使用 ARTEX",
+        "unavailable": "SSO 暂不可用，请稍后重试"
+      }
     },
     "setup": {
       "confirmPassword": "确认密码",

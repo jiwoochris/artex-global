@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const AUTH_PAGES = ["/login", "/setup"];
+const AUTH_PAGES = ["/login"];
 
 export function proxy(request: NextRequest) {
   // Mock demo：无真实登录，放行所有页面（客户端 auth 守卫也会放行）。
