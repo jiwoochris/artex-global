@@ -508,12 +508,81 @@ func identity(s string) string { return s }
 func shellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
 
 // renderTemplate replaces {name} placeholders with each param's rendered value.
+// A placeholder the template already wraps in double quotes is escaped for that
+// context instead of single-quoted: nesting a single-quoted value inside the
+// template's double quotes leaves the value's own double quotes live, so it can
+// close the template's quote and run a second command.
 func renderTemplate(tmpl string, params map[string]any, quote func(string) string) string {
 	out := tmpl
 	for k, v := range params {
-		out = strings.ReplaceAll(out, "{"+k+"}", quote(valToStr(v)))
+		s := valToStr(v)
+		ph := "{" + k + "}"
+		if c, ok := quoteCharAt(out, ph); ok {
+			out = strings.ReplaceAll(out, ph, shellQuoteWithin(s, c))
+			continue
+		}
+		out = strings.ReplaceAll(out, ph, quote(s))
 	}
 	return out
+}
+
+// shellQuoteWithin escapes s for the shell quoting context c that the template
+// already opened around the placeholder (" or ').
+func shellQuoteWithin(s string, c byte) string {
+	if c == '\'' {
+		// Inside single quotes only ' needs closing; no escapes are interpreted.
+		return strings.ReplaceAll(s, "'", `'\''`)
+	}
+	// Inside double quotes: escape what the shell still expands.
+	r := strings.NewReplacer(`\`, `\\`, `"`, `\"`, "$", `\$`, "`", "\\`")
+	return r.Replace(s)
+}
+
+// quoteCharAt reports the quote character the template uses around every
+// occurrence of ph, or false when at least one occurrence is unquoted.
+func quoteCharAt(tmpl, ph string) (byte, bool) {
+	q := byte(0)
+	for i := 0; ; {
+		j := strings.Index(tmpl[i:], ph)
+		if j < 0 {
+			return q, q != 0
+		}
+		j += i
+		c, ok := quoteAround(tmpl, j, j+len(ph))
+		if !ok || (q != 0 && c != q) {
+			return 0, false
+		}
+		q = c
+		i = j + len(ph)
+	}
+}
+
+// quoteAround reports which quote character, if any, encloses tmpl[a:b].
+func quoteAround(tmpl string, a, b int) (byte, bool) {
+	q := byte(0)
+	for i := 0; i < a; i++ {
+		switch c := tmpl[i]; {
+		case q != 0 && c == q:
+			q = 0
+		case q != 0:
+		case c == '"' || c == '\'':
+			q = c
+		case c == '\\':
+			i++
+		}
+	}
+	if q == 0 {
+		return 0, false
+	}
+	for i := b; i < len(tmpl); i++ {
+		switch c := tmpl[i]; {
+		case c == q:
+			return q, true
+		case c == '\\':
+			i++
+		}
+	}
+	return 0, false
 }
 
 // valToStr renders a param value: scalars as-is, arrays/objects as compact JSON.

@@ -18,6 +18,7 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 ### Fixed
 
 - Distinguish task report loading failures from empty reports and offer a retry button. Late responses from a previous task cannot replace the current task report.
+- **A custom tool's `command` template no longer lets a parameter break out of the quotes the template already put around it.** The value was always wrapped in single quotes, which inside a template's own double quotes left the value's `"`, `$(...)` and backticks live, so a crafted parameter closed the quote and ran a second command. A parameter inside a quoted placeholder is now escaped for that quoting context. Placeholders that are not quoted keep the previous single-quote treatment.
 
 ## [0.3.15-global.1] · 2026-10-14 · ARTEX-global transition release
 
