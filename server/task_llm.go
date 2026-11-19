@@ -579,6 +579,7 @@ func (s *Server) agentsForTask(t *Task) *taskAgentBundle {
 	pl.SetNoaEnabled(s.m.NoaCompactionEnabled) // 实验功能:noa 上下文压缩(平台级开关,每 run 读)
 	pl.SetKillWork(s.engine.KillWork)
 	pl.SetSteerWork(s.engine.SteerWork)
+	pl.SetRunTimeout(time.Duration(s.agentRunSeconds("planner")) * time.Second)
 	pl.SetProxy(s.m.ProxyAddr(), s.m.ProxyCACert())
 	pl.SetWebSearch(s.webSearchFor("planner"))
 	pl.SetConstraintInject(s.constraintInjectPlanner) // 操作约束注入 planner(可配置,默认开)
