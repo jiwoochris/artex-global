@@ -18,6 +18,7 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 ### Fixed
 
 - Distinguish task report loading failures from empty reports and offer a retry button. Late responses from a previous task cannot replace the current task report.
+- Fix planning rounds that never ended while re-saving the same todo list. A `TodoWrite` that leaves the list unchanged is refused with a prompt to end the round, and the planning agent's run time (`run_seconds`) from agent management now applies to each round. It used to be ignored, so rounds had no time limit.
 
 ## [0.3.15-global.1] · 2026-10-14 · ARTEX-global transition release
 

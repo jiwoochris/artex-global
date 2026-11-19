@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Autumn-27/artex/db"
 	"github.com/Autumn-27/artex/intercept"
 	"github.com/Autumn-27/norma/agentcore"
+	"github.com/Autumn-27/norma/harness"
 	"github.com/Autumn-27/norma/llm"
 	"github.com/Autumn-27/norma/permission"
 	actool "github.com/Autumn-27/norma/tool"
@@ -28,6 +31,7 @@ type Planner struct {
 	window            int                                    // context window in tokens (for compaction)
 	windowFn          func() int                             // optional dynamic task-chain minimum
 	maxTurns          int                                    // max agent turns per run (0 = unlimited)
+	runTimeout        time.Duration                          // wall-clock budget per planning round (0 = unlimited)
 	killWork          func(intentID int64) error             // engine callback to terminate a running work (nil = off)
 	steerWork         func(intentID int64, msg string) error // engine callback to steer a running work mid-run (nil = off)
 	proxyAddr         string                                 // recording proxy for WebFetch (empty = direct)
@@ -123,6 +127,42 @@ func (p *Planner) SetKillWork(fn func(intentID int64) error) { p.killWork = fn }
 // SetSteerWork wires the engine's per-work steering callback so the planner's
 // steer_work tool can inject a mid-run course-correction into a running worker.
 func (p *Planner) SetSteerWork(fn func(intentID int64, msg string) error) { p.steerWork = fn }
+
+// SetRunTimeout configures the wall-clock budget for one planning round
+// (0 = unlimited). When it fires, the SDK settlement phase still runs.
+func (p *Planner) SetRunTimeout(run time.Duration) { p.runTimeout = run }
+
+// unchangedTodoGuard refuses a TodoWrite that rewrites the planning todo with
+// exactly what it already holds. The SDK acks every TodoWrite with "continue
+// with the tasks", so a planner that has nothing new to dispatch can otherwise
+// re-save the same list turn after turn and never end its round.
+type unchangedTodoGuard struct{ todos *actool.TodoStore }
+
+const unchangedTodoMessage = "待办清单与当前完全相同，本次 TodoWrite 未生效。清单里没有本轮能推进的步骤：现在就结束本轮，给出你的判断，不要再调用任何工具。"
+
+func (g unchangedTodoGuard) PreToolUse(_ context.Context, name string, input []byte) (bool, string, []byte) {
+	if name != "TodoWrite" || g.todos == nil {
+		return false, "", nil
+	}
+	var in struct {
+		Todos []actool.Todo `json:"todos"`
+	}
+	if err := json.Unmarshal(input, &in); err != nil {
+		return false, "", nil
+	}
+	if slices.Equal(in.Todos, g.todos.List()) {
+		return true, unchangedTodoMessage, nil
+	}
+	return false, "", nil
+}
+
+func (unchangedTodoGuard) PostToolUse(context.Context, string, []byte, []byte, bool) {}
+
+func (unchangedTodoGuard) Stop(context.Context, []llm.Message) (bool, []string, string) {
+	return false, nil, ""
+}
+
+var _ harness.HookRunner = unchangedTodoGuard{}
 
 // renderPlannerTodos formats the persistent planning todo for injection into the
 // wake-up prompt (empty when there are no todos yet — first wake-up).
@@ -395,9 +435,9 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 		sysBody += constraintBlock(ts) // 操作约束(若有)注入系统提示,框定探索边界
 	}
 	system, boundary := deferredSystem(sysBody, def)
-	// planner 无自身墙钟预算;有 deadline 时把 MaxDuration 夹逼到剩余,让在跑的规划轮在
-	// 任务到点时进收尾(因超时→任务超时词,因步数→per-run 词)。
-	maxDur, clamped := clampMaxDuration(tc.DeadlineUnix, 0)
+	// planner 的墙钟预算 = 自身 run_seconds;有 deadline 时再夹逼到剩余,让在跑的规划轮在
+	// 预算或任务到点时进收尾(因超时→任务超时词,因步数→per-run 词)。
+	maxDur, clamped := clampMaxDuration(tc.DeadlineUnix, p.runTimeout)
 	settle := wrapupSettlement("planner", nil)
 	if tc.DeadlineUnix > 0 {
 		settle = wrapupSettlementForTask("planner", nil, clamped)
@@ -431,6 +471,7 @@ func (p *Planner) Plan(ctx context.Context, taskID int64, as *db.AssetStore, ts 
 		Compaction:            compactionConfig(p.compactionWindow()),
 		// 跨唤醒共享的规划待办：让串行链在多轮之间保留（session 是新的，store 不是）。
 		Todos: p.todoFor(ts.ID()),
+		Hooks: unchangedTodoGuard{todos: p.todoFor(ts.ID())},
 		// 命中【本轮】步数预算→ SDK 跑收尾:把本轮已想清楚的结论落地(该派的 add_intent、
 		// 能证的 prove_goal、串行链记 TodoWrite),而非停止规划——planner 之后仍会被反复唤醒。
 		// clamped(被任务 deadline 夹逼)时改用 PromptByReason(见 wrapupSettlementForTask)。
