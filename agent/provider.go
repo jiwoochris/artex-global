@@ -8,8 +8,11 @@
 package agent
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -77,6 +80,17 @@ type Config struct {
 	// Retry 是该配置解析后的重试参数(profile 覆盖 → 全局策略 → 内置默认,由
 	// server 侧解析)。三层的含义见 RetryConfig;零值 = 完全沿用内置默认。
 	Retry RetryConfig
+	// ChatGPTPlan selects OpenAI's Sign in with ChatGPT transport profile. The
+	// underlying provider remains Responses API, while this boundary injects a
+	// refreshed OAuth token and removes fields unsupported by plan-backed access.
+	ChatGPTPlan bool
+	TokenSource BearerTokenSource
+}
+
+// BearerTokenSource deliberately exposes only a short-lived access token. The
+// provider never receives or persists the account's refresh token.
+type BearerTokenSource interface {
+	AccessToken(context.Context) (string, error)
 }
 
 // RetryConfig 是随一个 LLM 配置走的重试参数。每层的「次数」统一语义:
@@ -218,6 +232,14 @@ func ConfigFrom(provider, model, baseURL, apiKey, proxy string) Config {
 		if c.Model == "" {
 			c.Model = "gpt-5"
 		}
+	case "chatgpt-plan":
+		c.Format = llm.FormatOpenAIResponses
+		c.BaseURL = "https://api.openai.com/v1"
+		c.ChatGPTPlan = true
+		c.Stream = true
+		if c.Model == "" {
+			c.Model = "gpt-6.1-sol"
+		}
 	default:
 		c.Format = llm.FormatAnthropic
 		// provider appends "/v1/messages".
@@ -241,6 +263,9 @@ func isFalsy(s string) bool {
 
 // Provider returns the short provider name ("anthropic"/"openai").
 func (c Config) Provider() string {
+	if c.ChatGPTPlan {
+		return "chatgpt-plan"
+	}
 	switch c.Format {
 	case llm.FormatOpenAI:
 		return "openai"
@@ -257,6 +282,12 @@ func (c Config) NewProvider() (llm.Provider, error) {
 	client, err := quotaAwareHTTPClient(c.Proxy, c.SessionHeaderKey)
 	if err != nil {
 		return nil, err
+	}
+	if c.ChatGPTPlan {
+		if c.TokenSource == nil {
+			return nil, errors.New("chatgpt plan: no connected ChatGPT account")
+		}
+		client.Transport = chatGPTPlanTransport{base: client.Transport, tokens: c.TokenSource}
 	}
 	lc := llm.Config{
 		Format:     c.Format,
@@ -376,6 +407,193 @@ func (t quotaAwareTransport) RoundTrip(req *http.Request) (*http.Response, error
 		resp.Status = "402 Payment Required"
 	}
 	return resp, nil
+}
+
+// chatGPTPlanTransport adapts Norma's ordinary Responses API request to the
+// stricter request profile accepted by Sign in with ChatGPT. It runs before the
+// quota/recording transport so diagnostics capture the actual wire request.
+type chatGPTPlanTransport struct {
+	base   http.RoundTripper
+	tokens BearerTokenSource
+}
+
+func (t chatGPTPlanTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	token, err := t.tokens.AccessToken(req.Context())
+	if err != nil {
+		return nil, err
+	}
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, fmt.Errorf("chatgpt plan: read Responses request: %w", err)
+	}
+	_ = req.Body.Close()
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return nil, fmt.Errorf("chatgpt plan: decode Responses request: %w", err)
+	}
+
+	// Plan-backed inference is streaming and stateless. max_output_tokens and
+	// temperature are intentionally absent: this OAuth profile currently rejects
+	// those ordinary API fields.
+	payload["stream"] = true
+	payload["store"] = false
+	for _, field := range []string{
+		"background", "conversation", "max_output_tokens", "max_tool_calls",
+		"metadata", "moderation", "multi_agent", "previous_response_id", "prompt",
+		"prompt_cache_retention", "safety_identifier", "temperature", "top_logprobs",
+		"top_p", "truncation", "user",
+	} {
+		delete(payload, field)
+	}
+
+	// Direct plan access accepts function tools as an additional_tools developer
+	// input item instead of the public API's top-level tools field.
+	if tools, ok := payload["tools"].([]any); ok && len(tools) > 0 {
+		input, _ := payload["input"].([]any)
+		additionalTools := map[string]any{
+			"type":  "additional_tools",
+			"role":  "developer",
+			"tools": tools,
+		}
+		payload["input"] = append([]any{additionalTools}, input...)
+	}
+	delete(payload, "tools")
+
+	body, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("chatgpt plan: encode Responses request: %w", err)
+	}
+	clone := req.Clone(req.Context())
+	clone.Header = req.Header.Clone()
+	clone.Header.Set("Authorization", "Bearer "+token)
+	clone.Header.Set("Content-Type", "application/json")
+	clone.Body = io.NopCloser(bytes.NewReader(body))
+	clone.ContentLength = int64(len(body))
+	clone.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(body)), nil
+	}
+	resp, err := t.base.RoundTrip(clone)
+	if err == nil && resp != nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		resp.Body = newCompletedSSEBody(resp.Body)
+	}
+	return resp, err
+}
+
+// completedSSEBody enforces the plan endpoint's terminal-event contract. Norma's
+// generic Responses adapter historically treats response.incomplete like a
+// normal end turn and accepts a bare EOF; for plan-backed access only an explicit
+// response.completed is success. Frames remain streaming (one SSE event buffered
+// at a time), while incomplete/bare-EOF become ordinary response.failed events.
+type completedSSEBody struct {
+	source       io.ReadCloser
+	reader       *bufio.Reader
+	pending      []byte
+	sourceEOF    bool
+	terminalSeen bool
+}
+
+func newCompletedSSEBody(source io.ReadCloser) *completedSSEBody {
+	return &completedSSEBody{source: source, reader: bufio.NewReader(source)}
+}
+
+func (b *completedSSEBody) Read(p []byte) (int, error) {
+	for len(b.pending) == 0 {
+		if b.sourceEOF {
+			if b.terminalSeen {
+				return 0, io.EOF
+			}
+			b.terminalSeen = true
+			b.pending = failedSSEFrame("stream ended before response.completed")
+			break
+		}
+		frame, eof, err := b.readFrame()
+		if err != nil {
+			return 0, err
+		}
+		b.sourceEOF = eof
+		if len(frame) == 0 {
+			continue
+		}
+		b.pending = b.validateFrame(frame)
+	}
+	n := copy(p, b.pending)
+	b.pending = b.pending[n:]
+	return n, nil
+}
+
+func (b *completedSSEBody) Close() error { return b.source.Close() }
+
+func (b *completedSSEBody) readFrame() ([]byte, bool, error) {
+	var frame bytes.Buffer
+	for {
+		line, err := b.reader.ReadString('\n')
+		frame.WriteString(line)
+		if line == "\n" || line == "\r\n" {
+			return frame.Bytes(), false, nil
+		}
+		if err == io.EOF {
+			return frame.Bytes(), true, nil
+		}
+		if err != nil {
+			return nil, false, err
+		}
+	}
+}
+
+func (b *completedSSEBody) validateFrame(frame []byte) []byte {
+	event := ""
+	data := ""
+	for _, line := range strings.Split(string(frame), "\n") {
+		line = strings.TrimSuffix(line, "\r")
+		switch {
+		case strings.HasPrefix(line, "event:"):
+			event = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
+		case strings.HasPrefix(line, "data:"):
+			if data != "" {
+				data += "\n"
+			}
+			data += strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		}
+	}
+	var envelope struct {
+		Type              string `json:"type"`
+		IncompleteDetails *struct {
+			Reason string `json:"reason"`
+		} `json:"incomplete_details"`
+		Response *struct {
+			IncompleteDetails *struct {
+				Reason string `json:"reason"`
+			} `json:"incomplete_details"`
+		} `json:"response"`
+	}
+	_ = json.Unmarshal([]byte(data), &envelope)
+	if event == "" {
+		event = envelope.Type
+	}
+	switch event {
+	case "response.completed":
+		b.terminalSeen = true
+	case "response.failed", "error":
+		b.terminalSeen = true
+	case "response.incomplete":
+		b.terminalSeen = true
+		reason := "response.incomplete"
+		if envelope.Response != nil && envelope.Response.IncompleteDetails != nil && envelope.Response.IncompleteDetails.Reason != "" {
+			reason += ": " + envelope.Response.IncompleteDetails.Reason
+		} else if envelope.IncompleteDetails != nil && envelope.IncompleteDetails.Reason != "" {
+			reason += ": " + envelope.IncompleteDetails.Reason
+		}
+		return failedSSEFrame(reason)
+	}
+	return frame
+}
+
+func failedSSEFrame(message string) []byte {
+	data, _ := json.Marshal(map[string]any{
+		"type":  "response.failed",
+		"error": map[string]any{"message": message},
+	})
+	return []byte("event: response.failed\ndata: " + string(data) + "\n\n")
 }
 
 // requestBodySnapshot copies an outgoing request body without consuming it.

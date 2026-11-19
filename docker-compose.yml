@@ -29,6 +29,10 @@ services:
       ARTEX_LLM_MODEL: ${ARTEX_LLM_MODEL:-}
       ARTEX_LLM_BASE_URL: ${ARTEX_LLM_BASE_URL:-}
       ARTEX_LLM_PROXY: ${ARTEX_LLM_PROXY:-}
+      # Sign in with ChatGPT stores rotating OAuth credentials here (0600),
+      # outside the workspace/data browser and on a persistent host mount.
+      ARTEX_CHATGPT_AUTH_FILE: /app/secrets/chatgpt-plan-auth.json
+      ARTEX_CHATGPT_REDIRECT_URI: ${ARTEX_CHATGPT_REDIRECT_URI:-}
       # 첫 실행 보호. 비워 두면 기동 로그에 무작위 설정 토큰이 찍히고, /setup 에서 그 값을
       # 입력해야 관리자 비밀번호를 만들 수 있습니다(docker compose logs artex 로 확인).
       # ARTEX_ADMIN_PASSWORD 를 주면 /setup 없이 그 값으로 바로 초기화합니다(8자 이상).
@@ -52,6 +56,9 @@ services:
       # 프로젝트 루트의 skills 를 컨테이너에 마운트합니다(이미지에 내장된 /app/skills 를 덮어씁니다).
       # skill 을 고치면 이미지를 다시 빌드할 필요 없이, 컨테이너가 호스트의 이 파일을 그대로 읽습니다.
       - ./skills:/app/skills
+      # OAuth refresh tokens must survive container recreation and must never be
+      # committed. The host directory is ignored by git.
+      - ./.secrets:/app/secrets
     restart: unless-stopped
 
 volumes:

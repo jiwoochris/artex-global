@@ -3233,6 +3233,27 @@
     }
   },
   "llmPage": {
+    "chatgpt": {
+      "title": "ChatGPT plan",
+      "description": "Use an eligible ChatGPT plan in ARTEX without an API key. Sign-in opens on this machine.",
+      "connected": "Using ChatGPT plan",
+      "disconnected": "Not connected",
+      "connectedAs": "Connected as {email}",
+      "connect": "Continue with ChatGPT",
+      "disconnect": "Disconnect",
+      "manageUsage": "Manage usage",
+      "welcomeTitle": "You're using your ChatGPT plan",
+      "welcomeDescription": "Eligible AI requests in ARTEX now use your ChatGPT plan or credits balance. You can review usage and adjust limits in ChatGPT settings.",
+      "gotIt": "Got it",
+      "toast": {
+        "finishInWindow": "Finish signing in in the window that opened",
+        "connected": "ChatGPT connected",
+        "connectFailed": "Could not start ChatGPT sign-in: {msg}",
+        "disconnected": "ChatGPT disconnected",
+        "disconnectedWarning": "Disconnected locally; remote revocation could not be confirmed",
+        "disconnectFailed": "Could not disconnect ChatGPT: {msg}"
+      }
+    },
     "page": {
       "subtitle": "Format / model / rate-limit settings shared by all agents. Click a card to edit; the star marks the active profile.",
       "poolConfig": "Rotation settings",
@@ -3262,6 +3283,10 @@
       "deleteAria": "Delete profile"
     },
     "health": {
+      "noAccount": {
+        "label": "No ChatGPT account",
+        "hint": "Connect ChatGPT at the top of this page"
+      },
       "noKey": {
         "label": "No key",
         "hint": "API Key is empty, so calls can't be made"
@@ -3376,7 +3401,8 @@
       "maxTokensFieldHint": {
         "openai": "Which key to send the cap under. max_tokens is the default and most compatible gateways recognize only this. OpenAI's official reasoning models (the o-series / GPT-5), on the other hand, recognize only max_completion_tokens and throw an unsupported_parameter error the moment they receive max_tokens.",
         "anthropic": "Selectable only in the openai format. Anthropic's field name is fixed to max_tokens.",
-        "openai-responses": "Selectable only in the openai format. The Responses API's field name is fixed to max_output_tokens."
+        "openai-responses": "Selectable only in the openai format. The Responses API's field name is fixed to max_output_tokens.",
+        "chatgpt-plan": "ChatGPT plan access does not accept an output-token cap; ARTEX omits it automatically."
       },
       "thinkingType": {
         "label": "Thinking switch · thinking.type",

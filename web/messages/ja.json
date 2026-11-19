@@ -3233,6 +3233,27 @@
     }
   },
   "llmPage": {
+    "chatgpt": {
+      "title": "ChatGPT プラン",
+      "description": "API キーなしで対象の ChatGPT プランを ARTEX で使用します。ログインはこの端末で開きます。",
+      "connected": "ChatGPT プランを使用中",
+      "disconnected": "未接続",
+      "connectedAs": "{email} として接続済み",
+      "connect": "ChatGPT で続行",
+      "disconnect": "切断",
+      "manageUsage": "使用量を管理",
+      "welcomeTitle": "ChatGPT プランを使用しています",
+      "welcomeDescription": "ARTEX の対象 AI リクエストは ChatGPT プランまたはクレジット残高を使用します。ChatGPT の設定で使用量を確認し、上限を調整できます。",
+      "gotIt": "了解",
+      "toast": {
+        "finishInWindow": "開いたウィンドウでログインを完了してください",
+        "connected": "ChatGPT に接続しました",
+        "connectFailed": "ChatGPT ログインを開始できませんでした: {msg}",
+        "disconnected": "ChatGPT を切断しました",
+        "disconnectedWarning": "ローカルでは切断しましたが、リモートの失効を確認できませんでした",
+        "disconnectFailed": "ChatGPT を切断できませんでした: {msg}"
+      }
+    },
     "page": {
       "subtitle": "すべてのエージェントが共有する形式 / モデル / レート制限の設定です。カードをクリックすると編集でき、星印は現在有効な設定です。",
       "poolConfig": "ローテーション設定",
@@ -3262,6 +3283,10 @@
       "deleteAria": "設定を削除"
     },
     "health": {
+      "noAccount": {
+        "label": "ChatGPT アカウントなし",
+        "hint": "このページ上部で ChatGPT を接続してください"
+      },
       "noKey": {
         "label": "Key 未設定",
         "hint": "API Key が空のため呼び出せません"
@@ -3376,7 +3401,8 @@
       "maxTokensFieldHint": {
         "openai": "上限をどのキーで送るかを指定します。max_tokens がデフォルトで、ほとんどの互換ゲートウェイはこれだけを認識します。一方、OpenAI 公式の推論モデル (o シリーズ / GPT-5) は max_completion_tokens のみを認識し、max_tokens を受け取るとただちに unsupported_parameter エラーを返します。",
         "anthropic": "openai 形式でのみ選択できます。Anthropic のフィールド名は max_tokens で固定です。",
-        "openai-responses": "openai 形式でのみ選択できます。Responses API のフィールド名は max_output_tokens で固定です。"
+        "openai-responses": "openai 形式でのみ選択できます。Responses API のフィールド名は max_output_tokens で固定です。",
+        "chatgpt-plan": "ChatGPT プラン経由では出力トークン上限を指定できないため、ARTEX が自動的に省略します。"
       },
       "thinkingType": {
         "label": "思考スイッチ · thinking.type",
