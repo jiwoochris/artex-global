@@ -30,8 +30,19 @@ func (t *runTrace) done(id string) {
 	}
 }
 
+// ReasonUnproductiveNoop is an artex-internal terminal reason (never produced by
+// the SDK) for a worker run that ended naturally yet called no tool and left no
+// text — a "thinking-only" no-op (issue #70). Some reasoning models spend a whole
+// turn thinking and stop without acting; the SDK reports this as ReasonCompleted,
+// which would otherwise mark the intent `done` and let the planner treat the
+// direction as covered, silently stalling the task. The worker retries such a run
+// (see Worker.execute) and, if it stays a no-op, returns this reason so the engine
+// marks the intent `exhausted` and the planner re-approaches instead.
+const ReasonUnproductiveNoop harness.TerminalReason = "unproductive_noop"
+
 var reasonHint = map[harness.TerminalReason]string{
 	harness.ReasonCompleted:         "模型正常结束了本轮，但没有留下文字总结；事实和资产以本轮工具调用记录为准",
+	ReasonUnproductiveNoop:          "模型只输出了思考、既没调用任何工具也没给出正文，整轮没有产出；多次催促仍未动手，意图标记为 exhausted，供规划者换方向而不是当作已覆盖",
 	harness.ReasonMaxTurns:          "达到步数上限(MaxTurns)：SDK 已执行收尾并写回事实和资产，意图会标记为 exhausted，供规划者换方向继续，而不是作为失败处理",
 	harness.ReasonTimeout:           "达到单次运行的墙钟预算(MaxDuration)：到点会打断在跑的工具并就地进收尾，把已识别的事实和资产写回，意图会标记为 exhausted",
 	harness.ReasonModelError:        "模型或 API 调用失败（网络、鉴权、限流、供应商 5xx 等），重试用尽后意图标记为 blocked——传输层故障导致这条意图基本没真正探成；查其执行过程（get_worker_trace）后再决定重派或换法",

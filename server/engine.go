@@ -1177,6 +1177,13 @@ func (e *Engine) runIntent(ctx context.Context, t *Task, name string, worker *ag
 	case reason == harness.ReasonTimeout:
 		state = "exhausted"
 		log.Printf("[worker %s] intent %d timed out (exhausted), wrote back %s after settlement", name, intent.ID, wrote)
+	case reason == agent.ReasonUnproductiveNoop:
+		// Thinking-only no-op (issue #70): the model never acted even after the
+		// worker re-prompted it. Don't record this as `done` — that would tell the
+		// planner the direction is covered and stall the task. Mark it exhausted so
+		// the planner re-approaches, same as a turn-limit hit.
+		state = "exhausted"
+		log.Printf("[worker %s] intent %d ended without acting (thinking-only, no tool calls after re-prompting); marking exhausted", name, intent.ID)
 	}
 	if state == "blocked" && isTaskLLMChainExhausted(err) {
 		_ = t.Store.SetIntentBlockedReason(intent.ID, db.IntentBlockedLLMQuota)

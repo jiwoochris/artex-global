@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -476,7 +477,14 @@ func (w *Worker) execute(ctx context.Context, name string, taskID int64, as *db.
 		opts.SessionID = WorkerSessionID(ts.ID(), intent.ID)
 	}
 	intentID := intent.ID
+	// toolCalls counts tool_use activities across every prompt run on this session,
+	// so after the run we can tell a worker that actually did something from a
+	// "thinking-only" no-op that never acted (issue #70).
+	var toolCalls int
 	emitWrap := func(r db.Activity) {
+		if r.Kind == "tool_use" {
+			toolCalls++
+		}
 		if emit != nil {
 			r.NodeID, r.Worker = &intentID, name
 			emit(r)
@@ -530,6 +538,51 @@ func (w *Worker) execute(ctx context.Context, name string, taskID int64, as *db.
 	// enters the wrap-up phase on the live ctx, so a run whose tool overran the budget
 	// still settles (no external hard-timeout backstop needed). ctx itself carries only
 	// pause / planner kill / shutdown, which the engine distinguishes and re-queues/stops.
-	_, reason, err := captureRunSession(ctx, s, input, emitWrap)
+	finalText, reason, err := captureRunSession(ctx, s, input, emitWrap)
+	// Thinking-only no-op rescue (issue #70): some reasoning models spend a whole
+	// turn thinking and end it with neither text nor a tool call. The SDK reports
+	// that as a natural completion (ReasonCompleted), and the empty-turn Stop hook
+	// is only allowed to nudge once (harness stopHookActive blocks a second
+	// consecutive nudge without an intervening tool-turn). For a model that stays
+	// thinking-only that single nudge is not enough, so the run ends having done
+	// literally nothing — the task then stalls because the intent looks `done`.
+	// Re-prompt the live session with an explicit "act now, stop thinking"
+	// instruction a bounded number of times; each is a fresh turn that also lets
+	// the Stop-hook nudge fire again. A run that called even one tool, produced any
+	// final text, errored, or was canceled is left untouched.
+	for attempt := 1; attempt <= emptyTurnRescueAttempts &&
+		isUnproductiveNoop(reason, err, toolCalls, finalText) &&
+		ctx.Err() == nil; attempt++ {
+		log.Printf("[worker %s] intent %d: thinking-only turn produced no action, re-prompting to force execution (%d/%d)",
+			name, intent.ID, attempt, emptyTurnRescueAttempts)
+		finalText, reason, err = captureRunSession(ctx, s, emptyTurnRescueInput, emitWrap)
+	}
+	// Still a pure no-op after the rescue: surface it as unproductive (not a
+	// successful `done`) so the engine marks the intent `exhausted` and the planner
+	// re-approaches the direction instead of treating it as covered.
+	if isUnproductiveNoop(reason, err, toolCalls, finalText) {
+		reason = ReasonUnproductiveNoop
+	}
 	return reason, tsx.Writes(), err
+}
+
+// emptyTurnRescueAttempts bounds how many times the worker re-prompts a
+// thinking-only run to force it to act before giving up (issue #70). It mirrors
+// the default empty-response-retries knob that the Stop-hook nudge reuses.
+const emptyTurnRescueAttempts = 2
+
+// emptyTurnRescueInput is the forceful re-prompt for a thinking-only no-op. It is
+// an internal behavior instruction, kept in the original Chinese like the rest of
+// the agent prompts (it is never surfaced as user-facing output).
+const emptyTurnRescueInput = "你上一轮只输出了思考，既没有调用任何工具，也没有给出正文结论，这一轮等于没有产出。" +
+	"现在立刻执行你刚才想好的下一步：直接调用一个工具开始动手，不要再只思考。"
+
+// isUnproductiveNoop reports whether a finished worker run did literally nothing:
+// it ended naturally (ReasonCompleted) with no error, yet called no tool and left
+// no final text — the thinking-only no-op of issue #70. A run that called a tool,
+// produced any text, or ended for any other reason is NOT a no-op (a tool run that
+// legitimately found nothing is a real `done`, not this case).
+func isUnproductiveNoop(reason harness.TerminalReason, err error, toolCalls int, finalText string) bool {
+	return err == nil && reason == harness.ReasonCompleted &&
+		toolCalls == 0 && strings.TrimSpace(finalText) == ""
 }
