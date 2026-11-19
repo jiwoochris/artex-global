@@ -113,14 +113,15 @@ func telegramHTML(m Message) (string, int) {
 		if m.HomeURL != "" {
 			footer = fmt.Sprintf("\n\n<a href=\"%s\">플랫폼에서 전체 보기</a>", telegramEscapeAttr(m.HomeURL))
 		}
-		kept := packItemCount(m.Items, telegramTextLimit, telegramReservedRunes, footer, runeSize, func(it Item, idx int) string {
-			return telegramBatchLine(it, idx+1)
-		})
+		// Each block carries its own leading separator so the character budget counts
+		// the blank line between entries, not just the entry text.
+		render := func(it Item, idx int) string { return "\n\n" + telegramBatchBlock(it, idx+1) }
+		kept := packItemCount(m.Items, telegramTextLimit, telegramReservedRunes, footer, runeSize, render)
 		items := m.Items[:kept]
 		b.Reset()
 		b.WriteString("<b>" + telegramEscape(telegramBatchTitle(m, items, len(m.Items))) + "</b>")
 		for i, it := range items {
-			b.WriteString("\n" + telegramEscape(telegramBatchLine(it, i+1)))
+			b.WriteString(render(it, i))
 		}
 		b.WriteString(footer)
 		return TruncateHTML(b.String(), telegramTextLimit), kept
@@ -132,6 +133,11 @@ func telegramHTML(m Message) (string, int) {
 	if it.IsStatusChange() {
 		b.WriteString(fmt.Sprintf("\n<b>상태 변경</b>: %s → %s",
 			telegramEscape(StatusLabel(it.FromStatus)), telegramEscape(StatusLabel(it.ToStatus))))
+	}
+	// Source identity first: which task produced this finding, and the numeric id an
+	// operator quotes when discussing it.
+	if meta := telegramItemMeta(it, " · "); meta != "" {
+		b.WriteString("\n" + meta)
 	}
 	if it.VulnClass != "" && it.VulnClass != it.Title() {
 		b.WriteString("\n<b>유형</b>: " + telegramEscape(it.VulnClass))
@@ -151,12 +157,43 @@ func telegramHTML(m Message) (string, int) {
 // telegramReservedRunes 预留给消息标题与可能出现的截断提示（按字符计）。
 const telegramReservedRunes = 160
 
-// telegramBatchLine 渲染汇总里的一条（未转义，由调用方统一转义）。
-func telegramBatchLine(it Item, idx int) string {
-	if a := assetLine(it.Assets, maxAssetsShown); a != "" {
-		return fmt.Sprintf("%d. %s · %s — %s", idx, SeverityLabel(it.Severity), it.Title(), a)
+// maxTaskNameRunes caps the task name shown in an alert. A task name is a label, not
+// evidence; a runaway generated name must not crowd out the finding text.
+const maxTaskNameRunes = 60
+
+// telegramItemMeta renders the source line ("Task: … · Finding: #42") as escaped
+// HTML, or "" when neither field is known. Keeping it in one helper makes the single
+// push and the digest show identical wording.
+func telegramItemMeta(it Item, sep string) string {
+	var parts []string
+	if name := OneLine(it.TaskName, maxTaskNameRunes); name != "" {
+		parts = append(parts, "<b>Task</b>: "+telegramEscape(name))
 	}
-	return fmt.Sprintf("%d. %s · %s", idx, SeverityLabel(it.Severity), it.Title())
+	if it.FindingID > 0 {
+		parts = append(parts, fmt.Sprintf("<b>Finding</b>: #%d", it.FindingID))
+	}
+	return strings.Join(parts, sep)
+}
+
+// telegramBatchBlock renders one digest entry as escaped HTML. Blocks are separated
+// by a blank line, which keeps each finding visually distinct in a long digest.
+func telegramBatchBlock(it Item, idx int) string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("<b>%d. %s</b> — <b>%s</b>",
+		idx, telegramEscape(SeverityLabel(it.Severity)), telegramEscape(it.Title())))
+	if meta := telegramItemMeta(it, " · "); meta != "" {
+		b.WriteString("\n" + meta)
+	}
+	if a := assetLine(it.Assets, maxAssetsShown); a != "" {
+		b.WriteString("\n<b>자산</b>: " + telegramEscape(a))
+	}
+	if s := OneLine(it.Summary, maxSummaryRunes); s != "" {
+		b.WriteString("\n<b>개요</b>: " + telegramEscape(s))
+	}
+	if it.DetailURL != "" {
+		b.WriteString(fmt.Sprintf("\n\n<a href=\"%s\">상세 보기</a>", telegramEscapeAttr(it.DetailURL)))
+	}
+	return b.String()
 }
 
 // telegramBatchTitle 渲染汇总消息的标题行。条数用的是**本条实际包含**的条数，

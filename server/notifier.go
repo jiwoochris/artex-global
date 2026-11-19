@@ -450,8 +450,15 @@ func (n *Notifier) itemFor(ctx context.Context, snap notify.Snapshot, baseURL st
 		// 消息里少一行资产而已。
 		log.Printf("[notify] failed to resolve asset name finding=%d: %v", snap.FindingID, err)
 	}
+	// Same best-effort rule for the task name: an empty name just drops that line.
+	taskName, err := n.pg.NotificationTaskName(ctx, snap.TaskID)
+	if err != nil {
+		log.Printf("[notify] failed to resolve the task name finding=%d task=%d: %v", snap.FindingID, snap.TaskID, err)
+	}
 	item := notify.Item{
 		FindingID:  snap.FindingID,
+		TaskID:     snap.TaskID,
+		TaskName:   taskName,
 		Name:       snap.Name,
 		VulnClass:  snap.VulnClass,
 		Severity:   snap.Severity,

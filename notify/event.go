@@ -25,6 +25,11 @@ type Snapshot struct {
 // Item 是一条待推送的漏洞，供渠道渲染。
 type Item struct {
 	FindingID int64
+	// TaskID / TaskName identify the task that produced the finding. TaskName is
+	// resolved by the server layer (best effort) and is omitted from rendering when
+	// empty, so a deleted or unknown task never blocks the push.
+	TaskID    int64
+	TaskName  string
 	Name      string
 	VulnClass string
 	Severity  string
