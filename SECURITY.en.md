@@ -42,4 +42,8 @@ The following are **not** covered by this security policy.
 - Problems caused by running the tool against someone else's system without authorization. Such use itself violates the [usage scope](README.md#️-read-first--authorized-use-and-legal-notice) and domestic law.
 - The mere fact that ARTEX runs an offensive tool "by design." This tool is built to perform penetration testing within an authorized scope.
 
-If you witness **misuse** of this tool (use beyond the authorized scope), do not report it through GitHub. Use the lawful reporting channels appropriate to the conduct (the owner of the affected system or the relevant authorities).
+## Reporting misuse
+
+If you believe ARTEX was used against your systems without authorization, email **travelandi01@gmail.com**. Send any technical indicators you have (IP addresses, timestamps, request logs and other indicators of compromise); we will review them and cooperate with investigators where they can help. Please do not report misuse in a public issue.
+
+The maintainers cannot stop or trace ARTEX instances that other people run. If you have suffered real harm, please also report it to the relevant authorities (in the US, the FBI at ic3.gov; elsewhere, your national law enforcement or CERT).
