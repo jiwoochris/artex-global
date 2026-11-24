@@ -1,0 +1,71 @@
+package agent
+
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/Autumn-27/artex/db"
+)
+
+func intentNode(id int64, state, summary string, anchors ...int64) *db.Node {
+	p, _ := json.Marshal(map[string]any{"summary": summary, "asset_ids": anchors})
+	// Production shape: ListByKind selects no anchors column, so Anchors stays
+	// empty and the payload is the only source of target assets.
+	return &db.Node{ID: id, Kind: db.KindIntent, State: state, Payload: p}
+}
+
+// The production failure: the same direction re-issued while an open copy sits
+// in the queue (METASCAN #3368 vs #3362, TCI #3489 vs #3484).
+func TestDuplicateOpenIntentBlocksQueuedDirection(t *testing.T) {
+	queued := intentNode(3484, "open",
+		"SQL-инъекции на https://lk.cainet.ru: систематически проверить параметры billmgr (func, elid, plid, ptype, sel, filter, ord, p_num, search, chapter, item, startform, lang, theme, out, sok) и кастомных модулей (v2.*.order.param, check_domain, domain.order.param, certificate.order.param, mhost.order.param, tcihostingdns.order.param, long/{token}) слепыми и time-based методами с отрицательным контролем и контролируемой задержкой; цель — версия СУБД и current_user, чтение системных таблиц.", 4175, 4015)
+	again := "Проверить SQL-инъекции в параметрах https://lk.cainet.ru/billmgr и кастомных модулей ТЦИ (sel, filter, ord, p_num, search, chapter, item, startform, lang, theme, out, sok, поля v2.*.order.param/check_domain/domain.order.param/certificate.order.param/mhost.order.param/tcihostingdns.order.param) в гостевой (level 8) и авторизованной (level 16, account 899) сессии: слепые и time-based проверки с контролируемой задержкой (SLEEP/pg_sleep) и отрицательным контролем, без перебора идентификаторов и разрушающих запросов; цель — версия СУБД, current_user и чтение системных таблиц как воспроизводимое доказательство."
+	id, _, dup := duplicateOpenIntent([]*db.Node{queued}, again, []int64{4175, 4015})
+	if !dup || id != 3484 {
+		t.Fatalf("queued duplicate not blocked: dup=%v id=%d", dup, id)
+	}
+}
+
+// A stopped intent is a forced interruption, not a verdict on the direction:
+// the same direction may be issued again (owner rule).
+func TestDuplicateOpenIntentAllowsStoppedDirection(t *testing.T) {
+	stopped := intentNode(3484, "stopped",
+		"SQL-инъекции на https://lk.cainet.ru: систематически проверить параметры billmgr", 4175, 4015)
+	again := "SQL-инъекции на https://lk.cainet.ru: систематически проверить параметры billmgr"
+	if _, _, dup := duplicateOpenIntent([]*db.Node{stopped}, again, []int64{4175}); dup {
+		t.Fatal("stopped intent must not block a re-issue")
+	}
+	exhausted := intentNode(3485, "exhausted", "SQL-инъекции на https://lk.cainet.ru: параметры billmgr", 4175)
+	if _, _, dup := duplicateOpenIntent([]*db.Node{exhausted}, again, []int64{4175}); dup {
+		t.Fatal("exhausted intent must not block a re-issue")
+	}
+	blocked := intentNode(3486, "blocked", "SQL-инъекции на https://lk.cainet.ru: параметры billmgr", 4175)
+	if _, _, dup := duplicateOpenIntent([]*db.Node{blocked}, again, []int64{4175}); dup {
+		t.Fatal("blocked intent must not block a re-issue")
+	}
+}
+
+// Different directions on the same host must stay allowed even with shared anchors.
+func TestDuplicateOpenIntentAllowsDifferentDirection(t *testing.T) {
+	queued := intentNode(3484, "open",
+		"SQL-инъекции на https://lk.cainet.ru: систематически проверить параметры billmgr", 4175, 4015)
+	other := "Проверить хранимые и отражённые XSS на https://lk.cainet.ru вне закрытого вектора имени роли: тема и тело тикета, профиль, услуги"
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, other, []int64{4175, 4015}); dup {
+		t.Fatal("different direction wrongly blocked")
+	}
+}
+
+// Shared target asset lowers the similarity floor, so a near-identical wording
+// on the same asset is still caught.
+func TestDuplicateOpenIntentAnchoredFloor(t *testing.T) {
+	queued := intentNode(3486, "open",
+		"SSRF на https://lk.cainet.ru: проверить функции, ходящие по URL (проверка домена, загрузка сертификата, вебхуки, интеграции, картинки, long-ссылки, редиректы); цель — внутренние сервисы, метаданные 169.254.169.254, file://, gopher://, доступ к админке на localhost; доказательство — уникальный маркер из ответа внутреннего сервиса.", 4175, 4015)
+	again := "Проверить SSRF во всех функциях https://lk.cainet.ru, ходящих по внешнему URL (check_domain, заказ/проверка сертификата, подтверждение домена, вебхуки/интеграции, изображения и аватар, long/{token}, редиректы): подставлять http://127.0.0.1:<порт>, http://localhost, file:///etc/passwd, gopher:// и метаданные, фиксируя уникальный маркер внутреннего ответа; отталкиваться от факта 3433 (внутренний запрос на epp.bmr.cainet.ru, тело не отдаётся) — искать функции, где тело внутреннего ответа возвращается клиенту, не атакуя сторонние сервисы."
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, again, []int64{4175, 4015}); !dup {
+		t.Fatal("anchored duplicate not blocked")
+	}
+	// Without the shared asset the same wording stays below the general floor.
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, again, []int64{9999}); dup {
+		t.Fatal("unanchored pair must not block at this similarity")
+	}
+}

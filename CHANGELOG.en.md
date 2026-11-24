@@ -8,6 +8,10 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 
 ## [Unreleased]
 
+### Planner
+
+- **Stopped the planner from re-issuing an open or running intent.** A queued intent is already dispatched work, so `add_intent` now rejects a duplicate direction (summary similarity 0.45, or 0.25 when the intents share a target asset). Intents that ended without a verdict — stopped, blocked, exhausted — stay re-issuable. This closes an observed loop where one direction was issued four times in 38 minutes while two copies remained open.
+
 ### Localization (i18n)
 
 - **Server console logs and the startup banner are now always English,** regardless of the display language, and a test fails if a non-ASCII message enters a log call. Runtime values such as model-written text and target names are printed as they are.
