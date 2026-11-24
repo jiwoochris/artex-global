@@ -55,6 +55,26 @@ func TestDuplicateOpenIntentAllowsDifferentDirection(t *testing.T) {
 	}
 }
 
+// The same wording aimed at a different asset is a different queued direction:
+// multi-target batches must not collapse into one intent.
+func TestDuplicateOpenIntentAllowsDisjointTargets(t *testing.T) {
+	queued := intentNode(1, "open",
+		"Verify authentication bypass on https://alpha.example.com", 101)
+	again := "Verify authentication bypass on https://bravo.example.com"
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, again, []int64{202}); dup {
+		t.Fatal("disjoint target sets must not be treated as duplicates")
+	}
+}
+
+// Short attack-vector tokens are the direction; dropping them would collapse
+// "Test DOM XSS" and "Test RPC RCE" into the same token set.
+func TestDuplicateOpenIntentKeepsShortVectorTokens(t *testing.T) {
+	queued := intentNode(1, "open", "Test DOM XSS", 7)
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, "Test RPC RCE", []int64{7}); dup {
+		t.Fatal("different short-vector directions must not collapse")
+	}
+}
+
 // Shared target asset lowers the similarity floor, so a near-identical wording
 // on the same asset is still caught.
 func TestDuplicateOpenIntentAnchoredFloor(t *testing.T) {

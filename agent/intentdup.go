@@ -30,10 +30,36 @@ const (
 
 var intentNonWord = regexp.MustCompile(`[^\p{L}\p{N}]+`)
 
+// intentStopwords are short function words that carry no direction. Short
+// domain tokens (xss, rce, sqli, ssrf, lfi, xxe) are kept on purpose: dropping
+// every token of three runes or fewer collapses "Test DOM XSS" and "Test RPC
+// RCE" to the same token set.
+var intentStopwords = map[string]struct{}{
+	"a": {}, "an": {}, "the": {}, "to": {}, "of": {}, "on": {}, "in": {},
+	"at": {}, "for": {}, "and": {}, "or": {}, "vs": {}, "by": {}, "with": {},
+	"from": {}, "as": {}, "is": {}, "are": {}, "be": {}, "do": {}, "no": {},
+	"not": {}, "into": {}, "via": {},
+	// Russian function words: short enough to survive the length cutoff but
+	// carrying no direction.
+	"а": {}, "без": {}, "более": {}, "бы": {}, "в": {}, "во": {}, "вот": {},
+	"все": {}, "всё": {}, "вы": {}, "для": {}, "до": {}, "его": {}, "ее": {},
+	"за": {}, "здесь": {}, "из": {}, "или": {}, "им": {}, "их": {}, "к": {},
+	"как": {}, "ко": {}, "ли": {}, "либо": {}, "мне": {}, "мы": {}, "на": {},
+	"над": {}, "наш": {}, "не": {}, "нет": {}, "ни": {}, "них": {}, "но": {},
+	"ну": {}, "о": {}, "об": {}, "однако": {}, "он": {}, "она": {}, "они": {},
+	"оно": {}, "от": {}, "перед": {}, "по": {}, "под": {}, "при": {}, "про": {},
+	"с": {}, "со": {}, "так": {}, "также": {}, "тем": {}, "то": {}, "тот": {},
+	"у": {}, "уж": {}, "хотя": {}, "чего": {}, "чем": {}, "что": {}, "чтобы": {},
+	"эта": {}, "эти": {}, "это": {}, "этот": {}, "я": {},
+}
+
 func intentTokens(s string) map[string]struct{} {
 	toks := map[string]struct{}{}
 	for _, w := range intentNonWord.Split(strings.ToLower(s), -1) {
-		if len([]rune(w)) <= 3 {
+		if len([]rune(w)) < 2 {
+			continue
+		}
+		if _, stop := intentStopwords[w]; stop {
 			continue
 		}
 		toks[w] = struct{}{}
@@ -95,6 +121,12 @@ func duplicateOpenIntent(nodes []*db.Node, summary string, anchors []int64) (int
 		if existing == "" {
 			continue
 		}
+		// Both intents target known assets: disjoint target sets are never the
+		// same queued direction, however similar the wording. Overlapping target
+		// sets keep the lower anchored threshold below.
+		if len(newAnchors) > 0 && len(exAnchors) > 0 && !anchorsOverlap(newAnchors, exAnchors) {
+			continue
+		}
 		sim := jaccard(ns, intentTokens(existing))
 		if sim >= dupSimilarityFloor {
 			return n.ID, existing, true
@@ -102,15 +134,18 @@ func duplicateOpenIntent(nodes []*db.Node, summary string, anchors []int64) (int
 		if len(newAnchors) == 0 {
 			continue
 		}
-		for _, a := range exAnchors {
-			if _, ok := newAnchors[a]; !ok {
-				continue
-			}
-			if sim >= dupAnchoredSimilarityFloor {
-				return n.ID, existing, true
-			}
-			break
+		if anchorsOverlap(newAnchors, exAnchors) && sim >= dupAnchoredSimilarityFloor {
+			return n.ID, existing, true
 		}
 	}
 	return 0, "", false
+}
+
+func anchorsOverlap(set map[int64]struct{}, b []int64) bool {
+	for _, v := range b {
+		if _, ok := set[v]; ok {
+			return true
+		}
+	}
+	return false
 }
