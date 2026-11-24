@@ -17,6 +17,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/Autumn-27/artex/config"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -245,7 +246,7 @@ func (s *Server) bootstrapAuth() {
 	if hash != "" {
 		return
 	}
-	if pw := os.Getenv(adminPasswordEnv); pw != "" {
+	if pw := config.Secret(adminPasswordEnv); pw != "" {
 		if utf8.RuneCountInString(pw) < minPasswordLen {
 			log.Printf("[auth] ignoring %s because it is shorter than %d characters; initialise with the setup token instead", adminPasswordEnv, minPasswordLen)
 		} else if len(pw) > maxPasswordBytes {
@@ -278,7 +279,7 @@ func (s *Server) currentSetupToken() string {
 	if s.setupToken != "" {
 		return s.setupToken
 	}
-	if v := strings.TrimSpace(os.Getenv(setupTokenEnv)); v != "" {
+	if v := strings.TrimSpace(config.Secret(setupTokenEnv)); v != "" {
 		s.setupToken = v
 		log.Printf("[auth] the admin password has not been set yet. The setup token is the value of environment variable %s (not printed to the log)", setupTokenEnv)
 		return s.setupToken

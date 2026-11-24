@@ -51,6 +51,11 @@ func main() {
 }
 
 func run() int {
+	// Take the server's own credentials out of the process environment before anything
+	// can spawn a child: agent bash commands, MCP servers and custom tools inherit
+	// os.Environ(), and an LLM steered by a hostile target must not be able to `env` them.
+	config.ScrubSecretEnv()
+
 	var (
 		addr    = flag.String("addr", "127.0.0.1:8787", "HTTP listen address (default accepts local connections only; use :8787 to serve other hosts)")
 		dataDir = flag.String("data", filepath.Join(config.BaseDir(), "data"), "data directory for SQLite stores (default: data/ next to the executable)")

@@ -199,7 +199,7 @@ func SkillDir() string {
 // instead of silently connecting to a wrong default. source describes where the
 // DSN came from (for startup logging).
 func PostgresDSN() (dsn, source string, err error) {
-	if v := strings.TrimSpace(os.Getenv("ARTEX_PG_DSN")); v != "" {
+	if v := strings.TrimSpace(Secret("ARTEX_PG_DSN")); v != "" {
 		return v, "environment variable ARTEX_PG_DSN", nil
 	}
 	db := Load().Database
