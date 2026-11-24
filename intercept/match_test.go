@@ -62,3 +62,22 @@ func TestMatchNoMatchWhenNoRulesConfigured(t *testing.T) {
 		t.Fatalf("an empty, successfully-loaded rule set must not match anything, got %+v", dec)
 	}
 }
+
+func TestRuleMatchesToolScope(t *testing.T) {
+	r := compiledRule{InterceptRule: db.InterceptRule{
+		MatchTarget: "tool_input",
+		MatchType:   "string",
+		Pattern:     "reboot",
+		ToolNames:   []string{"Bash"},
+	}}
+	if ruleMatches(r, "Write", []byte(`{"content":"reboot"}`)) {
+		t.Fatal("file content must not be matched by a Bash-scoped rule")
+	}
+	if !ruleMatches(r, "Bash", []byte(`{"command":"reboot"}`)) {
+		t.Fatal("Bash command must still match")
+	}
+	r.ToolNames = nil
+	if !ruleMatches(r, "Write", []byte(`{"content":"reboot"}`)) {
+		t.Fatal("empty tool scope must preserve legacy all-tools behavior")
+	}
+}

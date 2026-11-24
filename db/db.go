@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -280,6 +281,9 @@ ON CONFLICT (name) DO NOTHING`,
 	if err := d.seedDefaultInterceptRulesV3(); err != nil {
 		return fmt.Errorf("seed intercept rules v3: %w", err)
 	}
+	if err := d.seedDefaultInterceptRulesV4(); err != nil {
+		return fmt.Errorf("seed intercept rules v4: %w", err)
+	}
 	if err := d.seedDefaultAssetInterceptRules(); err != nil {
 		return fmt.Errorf("seed asset intercept rules: %w", err)
 	}
@@ -355,6 +359,7 @@ func (d *DB) seedDefaultInterceptRules() error {
 		target   string // tool_name | tool_input
 		typ      string // string | regex
 		pattern  string
+		tools    []string
 		action   string
 		message  string
 		priority int
@@ -365,7 +370,7 @@ func (d *DB) seedDefaultInterceptRules() error {
 			name:     "[内置] 递归强制删除 rm -rf",
 			target:   "tool_input",
 			typ:      "regex",
-			pattern:  `(?i)\brm\b.{0,80}(?:-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*|--recursive|--no-preserve-root)`,
+			pattern:  `(?i)\brm\b.{0,80}(?:-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*|--recursive|--no-preserve-root)\s+["']?(?:/(?:etc|bin|usr|boot|var|lib|sys|proc|dev|sbin|root)(?:/|["'\s]|$)|/app/data/?(?:["'\s]|$)|/(?:["'\s]|$))`,
 			action:   "deny",
 			message:  "禁止执行递归强制删除（rm -rf / rm --recursive），可能永久损坏系统或靶机环境",
 			priority: 100,
@@ -374,7 +379,7 @@ func (d *DB) seedDefaultInterceptRules() error {
 			name:     "[内置] 删除系统关键目录",
 			target:   "tool_input",
 			typ:      "regex",
-			pattern:  `\brm\b[^"'\n]{0,60}["'\s](/|/etc|/bin|/usr|/boot|/var|/lib|/sys|/proc|/dev|/sbin|/root)`,
+			pattern:  `\brm\b[^"'\n]{0,60}["'\s](/(?:etc|bin|usr|boot|var|lib|sys|proc|dev|sbin|root)(?:/|["'\s]|$)|/app/data/?(?:["'\s]|$)|/(?:["'\s]|$))`,
 			action:   "deny",
 			message:  "禁止删除系统关键路径",
 			priority: 100,
@@ -522,11 +527,18 @@ func (d *DB) seedDefaultInterceptRules() error {
 		},
 	}
 	for _, r := range rules {
+		if len(r.tools) == 0 {
+			r.tools = []string{"Bash", "shell_open", "shell_send"}
+		}
+		if r.priority == 80 {
+			r.tools = []string{"Bash", "shell_open", "shell_send", "WebFetch", "ExecuteExtraTool"}
+		}
+		toolsJSON, _ := json.Marshal(r.tools)
 		if _, err := d.Exec(`
-INSERT INTO intercept_rules(name, enabled, priority, match_target, match_type, pattern, action, message, timeout_enabled, timeout_seconds, timeout_action)
-VALUES ($1, true, $2, $3, $4, $5, $6, $7, false, 60, 'deny')
+INSERT INTO intercept_rules(name, enabled, priority, match_target, match_type, pattern, tool_names, action, message, timeout_enabled, timeout_seconds, timeout_action)
+VALUES ($1, true, $2, $3, $4, $5, $6, $7, $8, false, 60, 'deny')
 ON CONFLICT DO NOTHING`,
-			r.name, r.priority, r.target, r.typ, r.pattern, r.action, r.message,
+			r.name, r.priority, r.target, r.typ, r.pattern, toolsJSON, r.action, r.message,
 		); err != nil {
 			return fmt.Errorf("rule %q: %w", r.name, err)
 		}
@@ -548,6 +560,7 @@ func (d *DB) seedDefaultInterceptRulesV2() error {
 	rules := []struct {
 		name     string
 		pattern  string
+		tools    []string
 		action   string
 		message  string
 		enabled  bool
@@ -555,7 +568,8 @@ func (d *DB) seedDefaultInterceptRulesV2() error {
 	}{
 		{
 			name:     "[内置] 破坏性系统命令",
-			pattern:  `(?i)\b(rm\s+-rf\s+/|mkfs|dd\s+if=|:\(\)\s*\{|shutdown|reboot|>\s*/dev/sd)`,
+			pattern:  `(?i)\b(rm\s+-rf\s+/(?:["'\s]|$)|mkfs|dd\s+if=|:\(\)\s*\{|shutdown|reboot|>\s*/dev/sd)`,
+			tools:    []string{"Bash", "shell_open", "shell_send"},
 			action:   "deny",
 			message:  "破坏性命令被拒绝（rm -rf / / mkfs / dd / fork bomb / 关机重启 / 覆写磁盘设备）",
 			enabled:  true,
@@ -564,6 +578,7 @@ func (d *DB) seedDefaultInterceptRulesV2() error {
 		{
 			name:     "[内置] 数据外泄管道",
 			pattern:  `(?i)(curl|wget|nc|ncat)\b[^|]*\b(\|\s*(curl|wget|nc))`,
+			tools:    []string{"Bash", "shell_open", "shell_send"},
 			action:   "deny",
 			message:  "疑似数据外泄管道被拒绝（命令输出经 curl/wget/nc 外传）",
 			enabled:  false,
@@ -571,11 +586,12 @@ func (d *DB) seedDefaultInterceptRulesV2() error {
 		},
 	}
 	for _, r := range rules {
+		toolsJSON, _ := json.Marshal(r.tools)
 		if _, err := d.Exec(`
-INSERT INTO intercept_rules(name, enabled, priority, match_target, match_type, pattern, action, message, timeout_enabled, timeout_seconds, timeout_action)
-VALUES ($1, $2, $3, 'tool_input', 'regex', $4, $5, $6, false, 60, 'deny')
+INSERT INTO intercept_rules(name, enabled, priority, match_target, match_type, pattern, tool_names, action, message, timeout_enabled, timeout_seconds, timeout_action)
+VALUES ($1, $2, $3, 'tool_input', 'regex', $4, $5, $6, $7, false, 60, 'deny')
 ON CONFLICT DO NOTHING`,
-			r.name, r.enabled, r.priority, r.pattern, r.action, r.message,
+			r.name, r.enabled, r.priority, r.pattern, toolsJSON, r.action, r.message,
 		); err != nil {
 			return fmt.Errorf("rule %q: %w", r.name, err)
 		}
@@ -604,15 +620,36 @@ func (d *DB) seedDefaultInterceptRulesV3() error {
 		return nil
 	}
 	const name = "[内置] 删除类接口路径"
+	toolsJSON, _ := json.Marshal([]string{"Bash", "shell_open", "shell_send", "WebFetch", "ExecuteExtraTool"})
 	if _, err := d.Exec(`
-INSERT INTO intercept_rules(name, enabled, priority, match_target, match_type, pattern, action, message, timeout_enabled, timeout_seconds, timeout_action)
-SELECT $1, true, 80, 'tool_input', 'regex', $2, 'deny', $3, false, 60, 'deny'
+INSERT INTO intercept_rules(name, enabled, priority, match_target, match_type, pattern, tool_names, action, message, timeout_enabled, timeout_seconds, timeout_action)
+SELECT $1, true, 80, 'tool_input', 'regex', $2, $3, 'deny', $4, false, 60, 'deny'
 WHERE NOT EXISTS (SELECT 1 FROM intercept_rules WHERE name = $1)`,
 		name,
 		deleteEndpointPathPattern,
+		toolsJSON,
 		"禁止调用删除类接口（/delete /remove /unlink /erase 等），不论使用哪种 HTTP 方法——多数应用的删除接口用 GET/POST 就能触发，同样会真实删除目标数据",
 	); err != nil {
 		return fmt.Errorf("rule %q: %w", name, err)
 	}
 	return d.SetSetting("intercept_default_rules_v3", "done")
+}
+
+// seedDefaultInterceptRulesV4 scopes the built-in command/HTTP rules to the
+// tools that actually execute them. Before this migration, tool_input rules
+// matched the JSON of Write/Edit calls too, so ordinary file content containing
+// words such as "reboot" or "DROP" was blocked as if it were a command.
+func (d *DB) seedDefaultInterceptRulesV4() error {
+	if v, _, _ := d.GetSetting("intercept_default_rules_v4"); v == "done" {
+		return nil
+	}
+	commandTools, _ := json.Marshal([]string{"Bash", "shell_open", "shell_send"})
+	httpTools, _ := json.Marshal([]string{"Bash", "shell_open", "shell_send", "WebFetch", "ExecuteExtraTool"})
+	if _, err := d.Exec(`
+UPDATE intercept_rules
+   SET tool_names = CASE WHEN priority = 80 THEN $2::jsonb ELSE $1::jsonb END
+ WHERE name LIKE '[内置]%' AND tool_names = '[]'::jsonb`, string(commandTools), string(httpTools)); err != nil {
+		return fmt.Errorf("scope intercept rules: %w", err)
+	}
+	return d.SetSetting("intercept_default_rules_v4", "done")
 }

@@ -561,6 +561,18 @@ func (i *Interceptor) Match(toolName string, input []byte) (Decision, bool) {
 }
 
 func ruleMatches(r compiledRule, toolName string, input []byte) bool {
+	if len(r.ToolNames) > 0 {
+		allowed := false
+		for _, name := range r.ToolNames {
+			if name == toolName {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return false
+		}
+	}
 	var subject string
 	switch r.MatchTarget {
 	case "tool_name":

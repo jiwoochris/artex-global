@@ -1265,6 +1265,7 @@ export interface InterceptRule {
   match_target: InterceptMatchTarget;
   match_type: InterceptMatchType;
   pattern: string;
+  tool_names?: string[];
   action: InterceptAction;
   message: string;
   timeout_enabled: boolean;
