@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Autumn-27/artex/config"
 	"github.com/Autumn-27/artex/llmrec"
 	"github.com/Autumn-27/norma/agentcore"
 	"github.com/Autumn-27/norma/compaction"
@@ -144,8 +145,8 @@ func compactionConfig(windowTokens int) *compaction.Config {
 //	ANTHROPIC_API_KEY / OPENAI_API_KEY         = credentials
 func FromEnv() (Config, bool) {
 	prov := os.Getenv("ARTEX_LLM_PROVIDER")
-	anthKey := os.Getenv("ANTHROPIC_API_KEY")
-	oaiKey := os.Getenv("OPENAI_API_KEY")
+	anthKey := config.Secret("ANTHROPIC_API_KEY")
+	oaiKey := config.Secret("OPENAI_API_KEY")
 
 	if prov == "" {
 		switch {
@@ -161,7 +162,7 @@ func FromEnv() (Config, bool) {
 	c := Config{
 		BaseURL: os.Getenv("ARTEX_LLM_BASE_URL"),
 		Model:   os.Getenv("ARTEX_LLM_MODEL"),
-		Proxy:   strings.TrimSpace(os.Getenv("ARTEX_LLM_PROXY")),
+		Proxy:   strings.TrimSpace(config.Secret("ARTEX_LLM_PROXY")),
 		// 默认流式;ARTEX_LLM_STREAM=false/0/off 显式关闭走非流式。
 		Stream: !isFalsy(os.Getenv("ARTEX_LLM_STREAM")),
 	}
