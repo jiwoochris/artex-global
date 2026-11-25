@@ -585,7 +585,8 @@ func ruleMatches(r compiledRule, toolName string, input []byte) bool {
 	if len(r.ToolNames) > 0 {
 		allowed := false
 		for _, name := range r.ToolNames {
-			if name == toolName || (strings.HasPrefix(toolName, "mcp__") && name == "ExecuteExtraTool") {
+			canonical := CanonicalToolName(name)
+			if canonical == toolName || (strings.HasPrefix(toolName, "mcp__") && canonical == "ExecuteExtraTool") {
 				allowed = true
 				break
 			}

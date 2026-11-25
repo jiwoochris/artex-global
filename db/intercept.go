@@ -53,7 +53,9 @@ func scanInterceptRule(row interface{ Scan(...any) error }) (InterceptRule, erro
 		&r.TimeoutEnabled, &r.TimeoutSeconds, &r.TimeoutAction,
 		&r.CreatedAt, &r.UpdatedAt)
 	if err == nil && len(toolNamesJSON) > 0 {
-		_ = json.Unmarshal(toolNamesJSON, &r.ToolNames)
+		if unmarshalErr := json.Unmarshal(toolNamesJSON, &r.ToolNames); unmarshalErr != nil {
+			return r, fmt.Errorf("intercept rule %d: invalid tool_names: %w", r.ID, unmarshalErr)
+		}
 	}
 	return r, err
 }

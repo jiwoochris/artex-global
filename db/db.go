@@ -718,12 +718,12 @@ func (d *DB) seedDefaultInterceptRulesV4() error {
 	}
 	commandTools, _ := json.Marshal(commandToolNames())
 	httpTools, _ := json.Marshal(httpToolNames())
+	httpNames, _ := json.Marshal(httpBuiltInRules)
 	if _, err := d.Exec(`
 UPDATE intercept_rules
-   SET tool_names = CASE WHEN name IN ($3,$4,$5,$6,$7) THEN $2::jsonb ELSE $1::jsonb END
+   SET tool_names = CASE WHEN name IN (SELECT jsonb_array_elements_text($3::jsonb)) THEN $2::jsonb ELSE $1::jsonb END
  WHERE name LIKE '[内置]%' AND (tool_names = '[]'::jsonb OR tool_names = 'null'::jsonb)`,
-		string(commandTools), string(httpTools),
-		httpBuiltInRules[0], httpBuiltInRules[1], httpBuiltInRules[2], httpBuiltInRules[3], httpBuiltInRules[4]); err != nil {
+		string(commandTools), string(httpTools), string(httpNames)); err != nil {
 		return fmt.Errorf("scope intercept rules: %w", err)
 	}
 	// Existing installations still carry the pre-narrowing rm patterns. Replace
