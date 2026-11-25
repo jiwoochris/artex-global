@@ -247,7 +247,16 @@ func (s *Session) URL() string {
 	if s == nil || s.isClosed() {
 		return ""
 	}
-	return s.correlationID + randomString(nonceLength) + "." + s.serverURL.Host
+	return s.correlationID + randomString(nonceLength) + "." + s.serverURL.Hostname()
+}
+
+// Host returns the callback server hostname without the API port. The port
+// belongs to registration/polling only; a DNS label cannot contain it.
+func (s *Session) Host() string {
+	if s == nil || s.serverURL == nil {
+		return ""
+	}
+	return s.serverURL.Hostname()
 }
 
 // StartPolling polls the server on the given interval until StopPolling is

@@ -84,14 +84,25 @@ func TestOOBDisabledByConfig(t *testing.T) {
 
 func TestProbeIDUsesFullCallbackHost(t *testing.T) {
 	full := "c0ffeesessionnonce.example.test"
-	if got := probeIDForInteraction(full, "A? unrelated.example.test"); got != "c0ffeesessionnonce" {
+	if got := probeIDForInteraction(full, "A? unrelated.example.test", ""); got != "c0ffeesessionnonce" {
 		t.Fatalf("应以完整回调主机名的首段关联探测，got %q", got)
 	}
-	if got := probeIDForInteraction("", "GET / HTTP/1.1\r\nHost: c0ffeesessionnonce.example.test\r\n\r\n"); got != "c0ffeesessionnonce" {
+	if got := probeIDForInteraction("", "GET / HTTP/1.1\r\nHost: c0ffeesessionnonce.example.test\r\n\r\n", ""); got != "c0ffeesessionnonce" {
 		t.Fatalf("FullId 缺失时应从原始请求回退取回调主机名，got %q", got)
 	}
-	if got := probeIDForInteraction("", ""); got != "" {
+	if got := probeIDForInteraction("", "", ""); got != "" {
 		t.Fatalf("无主机名时不得伪造 probe_id，got %q", got)
+	}
+}
+
+// A DNS-exfiltration payload prefixes the probe label (data.<probe>.<server>);
+// the probe label is the one before the server hostname, not the first label.
+func TestProbeIDFindsPrefixedProbeLabel(t *testing.T) {
+	if got := probeIDForInteraction("data.c0ffeesessionnonce.oast.me", "", "oast.me"); got != "c0ffeesessionnonce" {
+		t.Fatalf("应以服务器域名前的标签作为 probe_id，got %q", got)
+	}
+	if got := probeIDForInteraction("", "GET / HTTP/1.1\r\nHost: data.c0ffeesessionnonce.oast.me\r\n\r\n", "oast.me"); got != "c0ffeesessionnonce" {
+		t.Fatalf("原始请求回退也应找到前置标签，got %q", got)
 	}
 }
 

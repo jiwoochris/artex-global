@@ -84,6 +84,9 @@ type liveSession struct {
 	seen   map[string]struct{}
 	closed bool
 	health func() (int64, error, time.Time, time.Time)
+	// serverHost is the callback hostname without port; it lets the probe label
+	// be found even when the target prefixed it (data.<probe>.<server>).
+	serverHost string
 }
 
 // pollSource is the subset of *oob.Session the live pump needs; tests inject
@@ -92,6 +95,11 @@ type pollSource interface {
 	urlClient
 	StartPolling(interval time.Duration, cb func(oob.Interaction)) error
 	Health() (int64, error, time.Time, time.Time)
+}
+
+// hostSource exposes the callback server hostname (no port).
+type hostSource interface {
+	Host() string
 }
 
 // newLiveSession wires a real *oob.Session into the seam and starts the
@@ -112,6 +120,9 @@ func newLiveSessionFrom(mint urlClient, src pollSource, pollInterval time.Durati
 		return nil, fmt.Errorf("oob: 会话未初始化")
 	}
 	ls := &liveSession{it: interactor{client: mint}, seen: make(map[string]struct{})}
+	if hs, ok := src.(hostSource); ok {
+		ls.serverHost = hs.Host()
+	}
 	err := src.StartPolling(pollInterval, func(in oob.Interaction) {
 		key := interactionKey(in)
 		ls.mu.Lock()
@@ -122,7 +133,7 @@ func newLiveSessionFrom(mint urlClient, src pollSource, pollInterval time.Durati
 		ls.seen[key] = struct{}{}
 		ls.buf = append(ls.buf, OOBInteraction{
 			Protocol:     in.Protocol,
-			UniqueID:     probeIDForInteraction(in.FullID, in.Raw),
+			UniqueID:     probeIDForInteraction(in.FullID, in.Raw, ls.serverHost),
 			FullID:       in.FullID,
 			Remote:       in.Remote,
 			Raw:          in.Raw,
@@ -153,7 +164,7 @@ func (ls *liveSession) Generate() (string, string, error) {
 // probeIDForInteraction maps an interaction back to the first DNS label issued
 // by Generate. Interactsh's UniqueID is the session correlation ID, not a
 // per-probe label, so only FullId or the raw request can identify the probe.
-func probeIDForInteraction(fullID, raw string) string {
+func probeIDForInteraction(fullID, raw, serverHost string) string {
 	for _, candidate := range []string{fullID, rawInteractionHost(raw)} {
 		candidate = strings.TrimSpace(candidate)
 		candidate = strings.TrimPrefix(candidate, "https://")
@@ -164,6 +175,19 @@ func probeIDForInteraction(fullID, raw string) string {
 		}
 		if candidate == "" {
 			continue
+		}
+		// A target may prefix the probe label (data.<probe>.<server> for DNS
+		// exfiltration). The probe label is the one right before the server
+		// hostname, not the first label.
+		if serverHost != "" {
+			labels := strings.Split(strings.TrimSuffix(candidate, "."), ".")
+			serverLabels := strings.Split(strings.TrimSuffix(serverHost, "."), ".")
+			if len(labels) > len(serverLabels) {
+				suffix := strings.Join(labels[len(labels)-len(serverLabels):], ".")
+				if strings.EqualFold(suffix, serverHost) {
+					return labels[len(labels)-len(serverLabels)-1]
+				}
+			}
 		}
 		if i := strings.IndexByte(candidate, '.'); i > 0 {
 			return candidate[:i]

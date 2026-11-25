@@ -113,8 +113,7 @@ func (t *ToolSet) oobPoll(s oobSession) actool.CoreTool {
 				}
 				wait = time.Duration(a.Wait) * time.Second
 			}
-			its, err := s.Poll(wait)
-			if err != nil {
+			observationFailed := func(err error) (actool.Result, error) {
 				outcome := "service_unavailable"
 				summary := "OOB 服务不可用，本轮未证明目标无漏洞"
 				if errors.Is(err, errNoCompletedPoll) || errors.Is(err, errSessionClosed) {
@@ -139,17 +138,46 @@ func (t *ToolSet) oobPoll(s oobSession) actool.CoreTool {
 				}
 				return jsonResult(out)
 			}
-			pending = append(pending, its...)
-			its = []OOBInteraction{}
-			remaining := make([]OOBInteraction, 0)
-			for _, interaction := range pending {
-				if a.ProbeID == "" || interaction.UniqueID == a.ProbeID {
-					its = append(its, interaction)
-				} else {
-					remaining = append(remaining, interaction)
+
+			// Retained callbacks answer first: another probe's callback must not
+			// force a remote poll that could fail or observe nothing.
+			its := []OOBInteraction{}
+			if a.ProbeID != "" {
+				remaining := make([]OOBInteraction, 0, len(pending))
+				for _, interaction := range pending {
+					if interaction.UniqueID == a.ProbeID {
+						its = append(its, interaction)
+					} else {
+						remaining = append(remaining, interaction)
+					}
+				}
+				pending = remaining
+			}
+			if len(its) == 0 {
+				// Keep observing until the requested window completes: a batch
+				// holding another probe's callback says nothing about this probe
+				// and must not be recorded as a healthy empty window.
+				deadline := time.Now().Add(wait)
+				for {
+					polled, err := s.Poll(time.Until(deadline))
+					if err != nil {
+						return observationFailed(err)
+					}
+					pending = append(pending, polled...)
+					remaining := make([]OOBInteraction, 0, len(pending))
+					for _, interaction := range pending {
+						if a.ProbeID == "" || interaction.UniqueID == a.ProbeID {
+							its = append(its, interaction)
+						} else {
+							remaining = append(remaining, interaction)
+						}
+					}
+					pending = remaining
+					if len(its) > 0 || !time.Now().Before(deadline) {
+						break
+					}
 				}
 			}
-			pending = remaining
 			out := map[string]any{
 				"interactions": its,
 				"status":       "ok",
