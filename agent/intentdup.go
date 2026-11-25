@@ -5,10 +5,18 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"unicode"
 
 	"github.com/Autumn-27/artex/db"
 )
+
+// intentRegisterMu serializes the read-then-insert in addOneIntent. The
+// duplicate check and AddIntent are two statements; without this lock two
+// planning rounds finishing together could both observe an empty queue and
+// insert the same direction. The server runs one process, so a process-wide
+// mutex covers every planner ToolSet.
+var intentRegisterMu sync.Mutex
 
 // duplicateOpenIntent guards the planner against re-issuing a direction that is
 // already dispatched. An intent in state open/running is a queued task, not an

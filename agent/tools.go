@@ -1069,6 +1069,8 @@ func (t *ToolSet) addOneIntent(it intentItem) (int64, error) {
 	if len(anchors) > 0 {
 		payload["asset_ids"] = anchors
 	}
+	intentRegisterMu.Lock()
+	defer intentRegisterMu.Unlock()
 	// Open/running intents are already-dispatched tasks. Re-issuing the same
 	// direction while a copy sits in the queue only multiplies work on one route;
 	// stop/blocked/exhausted intents are repeatable (no verdict about the direction).
