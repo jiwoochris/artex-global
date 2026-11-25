@@ -119,6 +119,6 @@ sigma convert -t splunk --without-pipeline detections/sigma/
 탐지 기여를 환영합니다. 새 규칙은 모든 지표를 관측 가능한 사실에 근거해 두고, 한계를 `description` 에
 밝히며, SigmaHQ 검증기 기준선을 깨끗이 통과하고
 (`sigma check --validation-config ../tests/sigma_lint/validators.yml .`), 공격 안내로 읽히는 내용을
-담지 않아야 합니다. [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md)와
+담지 않아야 합니다. [`../../CONTRIBUTING.ko.md`](../../CONTRIBUTING.ko.md)와
 [`../suricata/`](../suricata/)의 네트워크 계층, 그리고 [`../README.ko.md`](../README.ko.md)를
 참조하십시오.

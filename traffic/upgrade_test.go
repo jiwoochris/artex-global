@@ -41,7 +41,7 @@ func TestUpgradeFromOldInstall(t *testing.T) {
 	if _, err := old.Exec(ftsSchema); err != nil {
 		t.Fatal(err)
 	}
-	// 三条历史流量，含一条 legacy path<>'' 的行
+	// Three historical traffic rows, including one legacy row with path<>''
 	for i, row := range [][]any{
 		{"1700000000-0001", "old.example.com", ""},
 		{"1700000000-0002", "old.example.com", ""},
@@ -67,14 +67,14 @@ VALUES(?,'GET /x','','HTTP 200','老数据正文')`, row[0]); err != nil {
 		t.Fatal(err)
 	}
 
-	// ---- 新版本接管
+	// ---- The new version takes over
 	tr, err := Open(dir, "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("新版本无法打开旧库: %v", err)
 	}
 	defer tr.Close()
 
-	// 1. 必须是同一个文件，不能悄悄开了个新空库
+	// 1. It must be the same file; it must not quietly open a new empty DB
 	if st2, err := os.Stat(path); err != nil || st2.Size() == 0 {
 		t.Fatalf("原索引文件异常: size=%v err=%v", st2, err)
 	}
@@ -86,12 +86,12 @@ VALUES(?,'GET /x','','HTTP 200','老数据正文')`, row[0]); err != nil {
 	}
 	t.Logf("旧库 %d 字节，新版本接管后仍是同一文件", stat.Size())
 
-	// 2. 历史数据全部可见
+	// 2. All historical data is visible
 	n, err := tr.Count()
 	if err != nil || n != 3 {
 		t.Fatalf("Count=(%d,%v)，应为 (3,nil) —— 历史流量丢失", n, err)
 	}
-	// 3. 历史全文索引仍可搜
+	// 3. The historical full-text index is still searchable
 	if tr.fts {
 		rows, err := tr.query("old.example.com", "", "secret-token", 0, 10)
 		if err != nil {
@@ -101,17 +101,17 @@ VALUES(?,'GET /x','','HTTP 200','老数据正文')`, row[0]); err != nil {
 			t.Fatalf("历史全文搜索命中 %d 条，应为 2", len(rows))
 		}
 	}
-	// 4. 历史正文仍可读
+	// 4. Historical bodies are still readable
 	if _, resp, err := tr.Get("1700000000-0001"); err != nil {
 		t.Fatalf("读取历史正文失败: %v", err)
 	} else if resp == "" {
 		t.Fatal("历史响应为空")
 	}
-	// 5. 旧库不会被误判为已启用增量回收
+	// 5. The old DB is not misjudged as having incremental reclamation enabled
 	if tr.incrementalVacuum {
 		t.Fatal("旧库被误判为已启用增量回收")
 	}
-	// 6. 删除仍然正常工作，且回收流程在旧库上能收敛
+	// 6. Deletion still works, and the reclamation flow converges on the old DB
 	deleted, err := tr.DeleteHostsExact([]string{"old.example.com"})
 	if err != nil || deleted != 2 {
 		t.Fatalf("DeleteHostsExact=(%d,%v)，应为 (2,nil)", deleted, err)
@@ -120,7 +120,7 @@ VALUES(?,'GET /x','','HTTP 200','老数据正文')`, row[0]); err != nil {
 	if n, err := tr.Count(); err != nil || n != 1 {
 		t.Fatalf("删除后 Count=(%d,%v)，应为 (1,nil)", n, err)
 	}
-	// 7. legacy path<>'' 的行没被牵连
+	// 7. The legacy path<>'' row was not affected
 	var legacyPath string
 	if err := tr.DB().QueryRow(`SELECT path FROM exchanges`).Scan(&legacyPath); err != nil {
 		t.Fatal(err)
@@ -148,7 +148,7 @@ func TestDowngradeToOldBinary(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	old := openLegacyIndex(t, dir) // 旧版本二进制接管
+	old := openLegacyIndex(t, dir) // the old-version binary takes over
 	defer old.Close()
 	var n int
 	if err := old.QueryRow(`SELECT COUNT(*) FROM exchanges`).Scan(&n); err != nil || n != 5 {

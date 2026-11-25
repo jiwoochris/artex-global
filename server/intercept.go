@@ -28,9 +28,9 @@ func (s *Server) chatGuard() *guard.Guard {
 	return guard.NewWithInterceptor(s.m.interceptor)
 }
 
-// 사용자에게 노출되는 판정(judge) 모델 오류 메시지(한국어). 이 오류는
-// intercept.Judge 가 msgModelApprovalFailed 로 감싸 Decision.Message 로 노출하므로,
-// 래퍼(intercept 패키지)와 언어가 어긋나지 않게 함께 한국어로 둔다.
+// User-facing judge model error message (Korean). intercept.Judge wraps this error with
+// msgModelApprovalFailed and exposes it as Decision.Message, so it is kept in Korean together
+// with the wrapper (intercept package) so the languages don't diverge.
 const (
 	errNoJudgeModel          = "사용할 수 있는 판정 모델이 설정되지 않았습니다"
 	errJudgeModelUnavailable = "%d번 판정 모델 프로필을 사용할 수 없습니다"
@@ -387,7 +387,7 @@ func (s *Server) interceptDecide(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
 
-// --- tool-config (全局工具拦截范围) ---
+// --- tool-config (global tool interception scope) ---
 
 // interceptGetToolConfig returns the list of tool names that are currently
 // configured to enter the intercept rule system.
@@ -420,7 +420,7 @@ func (s *Server) interceptSetToolConfig(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
 
-// --- LLM fallback judge config (全局模型兜底) ---
+// --- LLM fallback judge config (global model fallback) ---
 
 // interceptGetJudgeConfig returns the resolved judge configuration. Prompt is the
 // effective prompt (built-in template when unset), so the UI can prefill it.

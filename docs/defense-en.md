@@ -2,7 +2,7 @@
 
 > This document helps **defenders** understand how an **autonomous AI penetration agent** such as ARTEX operates, so that you can build the capability to **detect and block** such attacks. It is not a guide to carrying out attacks. Use everything here only to protect systems you own or have explicit written authorization to test. Probing or attacking someone else's information and communications network without authorization is itself a crime (see the [security and misuse warning in the top-level README](../README.md)).
 >
-> 한국어판: **[자율 AI 공격 방어·탐지 가이드 (defense-ko.md)](defense-ko.md)**.
+> Korean version (한국어): **[defense-ko.md](defense-ko.md)**.
 
 An autonomous AI attack tool turns a penetration test — once a manual process a single operator ran by hand — into a 24/7 automated process in which an LLM agent **breaks goals down on its own, executes real tools, and accumulates discoveries**. The adversary a defender faces shifts from "one skilled attacker" to "a swarm of agents that never tire and never rest." This guide sets out what that shift demands of detection and response.
 
@@ -347,7 +347,7 @@ On a suspected host, check the following. The basis for each indicator is in Sec
    ```
    These two ports can be changed with the `--addr` and `--proxy` flags, so even if this query is empty, also review all open ports and whether an internal admin UI is up.
 2. **Egress logs.** Check whether requests went out to the code-repository host (GitHub releases) with the self-update User-Agent `artex-selfupdate` in your egress logs (`selfupdate/`). This suggests an ARTEX binary ran on the host.
-3. **Audit logs.** If the guard control marker `【ARTEX 平台管控·非目标防御】` appears in audit records, it supports an ARTEX-execution finding (`guard/guard.go`). It is written with this framing on every blocked tool call.
+3. **Audit logs.** If the guard control marker `【ARTEX 平台管控·非目标防御】` (a "platform control / non-target defense" marker) appears in audit records, it supports an ARTEX-execution finding (`guard/guard.go`). It is written with this framing on every blocked tool call.
 4. **State and recording stores.** ARTEX keeps its exploration graph in PostgreSQL (the `exploration_nodes`, `assets`, `companies`, `activity` tables and the `agent_prompts` seed) and leaves its state and recordings in the data directory next to the executable (the `--data` default in `cmd/artex/main.go`). Directly under that directory are the per-task `tasks/` and conversation `transcripts/` subdirectories, while the recording proxy's artifacts sit one level deeper in a `traffic/` subdirectory (`server/manager.go` opens `traffic/` under the data directory as the recorder's store). So the trust CA certificate is at `traffic/_ca/mitmproxy-ca-cert.pem`, the traffic index at `traffic/_index/index.sqlite`, and the recorded request/response bodies at `traffic/_blobs/`. The case strengthens when these appear together with `tasks/` and `transcripts/`.
 5. **Command auditing.** Compare the destructive-command hunting indicators (the end of Section 2 (b): `rm -rf`, `DROP DATABASE`, `FLUSHALL`, exfiltration pipes, and the like) against the host's command history. A legitimate administrator uses the same commands, so treat them only as leads.
 

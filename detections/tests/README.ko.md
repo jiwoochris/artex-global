@@ -268,7 +268,7 @@ RESULT: PASS
 
 ## SigmaHQ 관례 린트: [`sigma_lint/`](sigma_lint/)
 
-[`sigma_lint/run.sh`](sigma_lint/run.sh) 는 README 와 `CONTRIBUTING.md` 의 "`sigma check` 를 깨끗이
+[`sigma_lint/run.sh`](sigma_lint/run.sh) 는 README 와 `CONTRIBUTING.ko.md` 의 "`sigma check` 를 깨끗이
 통과한다"는 약속이 pySigma 의 핵심 검사뿐 아니라 SigmaHQ 의 관례까지 포함하도록 만듭니다. 그냥
 `sigma check` 는 `pySigma-validators-sigmahq` 플러그인을 적재하지 않으므로, 제목 대소문자·필드명 분류
 체계·로그소스 분류 체계·참조 링크 관례가 검사되지 않고 지나갑니다. 이 스위트는 그 플러그인을 설치하고,
@@ -451,7 +451,7 @@ detections/tests/misp/run.sh
 
 새 탐지 규칙은 그것이 발화함을 보여 주는 테스트가 있을 때 더 강합니다. 테스트는 자기 입력을 결정론적으로
 생성하고, 엔진 버전과 무관한 속성은 정확히 단언하며(그보다 무른 속성은 기준값을 기록한 하한으로), 공격
-안내로 읽힐 수 있는 내용은 피해야 합니다. [`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) 와
+안내로 읽힐 수 있는 내용은 피해야 합니다. [`../../CONTRIBUTING.ko.md`](../../CONTRIBUTING.ko.md) 와
 [`../README.ko.md`](../README.ko.md) 의 규칙 색인을 보십시오.
 
 여덟 스위트는 모두 `detections/` 를 건드리는 모든 push 나 pull request 에서 CI 로 돕니다

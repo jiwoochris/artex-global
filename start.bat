@@ -1,20 +1,20 @@
 @echo off
-rem 콘솔을 UTF-8 로 전환합니다. 그러지 않으면 이 파일의 한글이 GBK 터미널에서 깨집니다.
+rem Switch the console to UTF-8; otherwise the Korean text in this file is garbled on GBK terminals.
 chcp 65001 >nul 2>&1
-rem ARTEX 데몬 시작 스크립트(Windows)
+rem ARTEX daemon start script (Windows)
 rem
-rem 사용법:
-rem   start.bat                  포그라운드 실행(Ctrl-C 로 중지)
-rem   start.bat -addr :9000      추가 인자는 artex 로 그대로 전달
+rem Usage:
+rem   start.bat                  run in the foreground (stop with Ctrl-C)
+rem   start.bat -addr :9000      extra arguments are passed through to artex as is
 rem
-rem 이 스크립트는 한 가지만 합니다. artex.exe 를 실행하고, 프로세스가 종료되면 종료 코드를 보고 다시 띄울지 결정합니다.
+rem This script does exactly one thing: it runs artex.exe, and when the process exits it looks at the exit code to decide whether to relaunch it.
 rem
-rem   0      사용자가 정상 중지  -> 루프 종료
-rem   75     프로그램이 재시작 요청 -> 즉시 다시 실행(화면에서 "원클릭 업데이트" 또는 "롤백"을 누름)
-rem   그 외  비정상 종료       -> 백오프 후 다시 실행(1->2->4…최대 60초)
+rem   0      user stopped it normally  -> exit the loop
+rem   75     program requested restart -> relaunch immediately (the user clicked "one-click update" or "rollback" in the UI)
+rem   other  abnormal exit             -> relaunch after backoff (1->2->4... up to 60s)
 rem
-rem 다운로드·SHA256 체크섬 검증·버전 교체는 여기서 하지 않고, 전부 artex 가 기동할 때 스스로 처리합니다
-rem (selfupdate 패키지). 스크립트는 단순하게 유지합니다. 자세한 내용은 start.sh 상단 설명을 참고하세요.
+rem Downloading, SHA256 checksum verification and version swapping are not done here; artex handles all of it itself at startup
+rem (the selfupdate package). The script stays simple. For details, see the explanation at the top of start.sh.
 
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
@@ -39,14 +39,14 @@ if "!code!"=="0" (
 )
 
 if "!code!"=="%RESTART_CODE%" (
-	rem 업데이트/롤백이 준비되었습니다. 다시 실행하면 artex 가 기동 시 버전 교체를 완료합니다.
+rem An update/rollback is ready. On relaunch, artex completes the version swap at startup.
 	echo [artex] 재시작 요청: 새 버전 적용…
 	set /a delay=1
 	goto loop
 )
 
 echo [artex] 비정상 종료 ^(code=!code!^), !delay!s 후 재시작 1>&2
-rem timeout 은 리디렉션된 콘솔에서 실패하므로 ping 으로 대체합니다(N초 지연에는 N+1 번 필요).
+rem timeout fails on a redirected console, so ping is used instead (an N-second delay needs N+1 pings).
 set /a pings=!delay!+1
 ping -n !pings! 127.0.0.1 >nul 2>&1
 set /a delay=!delay!*2

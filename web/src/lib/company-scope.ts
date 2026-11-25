@@ -2,9 +2,9 @@ import type { CompanyScopeKind, CompanyScopeRule } from "@/lib/types";
 
 export const MAX_COMPANY_SCOPE_VALUE_LENGTH = 1024;
 
-// 검증 결과는 지역화 가능한 "오류 코드"로 돌려준다. 이 모듈은 React 밖 순수 함수라
-// 직접 번역할 수 없으므로, 노출 지점(scope-text-editor 는 next-intl 의 t(), mock
-// handler 는 companyScopeErrorText())이 코드를 각 언어 문구로 바꾼다.
+// Validation results are returned as localizable "error codes". This module is a pure function outside React
+// and cannot translate directly, so the display points (scope-text-editor via next-intl's t(), the mock
+// handler via companyScopeErrorText()) turn the codes into text for each language.
 export type CompanyScopeErrorCode =
   | "empty"
   | "tooLong"
@@ -144,8 +144,8 @@ export function companyScopeRuleError(rule: CompanyScopeRule): CompanyScopeError
   return "";
 }
 
-// mock handler(React 밖) 전용: 오류 코드를 한국어 문구로 바꾼다. 실제 UI 는
-// scope-text-editor 가 next-intl 의 t("scopeEditor.error.*") 로 지역화한다.
+// For the mock handler (outside React) only: turns an error code into Korean text. The real UI
+// is localized by scope-text-editor via next-intl's t("scopeEditor.error.*").
 export function companyScopeErrorText(code: CompanyScopeErrorCode | "" | undefined): string {
   switch (code) {
     case "empty":

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# ARTEX 업데이트 스크립트: ① Docker 업데이트(새 이미지를 받아 재구성)  ② 로컬 컴파일 업데이트(바이너리 재빌드)
-# install.sh 와 짝을 이룹니다. install 은 최초 설치를, update 는 새 버전으로의 업그레이드를 담당합니다.
-# DB 마이그레이션은 직접 실행할 필요가 없습니다. artex 는 기동할 때마다 schema.sql 을 멱등하게 다시 돌리므로(ADD COLUMN/CREATE
-# INDEX IF NOT EXISTS 포함) "재시작이 곧 마이그레이션"입니다. 데이터(pgdata 볼륨, ./data, ./skills)는 영향을 받지 않습니다.
+# ARTEX update script: ① Docker update (pull the new image and recreate)  ② local compile update (rebuild the binary)
+# Pairs with install.sh: install handles the first-time installation, update handles upgrading to a new version.
+# There is no need to run DB migrations yourself. artex re-runs schema.sql idempotently on every start (including ADD COLUMN/CREATE
+# INDEX IF NOT EXISTS), so "a restart is the migration". Data (the pgdata volume, ./data, ./skills) is not affected.
 set -euo pipefail
 cd "$(cd "$(dirname "$0")" && pwd)"
 
@@ -12,7 +12,7 @@ warn(){ printf '\033[33m[!]\033[0m %s\n' "$*"; }
 die(){  printf '\033[31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 ask(){  local p="$1" d="${2:-}" a; read -rp "$p${d:+ [$d]}: " a; echo "${a:-$d}"; }
 
-# ── 선택: 저장소를 최신 코드로 동기화합니다(compose·스크립트·로컬 컴파일 소스가 모두 이걸로 갱신됩니다) ───────
+# ── Optional: sync the repository to the latest code (this refreshes compose, the scripts and the local compile sources) ───────
 sync_repo(){
   [ -d .git ] && command -v git >/dev/null 2>&1 || { warn "git 작업 사본이 아니라 git pull 을 건너뜁니다"; return; }
   [ "$(ask '최신 코드를 받을까요 (git pull --ff-only)? (y/n)' y)" = y ] || return
@@ -21,13 +21,13 @@ sync_repo(){
   fi
 }
 
-# ── ① Docker 업데이트 ───────────────────────────────
+# ── ① Docker update ───────────────────────────────
 update_docker(){
   command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1 \
     || die "docker / docker compose 를 찾을 수 없습니다. 먼저 ./install.sh 로 설치·배포하세요"
   [ -f .env ] || die ".env 를 찾을 수 없습니다. 먼저 ./install.sh 로 최초 배포를 완료하세요"
 
-  # 선택: 지정한 버전 tag 로 업그레이드합니다(비워 두면 .env 의 ARTEX_TAG 를 따르고, 기본값은 latest 입니다)
+  # Optional: upgrade to a specific version tag (if left empty, follows ARTEX_TAG in .env; the default is latest)
   local tag; tag="$(ask '대상 이미지 tag(엔터를 누르면 .env / latest 사용)' '')"
   if [ -n "$tag" ]; then
     if grep -q '^ARTEX_TAG=' .env; then
@@ -38,9 +38,9 @@ update_docker(){
     ok "ARTEX_TAG 를 ${tag} 로 설정했습니다"
   fi
 
-  # artex 만 건드립니다. postgres 는 16-alpine 로 고정이라 따라 올릴 필요가 없습니다(받아 봐야 대역폭 낭비이고,
-  # 메이저 버전이 바뀌면 호환성 위험도 있습니다). artex 는 depends_on postgres 를 선언하므로 서비스명을 붙여
-  # up 하면 pg 가 안 떠 있을 때 자동으로 띄우고, 이미 떠 있으면 그대로 두고 재구성하지 않습니다.
+  # Only artex is touched. postgres is pinned to 16-alpine, so there is no need to bump it along (pulling it would only waste
+  # bandwidth, and a major-version change carries compatibility risk). artex declares depends_on postgres, so running up with the
+  # service name starts pg automatically if it is not running, and leaves it as is without recreating it if it already is.
   info "새 이미지를 받습니다(artex 만)…"
   if ! docker compose pull artex; then
     warn "이미지 ghcr.io/jiwoochris/artex-global 를 받지 못했습니다(지정한 tag 가 발행된 릴리스 태그인지, 네트워크가 되는지 확인하세요)"
@@ -53,7 +53,7 @@ update_docker(){
   info "오래된 이미지 정리(선택): docker image prune -f"
 }
 
-# ── ② 로컬 컴파일 업데이트 ──────────────────────────────
+# ── ② local compile update ──────────────────────────────
 update_local(){
   command -v go >/dev/null 2>&1 || die "Go 를 찾을 수 없습니다(>=1.26): https://go.dev/dl/"
   [ -f config.json ] || warn "config.json 을 찾을 수 없습니다. 최초 배포라면 ./install.sh 를 사용하세요"

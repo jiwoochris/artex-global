@@ -88,5 +88,5 @@ suricata -r enrich.pcap -S artex.rules -l out && \
 
 탐지 기여를 환영합니다. 새 규칙은 모든 지표를 관측 가능한 사실에 근거해 두고, 한계를 주석에
 밝히며, `suricata -T` 를 깨끗이 통과하고, 공격 안내로 읽히는 내용을 담지 않아야 합니다.
-[`../../CONTRIBUTING.md`](../../CONTRIBUTING.md)와 [`../sigma/`](../sigma/)의 Sigma 계층 /
+[`../../CONTRIBUTING.ko.md`](../../CONTRIBUTING.ko.md)와 [`../sigma/`](../sigma/)의 Sigma 계층 /
 [`../README.ko.md`](../README.ko.md)를 참조하십시오.

@@ -2,15 +2,13 @@
 
 English · [한국어](README.ko.md)
 
-> 한국어: 이 디렉터리는 [방어·탐지 가이드(docs/defense-ko.md)](../docs/defense-ko.md)의 4절 "탐지 규칙"을
-> 실제로 배포 가능한 [Sigma](https://sigmahq.io) 규칙으로 옮긴 것입니다. 모든 규칙은 자신이 소유하거나 서면
-> 허가를 받은 시스템을 지키는 **방어·탐지 목적에만** 사용하십시오. 한국어 전체 문서는
-> **[detections/README.ko.md](README.ko.md)** 를 보십시오.
-
 Deployable [Sigma](https://sigmahq.io) rules that formalize the pseudo-rules in the defense guide
 ([Korean](../docs/defense-ko.md) · [English](../docs/defense-en.md), section 4) into a vendor-neutral
 format you can convert to your own SIEM or EDR query language. Every indicator here is grounded in a
 string or behaviour verified in this repository's source, not inferred.
+
+> Use every rule here **only for defense and detection**, to protect systems you own or have written
+> authorization to protect. The full Korean version of this document is **[README.ko.md](README.ko.md)**.
 
 ## Atomic rules
 
@@ -269,4 +267,4 @@ destination table to your environment before deploying.
 Detection and hardening contributions are welcome. New rules should keep every indicator grounded in an
 observable fact, state limitations in the `description`, pass the SigmaHQ validator baseline cleanly
 (`sigma check --validation-config tests/sigma_lint/validators.yml`), and avoid any content that reads as
-attack guidance. See [`../CONTRIBUTING.en.md`](../CONTRIBUTING.en.md).
+attack guidance. See [`../CONTRIBUTING.md`](../CONTRIBUTING.md).

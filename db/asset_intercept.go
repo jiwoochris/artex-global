@@ -13,8 +13,8 @@ type AssetInterceptRule struct {
 	Pattern   string    `json:"pattern"`
 	Note      string    `json:"note"`
 	Builtin   bool      `json:"builtin"`
-	// Action 仅用于任务级规则：'block'=拦截 'allow'=允许(白名单)。
-	// 全局规则(asset_intercept_rules)不带此列，恒为空，视为拦截。
+	// Action applies only to task-level rules: 'block' = intercept, 'allow' = allow (allowlist).
+	// Global rules (asset_intercept_rules) have no such column; it is always empty and treated as intercept.
 	Action    string    `json:"action,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

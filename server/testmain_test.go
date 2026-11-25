@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 	// when it fires inside a later test's window it claims that test's
 	// deliveries out of band and corrupts the exact per-delivery attempt
 	// accounting. That is what made TestNotifyDeliveriesHistoryAndRetry flake
-	// intermittently ("重试耗尽后应为 failed，得到 pending"). No test asserts on the
+	// intermittently ("重试耗尽后应为 failed，得到 pending", i.e. "should be failed after retries are exhausted, got pending"). No test asserts on the
 	// background loop itself, so disable it suite-wide for determinism; the
 	// loop's dispatch is covered through direct stepRealtime/stepDigest calls.
 	os.Setenv(notifyBackgroundDisabledEnv, "1")

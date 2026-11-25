@@ -55,8 +55,8 @@ export function ChangePasswordDialog({
     api
       .changePassword(oldPassword, newPassword)
       .then((res) => {
-        // 비밀번호가 바뀌면 이전 토큰은 서버에서 모두 무효화된다. 응답의 새 토큰으로
-        // 현재 세션만 이어 가고, 다른 브라우저의 세션은 로그아웃된다.
+        // When the password changes, the server invalidates all previous tokens. The new token in the response
+        // keeps only the current session alive; sessions in other browsers are logged out.
         if (res.token) auth.setToken(res.token);
         toast.success(t("success"));
         onOpenChange(false);

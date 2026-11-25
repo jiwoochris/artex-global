@@ -21,14 +21,14 @@ type mcpClient interface {
 	Close() error
 }
 
-// connectMCP 이 돌려주는 전송 설정 검증 오류 네 가지는 사용자 노출이다 —
-// pgRefreshMCP(server_mgmt.go) 가 discoverAndCacheMCP 실패를
-// writeErr(502, errMgmtToolDiscoverFail+err.Error()) 로 응답 본문에 그대로 싣는다.
-// 다른 호출처(assembly.go 의 에이전트 조립·discoverEmptyMCPsOnStartup 시작 자동 발견·
-// sync_scopesentry.go 동기화·pgSaveMCP 추가 직후 발견)는 전부 log.Printf 로만 남기거나
-// 버려서 에이전트 두뇌 입력이 아니다. 그래서 한국어화한다. 전송 방식 enum
-// (stdio/http/sse)과 URL 은 와이어 식별자라 원문을 유지하고, UI mcpPage(전송 방식·명령·
-// 원격 URL)와 표기를 맞춘다.
+// The four transport-config validation errors connectMCP returns are user-facing —
+// pgRefreshMCP (server_mgmt.go) puts a discoverAndCacheMCP failure verbatim into the response
+// body via writeErr(502, errMgmtToolDiscoverFail+err.Error()). The other callers (agent
+// assembly in assembly.go · automatic discovery at startup in discoverEmptyMCPsOnStartup ·
+// sync in sync_scopesentry.go · discovery right after adding in pgSaveMCP) all just log via
+// log.Printf or discard it, so it is not agent brain input. Hence they are localized to
+// Korean. The transport enum (stdio/http/sse) and URLs are wire identifiers and stay as-is,
+// and the wording matches the UI mcpPage (transport · command · remote URL).
 const (
 	errMCPStdioNoCommand      = "stdio 전송 방식에 명령이 없습니다"
 	errMCPHTTPNoURL           = "http 전송 방식에 URL 이 없습니다"

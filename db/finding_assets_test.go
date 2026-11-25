@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-// cleanupTreeFixtures 删除一个用例造出来的资产与发现。必须用 defer 注册(而不是
-// t.Cleanup):t.Cleanup 跑在测试函数返回之后,那时 defer d.Close() 已经把连接关了,
-// 清理会静默失败并把脏数据留在共享开发库里。
+// cleanupTreeFixtures deletes the assets and findings created by a test. It must be registered with defer (not
+// t.Cleanup): t.Cleanup runs after the test function returns, by which time defer d.Close() has already closed the connection,
+// so the cleanup would fail silently and leave dirty data in the shared dev DB.
 func cleanupTreeFixtures(d *DB, taskID int64, rootDomains ...string) {
 	d.Exec(`DELETE FROM assets WHERE root_domain = ANY($1::text[])`, rootDomains) //nolint:errcheck
 	d.DeleteFindingsByTask(taskID)                                                //nolint:errcheck
@@ -43,7 +43,7 @@ func nodeByKey(tree *FindingAssetTree, key string) *FindingAssetNode {
 	return nil
 }
 
-// TestBuildFindingAssetTree covers the whole shape of the「按资产」tree: the
+// TestBuildFindingAssetTree covers the whole shape of the "by asset" (按资产) tree: the
 // root→subdomain→service→endpoint chain gets rebuilt from a finding that only
 // points at the leaf, ancestors aggregate their subtree, assets without any
 // finding stay out, and a finding whose asset row is gone lands in the
@@ -72,20 +72,20 @@ func TestBuildFindingAssetTree(t *testing.T) {
 	epID := seedTreeAsset(t, d, "endpoint", map[string]any{
 		"domain": sub, "root_domain": root, "url": "https://" + sub + "/admin", "port": 443, "method": "GET",
 	})
-	// 同域名下另一个服务,不挂任何发现 —— 不应出现在树里。
+	// Another service under the same domain with no findings attached — it should not appear in the tree.
 	seedTreeAsset(t, d, "service", map[string]any{
 		"domain": sub, "root_domain": root, "url": "http://" + sub + ":8080", "port": 8080, "service_type": "http",
 	})
 
-	// 只把发现挂在最深的 endpoint 上,祖先链要靠构树自己补出来。
+	// Attach the finding only to the deepest endpoint; the ancestor chain must be filled in by the tree builder itself.
 	if _, err := d.AddFinding(tk.ID, 0, "XSS", "反射型 XSS", "high", "s", "e", "w", []int64{epID}); err != nil {
 		t.Fatal(err)
 	}
-	// 直接挂在服务上的一条,用来验证 Self 与 Total 的区别。
+	// One attached directly to the service, to verify the difference between Self and Total.
 	if _, err := d.AddFinding(tk.ID, 0, "Info", "信息泄露", "low", "s", "e", "w", []int64{svcID}); err != nil {
 		t.Fatal(err)
 	}
-	// 资产行不存在(已删除资产)→ 未关联桶。
+	// Asset row does not exist (deleted asset) → unassigned bucket.
 	if _, err := d.AddFinding(tk.ID, 0, "Misc", "孤儿", "medium", "s", "e", "w", []int64{999000111}); err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestBuildFindingAssetTree(t *testing.T) {
 		}
 	}
 
-	// 父子链:endpoint → service → subdomain → root_domain。
+	// Parent/child chain: endpoint → service → subdomain → root_domain.
 	if epNode.Parent != svcNode.Key {
 		t.Errorf("endpoint parent: want %s, got %s", svcNode.Key, epNode.Parent)
 	}
@@ -124,7 +124,7 @@ func TestBuildFindingAssetTree(t *testing.T) {
 		t.Errorf("root parent: want top level, got %s", rootNode.Parent)
 	}
 
-	// 聚合:根域名两条(endpoint 的 high + service 的 low),service 自身一条、子树两条。
+	// Aggregation: root domain has two (the endpoint's high + the service's low); the service has one of its own and two in its subtree.
 	if rootNode.Total != 2 || rootNode.High != 1 || rootNode.Low != 1 {
 		t.Errorf("root totals: want 2/high1/low1, got %d/high%d/low%d", rootNode.Total, rootNode.High, rootNode.Low)
 	}
@@ -138,21 +138,21 @@ func TestBuildFindingAssetTree(t *testing.T) {
 		t.Errorf("endpoint total/self: want 1/1, got %d/%d", epNode.Total, epNode.Self)
 	}
 
-	// 没有发现的兄弟服务不进树。
+	// Sibling services without findings do not enter the tree.
 	for _, n := range tree.Nodes {
 		if n.Label == "http://"+sub+":8080" {
 			t.Errorf("asset without findings should be hidden: %+v", n)
 		}
 	}
 
-	// 未关联桶收下那条指向已删资产的发现。
+	// The unassigned bucket takes the finding that points at a deleted asset.
 	none := nodeByKey(tree, FindingUnassignedAsset)
 	if none == nil || none.Total != 1 || none.Medium != 1 {
 		t.Fatalf("unassigned bucket: want 1 medium, got %+v", none)
 	}
 }
 
-// TestFindingAssetScopeFilter verifies选中一个节点 narrows the findings list to
+// TestFindingAssetScopeFilter verifies that selecting a node narrows the findings list to
 // that node's whole subtree, and that the unassigned sentinel works too.
 func TestFindingAssetScopeFilter(t *testing.T) {
 	d, err := Open(testDSN(t))
@@ -184,8 +184,8 @@ func TestFindingAssetScopeFilter(t *testing.T) {
 	if _, err := d.AddFinding(tk.ID, 0, "C", "没有资产的", "high", "s", "e", "w", nil); err != nil {
 		t.Fatal(err)
 	}
-	// 指向已删除资产的发现,和 asset_ids 为空的一样属于「未关联」——树的桶收下它,
-	// 列表筛选也必须查得出来,两处口径不一致会让桶上的数字大于点开后的条数。
+	// A finding pointing at a deleted asset counts as "unassigned", just like one with empty asset_ids — the tree's bucket takes it,
+	// so the list filter must find it too; if the two use different criteria, the bucket's number exceeds the count shown after clicking into it.
 	if _, err := d.AddFinding(tk.ID, 0, "D", "资产已删除", "high", "s", "e", "w", []int64{999000333}); err != nil {
 		t.Fatal(err)
 	}
@@ -196,11 +196,11 @@ func TestFindingAssetScopeFilter(t *testing.T) {
 		scope string
 		want  int
 	}{
-		{"整棵子树", assetKey(rootID), 1},      // 根域名下只有子域名那条
-		{"叶子节点", assetKey(subID), 1},       // 子域名自身
-		{"另一棵树", assetKey(otherID), 1},     // 互不串味
-		{"未关联", FindingUnassignedAsset, 2}, // asset_ids 为空的 + 指向已删资产的
-		{"不存在的节点", "a:999000222", 0},       // 当前筛选下没有该节点 → 空结果,不是不过滤
+		{"整棵子树", assetKey(rootID), 1},      // under the root domain there is only the subdomain's one
+		{"叶子节点", assetKey(subID), 1},       // the subdomain itself
+		{"另一棵树", assetKey(otherID), 1},     // trees don't bleed into each other
+		{"未关联", FindingUnassignedAsset, 2}, // the one with empty asset_ids + the one pointing at a deleted asset
+		{"不存在的节点", "a:999000222", 0},       // no such node under the current filters → empty result, not unfiltered
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -216,12 +216,12 @@ func TestFindingAssetScopeFilter(t *testing.T) {
 		})
 	}
 
-	// 不带 scope 时四条都在。
+	// Without a scope all four are present.
 	if _, total, err := d.ListFindingsPage(base, 1, 50); err != nil || total != 4 {
 		t.Fatalf("unscoped: want 4, got %d (%v)", total, err)
 	}
 
-	// 树上未关联桶的计数必须与点开后查到的条数一致 —— 这正是两处口径分家时会崩的断言。
+	// The unassigned bucket's count in the tree must equal the number of rows found after clicking into it — exactly the assertion that breaks when the two criteria diverge.
 	tree, err := d.BuildFindingAssetTree(base)
 	if err != nil {
 		t.Fatal(err)

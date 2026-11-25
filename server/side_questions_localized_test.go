@@ -3,9 +3,9 @@ package server
 import "testing"
 
 // TestSideQuestionAPIErrorsLocalized guards F21: every user-facing side-question
-// (곁질문) message surfaced by the HTTP wrapper (writeErr responses) and by the
+// message surfaced by the HTTP wrapper (writeErr responses) and by the
 // exchange status (e.Error) must be Korean — Hangul present, no Chinese Han.
-// These reach the chat 곁질문 panel alongside the sidequestion package errors, so
+// These reach the chat side-question panel alongside the sidequestion package errors, so
 // both layers are localized together to avoid a mixed-language panel. Reuses
 // assertKoreanError (F3a).
 func TestSideQuestionAPIErrorsLocalized(t *testing.T) {

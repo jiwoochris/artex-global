@@ -1,78 +1,80 @@
 #!/usr/bin/env python3
-"""정적 내보내기한 웹 UI(`web/out`)의 HTML 에 중국어(한자)가 새어 나왔는지 검사한다.
+"""Check whether Chinese (Han characters) has leaked into the HTML of the statically exported web UI (`web/out`).
 
-이 포크의 핵심 성과이자 차별점은 "사용자에게 보이는 화면에 중국어가 없다"는 것이다
-(백로그 B4 가 수립한 `out` HTML 한자 0 속성). 그 속성을 손검증에만 맡기면, 기여자가
-중국어 문자열을 하드코딩하거나 번역이 누락되는 회귀가 생겨도 다음 사람이 눈으로
-발견할 때까지 조용히 깨진 채 남는다. 이 스크립트는 그 회귀를 머지 게이트에서 막는다.
+This fork's core achievement and differentiator is that "there is no Chinese on any user-facing screen"
+(the zero-Han-characters-in-`out`-HTML property established by backlog B4). If that property were left
+to manual checking alone, a regression where a contributor hard-codes a Chinese string or a translation
+goes missing would stay silently broken until the next person happened to spot it by eye. This script
+blocks that regression at the merge gate.
 
-검사 방식
----------
-`web/out` 아래 모든 `.html` 파일의 **원시 내용**(렌더된 마크업뿐 아니라 인라인
-스크립트·React Server Components 플라이트 데이터까지)을 훑어 한자가 하나라도 있으면
-종료 코드 1 로 끝난다. 원시 내용을 그대로 보는 이유는, 사용자에게 보이는 텍스트가
-플라이트 데이터(JSON 꼴 문자열)에 실려 HTML 에 함께 내려오기 때문이다. 태그만
-벗겨 내면 그 경로의 누출을 놓친다.
-
-검사 범위 밖 (정직한 한계)
------------------------
-이 게이트는 정적 내보내기 결과물만 본다. 그래서 **MOCK 모드(`NEXT_PUBLIC_MOCK=1`,
-공개 데모가 쓰는 모드)에서 브라우저가 실행 중에 그려 내는 내용**까지는 검사하지 못한다.
-`web/src/lib/mock/data.ts`·`handler.ts` 와 각 페이지의 하드코딩 샘플은 하이드레이션
-뒤 `useEffect` 가 `mockHandle()` 로 가져와 React 상태로 렌더하므로, `out` HTML 이
-아니라 런타임 JS 번들에만 실린다. 즉 이 경로로 들어온 중국어는 이 게이트를 통과한다
-(과거 공개 데모의 `/system/logs` 샘플 로그에 중국어가 그렇게 조용히 남아 있었고,
-백로그 G114 에서 한국어로 고쳤다).
-
-그 표면은 소스 검토로 지킨다. 렌더 대상 파일(`web/src` 의 `.tsx`·클라이언트 데이터)에
-남는 중국어는 반드시 다음 중 하나여야 한다: 코드 주석, `t.has(...)` 로 막혀 실제로는
-쓰이지 않는 i18n 폴백, 백엔드 와이어 포맷 토큰(챗 멘션 분류 라벨·`[模型]` 결정 출처
-센티넬), locale 가 `zh` 일 때만 보이는 분기 리터럴, 또는 성능 보존을 위해 번역하지
-않는 에이전트 두뇌(段 [A]) 프롬프트를 그대로 비추는 미러. 이 가운데 어디에도 속하지
-않고 "그냥 화면에 보이는 중국어"라면 한국어로 번역한다(백로그 G115 가 이 분류를
-전수 확인했다).
-
-허용·탐지 범위
+How it checks
 -------------
-- **한글(`가-힣` 등)은 허용**한다. 한자 블록과 한글 블록은 유니코드에서 겹치지 않으므로,
-  한자 블록만 탐지하면 한글은 자동으로 통과한다.
-- **한자(CJK 한자)만 탐지**한다: 통합 한자와 확장 A(`㐀`–`鿿`), 호환 한자
-  (`豈`–`﫿`), 그리고 보충 평면의 확장 B 이상(`𠀀`–). 가나·전각 문장부호는
-  "한자"가 아니므로 이 게이트의 대상이 아니다(원문 보존 코드 블록이나 증거 인용에
-  섞여 들어와 거짓 양성을 내는 것을 막기 위해 범위를 한자로 좁힌다).
+It scans the **raw content** of every `.html` file under `web/out` (not just the rendered markup but also
+inline scripts and React Server Components flight data), and exits with code 1 if there is even a single
+Han character. The raw content is examined as is because user-visible text is carried in the flight data
+(JSON-like strings) and shipped down inside the HTML. Merely stripping the tags would miss leaks through
+that path.
 
-상류 보존이 필요한 의도적 한자
+Out of scope (honest limitations)
+-----------------------
+This gate only looks at the static export output. So it cannot check **content that the browser draws at
+runtime in MOCK mode (`NEXT_PUBLIC_MOCK=1`, the mode the public demo uses)**.
+`web/src/lib/mock/data.ts`, `handler.ts` and each page's hard-coded samples are fetched after hydration by
+`useEffect` via `mockHandle()` and rendered from React state, so they ship only in the runtime JS bundle,
+not in the `out` HTML. In other words, Chinese that comes in through this path passes this gate
+(that is how Chinese once sat quietly in the `/system/logs` sample log of the public demo, which was
+fixed to Korean in backlog G114).
+
+That surface is guarded by source review. Any Chinese remaining in rendered files (`.tsx` and client data
+in `web/src`) must be one of the following: a code comment, an i18n fallback that is guarded by
+`t.has(...)` and never actually used, a backend wire-format token (chat mention classification labels, the
+`[模型]` decision-source sentinel), a branch literal shown only when the locale is `zh`, or a mirror that
+reflects verbatim an agent-brain (段 [A], "section [A]") prompt that is not translated in order to
+preserve performance. If it is none of these and is "just Chinese visible on screen", translate it into
+Korean (backlog G115 verified this classification exhaustively).
+
+Allowed and detected ranges
+-------------
+- **Hangul (`가-힣`, etc.) is allowed**. The Han blocks and the Hangul blocks do not overlap in Unicode,
+  so detecting only the Han blocks lets Hangul pass automatically.
+- **Only Han characters (CJK ideographs) are detected**: Unified Ideographs and Extension A (`㐀`–`鿿`),
+  Compatibility Ideographs (`豈`–`﫿`), and Extension B and above in the supplementary planes (`𠀀`–).
+  Kana and full-width punctuation are not "Han characters", so they are not targets of this gate (the
+  range is narrowed to Han characters to avoid false positives from them slipping in through code
+  blocks preserved verbatim or quoted evidence).
+
+Intentional Han characters that must be preserved from upstream
 -----------------------------
-현재 `out` HTML 에는 한자가 한 글자도 없어 허용 목록이 비어 있다. 앞으로 성능 보존을
-위해 원문(중국어)을 일부러 화면에 남겨야 하는 경우(예: 언어 스위처의 `中文` 라벨)가
-생기면, 그 글자를 아래 `ALLOWED_HAN` 에 추가하고 왜 남기는지 주석으로 적는다. 그래야
-게이트는 엄격하게 유지되면서도 의도된 예외만 좁게 통과시킬 수 있다.
+The `out` HTML currently contains not a single Han character, so the allowlist is empty. If in the future
+the original (Chinese) text must deliberately stay on screen to preserve performance (e.g. the `中文`
+label in the language switcher), add those characters to `ALLOWED_HAN` below and write a comment explaining
+why they stay. That way the gate stays strict while letting only the intended exceptions through narrowly.
 
-표준 라이브러리만 쓰고 네트워크에 접속하지 않는다.
-실행: `python3 -I scripts/check-web-cjk.py [out 디렉터리]`
-(기본값은 저장소 루트의 `web/out`. CI 는 `web` 작업 디렉터리에서
-`python3 -I ../scripts/check-web-cjk.py` 로 부른다.)
+Uses only the standard library and makes no network connections.
+Run: `python3 -I scripts/check-web-cjk.py [out directory]`
+(The default is `web/out` under the repository root. CI calls it from the `web` working directory as
+`python3 -I ../scripts/check-web-cjk.py`.)
 """
 import os
 import re
 import subprocess
 import sys
 
-# CJK 한자 블록만. 한글(AC00–D7A3)·가나·전각 문장부호는 들어 있지 않다.
-# 범위: 확장 A + 통합 한자(U+3400–U+9FFF = 㐀–鿿), 호환 한자(U+F900–U+FAFF = 豈–﫿),
-#       보충 평면 확장 B 이상(U+20000–U+2FFFF).
+# Han blocks only. Hangul (AC00–D7A3), kana and full-width punctuation are not included.
+# Ranges: Extension A + Unified Ideographs (U+3400–U+9FFF = 㐀–鿿), Compatibility Ideographs (U+F900–U+FAFF = 豈–﫿),
+#         Extension B and above in the supplementary planes (U+20000–U+2FFFF).
 HAN = re.compile(r"[㐀-鿿豈-﫿\U00020000-\U0002ffff]")
 
-# 화면에 일부러 남기는 한자(예: 언어 스위처 `中文`). 지금은 비어 있다 —
-# 비우면 어떤 한자든 게이트에 걸린다. 예외를 더할 때는 글자와 사유를 함께 적는다.
-# 예) ALLOWED_HAN = {"中", "文"}  # 언어 스위처 '中文' 라벨(상류 대조용)
+# Han characters deliberately kept on screen (e.g. the language switcher's `中文`). Currently empty —
+# while it is empty, any Han character trips the gate. When adding an exception, record the characters together with the reason.
+# e.g.) ALLOWED_HAN = {"中", "文"}  # language switcher '中文' label (for comparison with upstream)
 ALLOWED_HAN: set = set()
 
 
 def find_out_dir() -> str:
-    """검사할 `out` 디렉터리를 정한다.
+    """Decide which `out` directory to check.
 
-    인자로 경로를 주면 그것을, 없으면 git 저장소 루트의 `web/out` 를 쓴다.
+    If a path is given as an argument, use it; otherwise use `web/out` under the git repository root.
     """
     if len(sys.argv) > 1:
         return os.path.abspath(sys.argv[1])
@@ -92,7 +94,7 @@ def main() -> int:
         return 2
 
     checked = 0
-    offenders = []  # (상대경로, 한자 개수, 미리보기)
+    offenders = []  # (relative path, Han character count, preview)
     for dirpath, _dirnames, filenames in os.walk(out_dir):
         for name in filenames:
             if not name.endswith(".html"):

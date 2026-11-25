@@ -22,12 +22,14 @@ import (
 	actool "github.com/Autumn-27/norma/tool"
 )
 
-// 本文件实现自定义工具执行器(docs/自定义工具设计.md)。system=false 的 tools 行按
-// kind 分派:command(渲染命令→复用 Bash 底层 run)、script(仅 Python;写临时文件、
-// stdin=参数 JSON + env TOOL_*、用配置的解释器)、http(原生请求+可设代理)。这些工具
-// 像流量/编排工具一样 seed 不需要(它们本就在 tools 表),经 hostTools 注入、按绑定过滤。
+// This file implements the custom tool executor (docs/自定义工具设计.md, custom tool design).
+// tools rows with system=false are dispatched by kind: command (render the command → reuse
+// Bash's underlying run), script (Python only; writes a temp file, stdin = params JSON + env
+// TOOL_*, uses the configured interpreter), http (native request + optional proxy). Like the
+// traffic/orchestration tools, these need no seeding (they already live in the tools table);
+// they are injected via hostTools and filtered by binding.
 
-// ---------- 自定义工具 CRUD ----------
+// ---------- Custom tool CRUD ----------
 
 type customToolReq struct {
 	Key         string          `json:"key"`
@@ -40,11 +42,12 @@ type customToolReq struct {
 	Deferred    bool            `json:"deferred"`
 }
 
-var reToolKey = reAgentKey // 同 agent key 规则:小写字母开头 + 小写字母/数字/下划线
+var reToolKey = reAgentKey // same rule as agent keys: starts with a lowercase letter + lowercase letters/digits/underscores
 
-// 사용자 지정 도구 CRUD·시험 실행 엔드포인트가 writeErr 로 사용자에게 돌려주는 검증
-// 오류 응답을 한국어로 고정한다. 에이전트가 읽는 도구 실행 결과(actool.Errorf)와 도구
-// 스키마 description 은 두뇌 경계라 중국어 원문을 보존한다(BRIEF 성능 보존 방침).
+// Pins to Korean the validation error responses that the custom tool CRUD · test-run
+// endpoints return to the user via writeErr. Tool execution results the agent reads
+// (actool.Errorf) and tool schema descriptions are on the brain boundary, so their Chinese
+// originals are preserved (BRIEF performance-preservation policy).
 const (
 	errCustomToolKeyFormat          = "key는 소문자로 시작하고 소문자·숫자·밑줄만 사용할 수 있습니다"
 	errCustomToolKindInvalid        = "kind 값은 command, script, http, shell 중 하나여야 합니다"
@@ -192,7 +195,7 @@ func (s *Server) pgTestCustomTool(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"output": res.Flatten(), "is_error": res.IsError})
 }
 
-// ---------- Python 解释器(检测 + 入库 + 覆盖) ----------
+// ---------- Python interpreter (detect + persist to DB + override) ----------
 
 const settingPythonInterp = "python_interpreter"
 
@@ -227,7 +230,7 @@ func (s *Server) seedPythonInterpreter() {
 	}
 }
 
-// ---------- exec 规格 ----------
+// ---------- exec spec ----------
 
 type commandExec struct {
 	Command   string `json:"command"`
@@ -254,7 +257,7 @@ func timeoutOr(ms, def int) time.Duration {
 	return time.Duration(ms) * time.Millisecond
 }
 
-// ---------- 通用工具构造 ----------
+// ---------- Generic tool construction ----------
 
 // customTools builds CoreTools for every user-defined (system=false) tool row.
 // shell-kind tools are environment hints only — they surface in the Bash tool
@@ -275,7 +278,7 @@ func (s *Server) customTools() ([]actool.CoreTool, error) {
 }
 
 // buildCustomTool turns one custom-tool row into a CoreTool. Empty schema → a thin
-// {args:string} (薄壳工具), so command/http templates can use {args}.
+// {args:string} (thin-shell tool), so command/http templates can use {args}.
 func (s *Server) buildCustomTool(t *db.Tool) actool.CoreTool {
 	schema := ensureSchema(t.Schema)
 	key, kind, execRaw := t.Key, t.Kind, t.Exec
@@ -340,7 +343,7 @@ func ensureSchema(raw json.RawMessage) map[string]any {
 	}
 }
 
-// ---------- command:渲染命令 → 复用 Bash 底层 run ----------
+// ---------- command: render the command → reuse Bash's underlying run ----------
 
 func (s *Server) runCommandTool(ctx context.Context, execRaw json.RawMessage, params map[string]any, tc *actool.ToolContext) (actool.Result, error) {
 	var spec commandExec
@@ -349,8 +352,10 @@ func (s *Server) runCommandTool(ctx context.Context, execRaw json.RawMessage, pa
 		return actool.Errorf("command 为空"), nil
 	}
 	cmd := renderTemplate(spec.Command, params, shellQuote)
-	// 复用 Bash 也在用的底层 run(经 Bash CoreTool.Call):自动继承安全 floor/超时/
-	// 代理 env/输出溢出。工具与 Bash 平级、共用底层,不经过 Bash 这个工具让模型调。
+	// Reuse the same underlying run that Bash uses (via the Bash CoreTool.Call): it automatically
+	// inherits the safety floor/timeout/proxy env/output overflow handling. The tool sits at the
+	// same level as Bash and shares its underpinnings, without going through Bash as a tool the
+	// model calls.
 	bashIn, _ := json.Marshal(map[string]any{"command": cmd})
 	if spec.TimeoutMs > 0 {
 		var cancel context.CancelFunc
@@ -360,7 +365,7 @@ func (s *Server) runCommandTool(ctx context.Context, execRaw json.RawMessage, pa
 	return actool.NewBash().Call(ctx, bashIn, tc)
 }
 
-// ---------- script(仅 Python):临时文件 + stdin JSON + env ----------
+// ---------- script (Python only): temp file + stdin JSON + env ----------
 
 func (s *Server) runScriptTool(ctx context.Context, key string, execRaw json.RawMessage, params map[string]any, tc *actool.ToolContext) (actool.Result, error) {
 	var spec scriptExec
@@ -411,14 +416,14 @@ func execPython(ctx context.Context, interp, key, code string, params map[string
 	defer cancel()
 	c := exec.CommandContext(runCtx, interp, tmp)
 	c.Dir = workDir
-	c.Env = append(os.Environ(), sessionEnv...) // 会话代理 env
-	for k, v := range params {                  // 标量参数镜像成 TOOL_<NAME>
+	c.Env = append(os.Environ(), sessionEnv...) // session proxy env
+	for k, v := range params {                  // mirror scalar params as TOOL_<NAME>
 		if sv, ok := scalarStr(v); ok {
 			c.Env = append(c.Env, "TOOL_"+strings.ToUpper(k)+"="+sv)
 		}
 	}
 	pj, _ := json.Marshal(params)
-	c.Stdin = bytes.NewReader(pj) // 参数 JSON 走 stdin
+	c.Stdin = bytes.NewReader(pj) // params JSON goes over stdin
 	out, err := c.CombinedOutput()
 	body := string(out)
 	if runCtx.Err() == context.DeadlineExceeded {
@@ -429,7 +434,7 @@ func execPython(ctx context.Context, interp, key, code string, params map[string
 	return body, nil
 }
 
-// ---------- http:原生请求 + 代理 ----------
+// ---------- http: native request + proxy ----------
 
 func (s *Server) runHTTPTool(ctx context.Context, execRaw json.RawMessage, params map[string]any, tc *actool.ToolContext) (actool.Result, error) {
 	var spec httpExec

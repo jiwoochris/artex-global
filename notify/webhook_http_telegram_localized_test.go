@@ -9,29 +9,29 @@ import (
 	"testing"
 )
 
-// 이 파일은 F4 ④⑤(telegram·webhook·공용 HTTP 전송 계층) 한국어화를 회귀로부터
-// 지킨다. telegram.go 의 메시지 라벨·배치 제목, webhook.go 의 설정 검증 오류,
-// http.go 의 전송 오류, 그리고 다섯 채널이 공유하는 validateHTTPURL 이 중국어로
-// 되돌아가면 잡아낸다. 헬퍼 hasHan·hasHangul·assertKorean 은
-// notify_localized_test.go 에 있다(같은 패키지).
+// This file guards the F4 ④⑤ Korean localization (telegram, webhook, and the shared HTTP
+// transport layer) against regressions. It catches telegram.go's message labels and batch titles,
+// webhook.go's config validation errors, http.go's transport errors, and validateHTTPURL (shared
+// by all five channels) reverting to Chinese. The helpers hasHan, hasHangul and assertKorean live in
+// notify_localized_test.go (same package).
 //
-// 데이터(제목·유형·자산·개요)는 전부 ASCII 로 둔다. 그래야 "출력 전체에 한자 0"
-// 이라는 단언이 콘텐츠가 아니라 골격 라벨의 회귀만 정확히 포착한다. 심각도·상태
-// 라벨은 F4 ①에서 이미 한국어라 출력에 한글로 나오며(한자 아님) 단언을 통과한다.
+// All data (title, type, assets, summary) is kept ASCII. That way the assertion "zero Han
+// characters in the whole output" catches regressions in the skeleton labels only, not in content.
+// Severity/status labels were already Koreanized in F4 ①, so they render as Hangul (not Han) and pass.
 
-// TestTelegramItemLabelsLocalized 는 단건 Telegram 메시지의 모든 라벨 분기를 켠 뒤
-// 골격이 한국어이고 중국어 한자가 없음을 확인한다.
+// TestTelegramItemLabelsLocalized turns on every label branch of a single-item Telegram message
+// and checks that the skeleton is Korean and contains no Chinese Han characters.
 func TestTelegramItemLabelsLocalized(t *testing.T) {
 	m := Message{
 		HomeURL: "https://example.com/panel",
 		Items: []Item{{
 			Name:       "sqli-login", // Title() = Name
-			VulnClass:  "injection",  // Title() 과 달라야 유형 줄이 렌더됨
-			Severity:   "high",       // SeverityLabel → 높음(한글)
+			VulnClass:  "injection",  // must differ from Title() for the type line to render
+			Severity:   "high",       // SeverityLabel → 높음 ("high", in Hangul)
 			Summary:    "login form is injectable",
 			Assets:     []string{"host-a.example.com"},
 			DetailURL:  "https://example.com/f/1",
-			FromStatus: "pending", // IsStatusChange()=true → 상태 변경 줄
+			FromStatus: "pending", // IsStatusChange()=true → status-change line
 			ToStatus:   "fixed",
 		}},
 	}
@@ -49,13 +49,13 @@ func TestTelegramItemLabelsLocalized(t *testing.T) {
 	}
 }
 
-// TestTelegramBatchTitleLocalized 는 배치(digest) 제목의 넘침·시간창 분기가
-// 한국어로 렌더되는지 확인한다. markdownTitle 과 글자까지 맞춰야 채널 간 혼재가
-// 생기지 않는다.
+// TestTelegramBatchTitleLocalized checks that the overflow and time-window branches of the batch
+// (digest) title render in Korean. It must match markdownTitle character for character, or the
+// channels end up with mixed wording.
 func TestTelegramBatchTitleLocalized(t *testing.T) {
 	items := []Item{{Name: "a", Severity: "high"}, {Name: "b", Severity: "low"}}
 
-	// 넘침 있음 + 시간창: 요약·총건수·앞 N건·나머지·다음 메시지·최근 N분간.
+	// Overflow + time window: summary, total count, first N items, the rest, next message, last N minutes.
 	over := telegramBatchTitle(Message{WindowMinutes: 30}, items, 5)
 	assertKorean(t, "telegramBatchTitle(넘침)", over)
 	for _, want := range []string{"취약점 요약 · 총 5건", "앞 2건만 표시", "나머지 3건", "다음 메시지", "최근 30분간"} {
@@ -64,7 +64,7 @@ func TestTelegramBatchTitleLocalized(t *testing.T) {
 		}
 	}
 
-	// 넘침 없음 + 시간창 없음: 다음 메시지 안내가 없어야 한다.
+	// No overflow + no time window: there must be no "next message" notice.
 	full := telegramBatchTitle(Message{}, items, 2)
 	assertKorean(t, "telegramBatchTitle(전량)", full)
 	if !strings.Contains(full, "취약점 요약 · 총 2건") {
@@ -75,8 +75,8 @@ func TestTelegramBatchTitleLocalized(t *testing.T) {
 	}
 }
 
-// TestTelegramValidateLocalized 는 필수 필드 누락 오류가 한국어이고 어떤 필드가
-// 비었는지 알려 주는지 확인한다. 기술 용어 Bot Token·Chat ID 는 그대로 보존한다.
+// TestTelegramValidateLocalized checks that missing-required-field errors are Korean and say which
+// field is empty. The technical terms Bot Token and Chat ID are kept as is.
 func TestTelegramValidateLocalized(t *testing.T) {
 	if err := (telegramChannel{}).Validate(map[string]any{}); err == nil {
 		t.Fatal("bot_token 누락은 검증 실패여야 합니다")
@@ -96,8 +96,8 @@ func TestTelegramValidateLocalized(t *testing.T) {
 	}
 }
 
-// TestWebhookValidateLocalized 는 범용 Webhook 설정 검증 오류 세 가지가 한국어이고
-// 각 오류가 문제의 원인을 알려 주는지 확인한다.
+// TestWebhookValidateLocalized checks that the three generic Webhook config validation errors are
+// Korean and that each one states the cause of the problem.
 func TestWebhookValidateLocalized(t *testing.T) {
 	if err := (webhookChannel{}).Validate(map[string]any{}); err == nil {
 		t.Fatal("url 누락은 검증 실패여야 합니다")
@@ -107,7 +107,7 @@ func TestWebhookValidateLocalized(t *testing.T) {
 			t.Errorf("대상 URL 누락을 알려줘야 합니다: %q", err.Error())
 		}
 	}
-	// 지원하지 않는 메서드: 한국어 + 허용 목록 노출.
+	// Unsupported method: Korean, and the allowed list is shown.
 	if err := (webhookChannel{}).Validate(map[string]any{"url": "https://example.com/hook", "method": "DELETE"}); err == nil {
 		t.Fatal("DELETE 는 검증 실패여야 합니다")
 	} else {
@@ -116,7 +116,7 @@ func TestWebhookValidateLocalized(t *testing.T) {
 			t.Errorf("허용 메서드 목록을 알려줘야 합니다: %q", err.Error())
 		}
 	}
-	// 템플릿 문법 오류: 한국어(래핑된 원인은 Go 템플릿 오류라 한자가 없다).
+	// Template syntax error: Korean (the wrapped cause is a Go template error, so it has no Han).
 	if err := (webhookChannel{}).Validate(map[string]any{"url": "https://example.com/hook", "body_template": "{{"}); err == nil {
 		t.Fatal("깨진 템플릿은 검증 실패여야 합니다")
 	} else {
@@ -127,11 +127,11 @@ func TestWebhookValidateLocalized(t *testing.T) {
 	}
 }
 
-// TestValidateHTTPURLLocalized 는 다섯 채널(telegram·webhook·dingtalk·feishu·wecom)이
-// 공유하는 URL 검증 헬퍼의 오류가 한국어인지 확인한다. 이 헬퍼가 중국어로 남아 있으면
-// 한국어 접두("API 주소가 올바르지 않습니다: ...")와 섞여 반한반중이 된다.
+// TestValidateHTTPURLLocalized checks that errors from the URL validation helper shared by the five
+// channels (telegram, webhook, dingtalk, feishu, wecom) are Korean. If this helper stayed Chinese,
+// it would mix with the Korean prefix ("API 주소가 올바르지 않습니다: ...", "invalid API address") into half-Korean, half-Chinese text.
 func TestValidateHTTPURLLocalized(t *testing.T) {
-	// 지원하지 않는 스킴.
+	// Unsupported scheme.
 	if err := validateHTTPURL("ftp://example.com/x"); err == nil {
 		t.Fatal("ftp 스킴은 거부되어야 합니다")
 	} else {
@@ -140,7 +140,7 @@ func TestValidateHTTPURLLocalized(t *testing.T) {
 			t.Errorf("지원 스킴(http/https)을 알려줘야 합니다: %q", err.Error())
 		}
 	}
-	// 호스트 이름 없음.
+	// No host name.
 	if err := validateHTTPURL("http://"); err == nil {
 		t.Fatal("호스트 없는 주소는 거부되어야 합니다")
 	} else {
@@ -148,10 +148,10 @@ func TestValidateHTTPURLLocalized(t *testing.T) {
 	}
 }
 
-// TestHTTPLocalTargetBlockedLocalized 는 로컬/링크 로컬 주소 차단 오류가 한국어이고
-// 우회 방법(환경 변수)을 알려 주는지 확인한다.
+// TestHTTPLocalTargetBlockedLocalized checks that the error for blocked local/link-local addresses
+// is Korean and explains the workaround (the environment variable).
 func TestHTTPLocalTargetBlockedLocalized(t *testing.T) {
-	t.Setenv(AllowLocalTargetsEnv, "") // 명시적으로 꺼서 차단 경로를 탄다
+	t.Setenv(AllowLocalTargetsEnv, "") // explicitly disabled so the block path is taken
 	err := blockInternalDial("tcp", "127.0.0.1:25", nil)
 	if err == nil {
 		t.Fatal("로컬 주소는 기본적으로 차단되어야 합니다")
@@ -162,13 +162,13 @@ func TestHTTPLocalTargetBlockedLocalized(t *testing.T) {
 	}
 }
 
-// TestHTTPRedactHelpersLocalized 는 주소 탈감(redact) 자리표시자와 전송 오류의
-// "알 수 없는 오류" 분기가 한국어인지 확인한다.
+// TestHTTPRedactHelpersLocalized checks that the address-redaction placeholder and the "unknown
+// error" ("알 수 없는 오류") branch of transport errors are Korean.
 func TestHTTPRedactHelpersLocalized(t *testing.T) {
 	if got := redactRequestTarget(""); !strings.Contains(got, "해석할 수 없") {
 		t.Errorf("해석 불가 주소는 한국어 자리표시자여야 합니다, 받은 값 %q", got)
 	}
-	// *url.Error 의 Err 가 nil 인 분기.
+	// The branch where *url.Error's Err is nil.
 	got := redactTransportError(&url.Error{Op: "Get", URL: "http://api.example", Err: nil})
 	if hasHan(got) {
 		t.Errorf("전송 오류 탈감 결과에 한자가 남았습니다: %q", got)
@@ -178,9 +178,9 @@ func TestHTTPRedactHelpersLocalized(t *testing.T) {
 	}
 }
 
-// TestHTTPStatusErrorsLocalized 는 실제 doJSON 왕복으로 상태코드 분류(거부/서버
-// 오류/제한)의 사용자 노출 오류가 한국어인지 확인한다. 127.0.0.1 httptest 로의
-// 전송은 기본 차단이라 이 테스트에서만 명시적으로 허용한다.
+// TestHTTPStatusErrorsLocalized uses a real doJSON round trip to check that the user-facing errors
+// for each status-code class (rejected / server error / rate-limited) are Korean. Sending to a
+// 127.0.0.1 httptest server is blocked by default, so this test alone allows it explicitly.
 func TestHTTPStatusErrorsLocalized(t *testing.T) {
 	t.Setenv(AllowLocalTargetsEnv, "1")
 	cases := []struct {

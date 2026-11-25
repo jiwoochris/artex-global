@@ -184,24 +184,24 @@ flowchart TB
     UI["Dashboard · Tasks · Assets · Coverage graph · Traffic · Workspace · System settings"]
   end
   subgraph SRV["server (Go net/http)"]
-    API["REST /api/*　JWT auth　SSE"]
+    API["REST /api/* · JWT auth · SSE"]
     ENG["engine scheduling loop"]
-    MGR["Manager　task/engine/store lifecycle"]
+    MGR["Manager · task/engine/store lifecycle"]
   end
   subgraph AG["agent (norma SDK)"]
-    GO["goals　goal decomposition + scope extraction"]
-    PL["planner　the only intent producer"]
-    WK["worker　executor ×N"]
-    MA["mainagent　human-in-the-loop"]
+    GO["goals · goal decomposition + scope extraction"]
+    PL["planner · the only intent producer"]
+    WK["worker · executor ×N"]
+    MA["mainagent · human-in-the-loop"]
   end
   subgraph DB["PostgreSQL"]
-    AGRAPH["Asset graph　assets / companies / task_scope"]
-    EGRAPH["Exploration graph　exploration_nodes / anchors / activity"]
+    AGRAPH["Asset graph · assets / companies / task_scope"]
+    EGRAPH["Exploration graph · exploration_nodes / anchors / activity"]
   end
   subgraph SUB["Supporting subsystems"]
-    PROXY["traffic-recording proxy　MITM + CA recording"]
-    GUARD["guard / intercept　tool approval gate"]
-    ENR["enrich　async DNS / HTTP enrichment"]
+    PROXY["traffic-recording proxy · MITM + CA recording"]
+    GUARD["guard / intercept · tool approval gate"]
+    ENR["enrich · async DNS / HTTP enrichment"]
     EXT["MCP · skills · memory · report"]
   end
 
@@ -325,15 +325,15 @@ A real attack chain is often an ordered sequence of mutually dependent steps (e.
 flowchart TB
   subgraph TODO["shared todolist (persists per task · resident across wakes)"]
     direction LR
-    T1["1 injection point　[done]"]
-    T2["2 obtain credentials　[in progress]"]
-    T3["3 lateral movement　[awaiting prereq]"]
-    T4["4 privilege escalation　[awaiting prereq]"]
+    T1["1 injection point · [done]"]
+    T2["2 obtain credentials · [in progress]"]
+    T3["3 lateral movement · [awaiting prereq]"]
+    T4["4 privilege escalation · [awaiting prereq]"]
     T1 -. prereq satisfied .-> T2 -.-> T3 -.-> T4
   end
-  R1["round 1 wake　dispatch intent ①"] --> T1
-  R2["round 2 (① yields fact)　dispatch intent ②"] --> T2
-  R3["round 3 (② yields fact)　dispatch intent ③"] --> T3
+  R1["round 1 wake · dispatch intent ①"] --> T1
+  R2["round 2 (① yields fact) · dispatch intent ②"] --> T2
+  R3["round 3 (② yields fact) · dispatch intent ③"] --> T3
 ```
 
 This lets the attack chain progress reliably even in an "event-driven + stateless session" environment — without duplication and without going out of order. This is the core of how ARTEX completes multi-step attack chains autonomously.
@@ -356,7 +356,7 @@ This repository aims to help the **defending side** understand how autonomous AI
   - **[Host triage script (detections/triage/)](detections/triage/)**: a read-only script, [`artex_host_triage.py`](detections/triage/artex_host_triage.py), for the responder standing at a single suspected host's shell with no SIEM or network sensor. It checks the same fingerprints the rules above do, plus — on the box itself — the three host/DB indicators the indicator CSV deliberately carries without a Sigma rule because they are not log- or network-observable (the server listen port, the recording-proxy endpoint, the PostgreSQL exploration schema). It runs on the standard library alone with nothing to install, and every finding is a triage lead carrying the same caveat as its indicator row, never an attribution on its own.
   - The rules, the layer, the indicators above, and the host-triage script's self-test are all re-run and verified by the repository tests ([detections/tests/](detections/tests/)): a detection rule you cannot run is only a claim.
 
-> This material is continually expanded. Suggest additional detection rules or hardening items as issues, and when you send a rule directly, please follow the contract in [the "Contributing detection rules and detection tests" section of the contributing guide](CONTRIBUTING.en.md#contributing-detection-rules-and-detection-tests) (ground every indicator in observable fact, state the limits, pass static validation, and include a reproducible test).
+> This material is continually expanded. Suggest additional detection rules or hardening items as issues, and when you send a rule directly, please follow the contract in [the "Contributing detection rules and detection tests" section of the contributing guide](CONTRIBUTING.md#contributing-detection-rules-and-detection-tests) (ground every indicator in observable fact, state the limits, pass static validation, and include a reproducible test).
 
 ---
 
@@ -375,7 +375,7 @@ Local development and testing:
 
 For other development topics (such as manual vulnerability re-verification), see the "开发" (Development) section of [`README.zh.md`](README.zh.md#开发).
 
-The changes this global edition adds on top of upstream ARTEX are tracked in the [changelog (CHANGELOG.en.md)](CHANGELOG.en.md).
+The changes this global edition adds on top of upstream ARTEX are tracked in the [changelog (CHANGELOG.md)](CHANGELOG.md).
 
 ---
 
@@ -394,7 +394,7 @@ Anyone is free to use, modify, and distribute it, but **derivative works must al
 - Use this tool to **read and study the source code**, and to **verify its technical principles in a locally isolated environment.**
 - Unless the target is one you own or for which you have **explicit written authorization**, do not scan, probe, exploit, or attack any website, online service, or connected system.
 - Using it for illegal intrusion, data theft, denial of service (DoS), or any other destructive or criminal activity is strictly prohibited.
-- You must comply with all laws on network security, data protection, and computer crime in your country and region (in Korea, the 정보통신망법, 개인정보보호법, and others).
+- You must comply with all laws on network security, data protection, and computer crime in your country and region (in Korea, the Network Act (정보통신망법), the Personal Information Protection Act (개인정보보호법), and others).
 
 ### Disclaimer
 

@@ -6,7 +6,7 @@ import (
 )
 
 // TaskInterceptRuleInput is one task-level rule supplied at task creation.
-// Action: 'block'=拦截 'allow'=允许(白名单)；空视为 'block'。
+// Action: 'block' = intercept, 'allow' = allow (allowlist); empty is treated as 'block'.
 type TaskInterceptRuleInput struct {
 	Enabled bool   `json:"enabled"`
 	Action  string `json:"action"`

@@ -104,7 +104,7 @@ func TestTaskArchivePackageSkipsSymlink(t *testing.T) {
 	if err := os.WriteFile(regular, []byte("keep me"), archiveFileMode); err != nil {
 		t.Fatal(err)
 	}
-	// 工作目录里出现的符号链接应被跳过，而不是让整个归档失败。
+	// Symlinks that appear in the working directory should be skipped rather than failing the whole archive.
 	if err := os.Symlink(regular, filepath.Join(payload, "link.txt")); err != nil {
 		t.Skipf("symlink unsupported on this platform: %v", err)
 	}

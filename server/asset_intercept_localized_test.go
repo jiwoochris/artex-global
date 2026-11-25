@@ -2,15 +2,17 @@ package server
 
 import "testing"
 
-// asset_intercept.go·task_intercept.go 의 가로채기 규칙 검증기가 돌려주는 사용자 노출
-// 오류 문구를 한국어로 유지하는 회귀 방어 테스트다. 두 검증기
-// (validateAssetInterceptRuleReq·validateTaskInterceptRuleReq)는 DB 를 쓰지 않는 순수
-// 함수라, 상수 핀 고정에 더해 실제 오류 경로를 직접 호출해 반환 문구까지 검증한다.
-// 한국어 판정은 F3a 가 만든 assertKoreanError(한글 포함·중국어 한자 0)를 재사용한다.
-// 필드명·열거값(pattern·exact_ip·cidr·kind·action·block·allow)은 와이어 식별자라 ASCII 로
-// 남으며 한자 판정에서 걸리지 않는다. 누군가 둘러싼 설명을 중국어로 되돌리면 실패한다.
+// Regression guard test that keeps the user-facing error text returned by the intercept
+// rule validators in asset_intercept.go · task_intercept.go in Korean. The two validators
+// (validateAssetInterceptRuleReq · validateTaskInterceptRuleReq) are pure functions that
+// do not touch the DB, so on top of pinning the constants, the test calls the real error
+// paths directly and checks the returned text as well.
+// The Korean check reuses assertKoreanError (contains Hangul · zero Chinese Han), built in F3a.
+// Field names · enum values (pattern · exact_ip · cidr · kind · action · block · allow) are
+// wire identifiers, so they stay ASCII and are not caught by the Han check. The test fails
+// if someone reverts the surrounding description back to Chinese.
 func TestAssetInterceptErrorsLocalized(t *testing.T) {
-	// 상수 핀 고정
+	// Pin the constants
 	for _, c := range []struct{ label, msg string }{
 		{"pattern_empty", errAssetInterceptPatternEmpty},
 		{"bad_exact_ip", errAssetInterceptInvalidExactIPFmt},
@@ -21,7 +23,7 @@ func TestAssetInterceptErrorsLocalized(t *testing.T) {
 		assertKoreanError(t, c.label, c.msg)
 	}
 
-	// 실제 경로: validateAssetInterceptRuleReq 의 네 거부 분기
+	// Real path: the four rejection branches of validateAssetInterceptRuleReq
 	for _, c := range []struct {
 		label string
 		req   assetInterceptRuleReq
@@ -39,13 +41,13 @@ func TestAssetInterceptErrorsLocalized(t *testing.T) {
 		assertKoreanError(t, c.label, err.Error())
 	}
 
-	// 유효 입력은 거부되지 않는다
+	// Valid input is not rejected
 	okReq := assetInterceptRuleReq{Kind: "cidr", Pattern: "192.168.0.0/16"}
 	if err := validateAssetInterceptRuleReq(&okReq); err != nil {
 		t.Fatalf("유효한 CIDR 가 거부되었습니다: %v", err)
 	}
 
-	// 실제 경로: validateTaskInterceptRuleReq 의 action 거부 분기
+	// Real path: the action rejection branch of validateTaskInterceptRuleReq
 	badAction := taskInterceptRuleReq{Action: "nope", Kind: "exact_domain", Pattern: "example.com"}
 	if err := validateTaskInterceptRuleReq(&badAction); err == nil {
 		t.Fatalf("bad_action_path: 오류가 없습니다(검증을 통과함)")
@@ -53,7 +55,7 @@ func TestAssetInterceptErrorsLocalized(t *testing.T) {
 		assertKoreanError(t, "bad_action_path", err.Error())
 	}
 
-	// action 공란은 block 기본값으로 정규화되어 통과한다
+	// An empty action is normalized to the default "block" and passes
 	defaultAction := taskInterceptRuleReq{Action: "", Kind: "exact_domain", Pattern: "example.com"}
 	if err := validateTaskInterceptRuleReq(&defaultAction); err != nil {
 		t.Fatalf("기본 action 정규화에 실패했습니다: %v", err)

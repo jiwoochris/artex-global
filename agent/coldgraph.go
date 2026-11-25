@@ -191,7 +191,7 @@ func (g *coldGraph) eligibleCold(structCold map[int64]bool, coldSince map[int64]
 }
 
 // block is a group of cold nodes to fold into one digest, plus the external
-// parent nodes that anchor them (§3.1 "父作锚不作成员"): anchors are fed to the
+// parent nodes that anchor them (§3.1 "parents act as anchors, not members"): anchors are fed to the
 // compressor as context but never become members / never get a covers edge.
 type block struct {
 	Members []int64 // sorted; the nodes this digest covers

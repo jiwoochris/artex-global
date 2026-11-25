@@ -4,10 +4,10 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: write # Release 생성에 필요
+  contents: write # required to create the Release
 
 jobs:
-  # ① 프런트엔드 정적 내보내기(한 번 수행), 산출물을 각 플랫폼 크로스 컴파일에서 재사용
+  # ① Static frontend export (done once); the output is reused by each platform's cross-compile
   frontend:
     runs-on: ubuntu-latest
     steps:
@@ -26,7 +26,7 @@ jobs:
           name: web-dist
           path: web/out
 
-  # ② 5개 플랫폼 크로스 컴파일(프런트엔드 내장) + zip 패키징
+  # ② Cross-compile for 5 platforms (frontend embedded) + zip packaging
   binaries:
     needs: frontend
     runs-on: ubuntu-latest
@@ -55,8 +55,8 @@ jobs:
           ARTEX_BUILD_VERSION: ${{ github.ref_name }}
           ARTEX_SKIP_FRONTEND: "1"
           ARTEX_SKIP_NPM_CI: "1"
-          # UPX 자가 압축 해제 ELF 는 일부 Linux 커널·가상화·보안 정책에서 크래시가 난다.
-          # Release 는 Go linker 스트립과 zip 압축을 사용해 이식성을 우선 보장한다.
+          # UPX self-extracting ELF binaries crash under some Linux kernels, virtualization and security policies.
+          # The Release uses Go linker stripping and zip compression, prioritizing portability.
           ARTEX_COMPRESS: "0"
           ARTEX_PACKAGE: "1"
           ARTEX_PACKAGE_DIR: dist
@@ -69,14 +69,14 @@ jobs:
         with:
           name: pkg-${{ matrix.goos }}-${{ matrix.goarch }}
           path: "dist/*.zip"
-      # Linux 원본 바이너리를 따로 업로드해 docker job 에서 재사용한다(이미지 안에서 프런트엔드+Go 를 다시 빌드하지 않도록)
+      # Upload the raw Linux binary separately so the docker job can reuse it (so the frontend + Go aren't rebuilt inside the image)
       - if: matrix.goos == 'linux'
         uses: actions/upload-artifact@v4
         with:
           name: bin-linux-${{ matrix.goarch }}
           path: dist/artex-linux-${{ matrix.goarch }}/artex
 
-  # ③ 모든 zip 을 모아 → GitHub Release 생성
+  # ③ Collect all the zips → create the GitHub Release
   release:
     needs: binaries
     runs-on: ubuntu-latest
@@ -96,10 +96,10 @@ jobs:
             dist/SHA256SUMS
           generate_release_notes: true
 
-  # ④ 다중 아키텍처 이미지 → GitHub Container Registry(ghcr.io) 에 push(binaries 가 빌드한 Linux 바이너리를
-  #    재사용하고, 이미지에는 도구만 설치 + 바이너리만 배치; arm64 는 apt 계층만 에뮬레이션하면 되어 빌드가 훨씬 빠르다)
-  #    로그인은 워크플로 기본 GITHUB_TOKEN 으로 하므로 별도 시크릿이 필요 없다. 상류 autumn27/artex(Docker Hub)는
-  #    내려갔고 이 포크는 그 네임스페이스에 push 권한도 없어, 이 포크 소유의 ghcr 네임스페이스로 발행한다.
+  # ④ Multi-arch image → push to the GitHub Container Registry (ghcr.io) (reuses the Linux binaries built by binaries;
+  #    the image only installs tools + places the binary; arm64 only has to emulate the apt layers, so the build is much faster)
+  #    Login uses the workflow's default GITHUB_TOKEN, so no separate secret is needed. Upstream autumn27/artex (Docker Hub)
+  #    has been taken down and this fork has no push permission on that namespace anyway, so it publishes to this fork's own ghcr namespace.
   docker:
     needs: [binaries]
     runs-on: ubuntu-latest
@@ -109,7 +109,7 @@ jobs:
     env:
       IMAGE_NAMESPACE: ghcr.io/jiwoochris/artex-global
     steps:
-      - uses: actions/checkout@v4 # Dockerfile 과 skills/ 를 가져온다
+      - uses: actions/checkout@v4 # fetches the Dockerfile and skills/
       - uses: actions/download-artifact@v4
         with:
           name: bin-linux-amd64

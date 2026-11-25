@@ -15,11 +15,12 @@ import (
 
 const maxChatMentions = 10
 
-// User-facing @멘션(인용) error messages surfaced through the HTTP API, localized
-// to Korean (BRIEF 현지화 방침). 用語: 引用→인용(UI mentionTextarea 네임스페이스
-// 정합). 보존 대상은 여기 없다: 와이어 토큰 라벨(chatMentionPattern·
-// chatMentionKinds)과 에이전트 입력 스냅샷 헤더·절단 표시(composeChatMentionMessage
-// 안)는 표시 문구가 아니라 두뇌 입력 형식이라 원문 그대로 둔다.
+// User-facing @mention (citation) error messages surfaced through the HTTP API, localized
+// to Korean (BRIEF localization policy). Terminology: 引用 (citation) → 인용 (consistent with
+// the UI mentionTextarea namespace). Nothing here needs preserving: the wire token labels
+// (chatMentionPattern · chatMentionKinds) and the agent-input snapshot header · truncation
+// markers (inside composeChatMentionMessage) are not display text but the brain's input
+// format, so they are left as-is.
 const (
 	errChatMentionBadID       = "인용 ID 가 올바르지 않습니다. 다시 선택해 주세요"
 	errChatMentionTooMany     = "메시지 한 건에는 레코드를 최대 10개까지 인용할 수 있습니다"
@@ -29,10 +30,11 @@ const (
 	errChatMentionNotFoundFmt = "인용한 %s #%d 레코드가 존재하지 않거나 유형이 일치하지 않습니다. 제거한 뒤 다시 선택해 주세요"
 )
 
-// chatMentionKindLabel: 사용자 노출 오류에서만 쓰는 표시 전용 한국어 라벨.
-// UI `mentionTextarea.kind.*` 와 같은 용어를 쓴다. 와이어 토큰(chatMentionPattern·
-// chatMentionKinds)과 에이전트 입력(ref.Name, composeChatMentionMessage 안)은
-// 중국어 라벨을 그대로 유지한다 — 프론트 멘션 칩 표시 i18n(F30)과 분리된 별건.
+// chatMentionKindLabel: display-only Korean labels used only in user-facing errors.
+// Uses the same terms as the UI `mentionTextarea.kind.*`. The wire tokens (chatMentionPattern ·
+// chatMentionKinds) and the agent input (ref.Name, inside composeChatMentionMessage) keep
+// their Chinese labels as-is — a separate matter from the frontend mention-chip display
+// i18n (F30).
 var chatMentionKindLabel = map[string]string{
 	"finding": "취약점", "asset": "자산", "company": "기업", "endpoint": "엔드포인트",
 	"ip": "IP", "app": "앱", "root_domain": "도메인", "subdomain": "서브도메인", "service": "서비스",
@@ -134,7 +136,7 @@ func composeChatMentionMessage(pg *db.DB, message string) (string, error) {
 			return "", err
 		}
 		if data == nil {
-			// 와이어 라벨(ref.Name, 중국어)은 보존하되, 표시는 한국어 라벨로.
+			// Preserve the wire label (ref.Name, Chinese), but display the Korean label.
 			label := chatMentionKindLabel[ref.Kind]
 			if label == "" {
 				label = ref.Name

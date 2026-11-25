@@ -4,11 +4,11 @@ import packageJson from "../../package.json";
 
 const currentYear = new Date().getFullYear();
 
-// 브라우저 탭 제목·검색엔진 메타 설명. layout.tsx 의 정적 metadata 로 들어가 모든
-// 페이지의 <title>·<meta name="description"> 에 렌더되므로, 빌드 기본 locale 에 맞춰
-// 다섯 언어를 분기한다. zh 는 상류 대조를 위해 원문을 그대로 보존한다. 제목은 엠대시 대신
-// 콜론을 써서 "제품명: 설명" 형태로 둔다. 이 메타는 빌드 시점 정적 값이라 실행 중 언어
-// 전환에는 반응하지 않는다(탭 제목 한 줄 수준이라 허용한다).
+// Browser tab title and search-engine meta description. These go into layout.tsx's static metadata and render into every
+// page's <title> and <meta name="description">, so they branch across the five languages according to the build's
+// default locale. zh keeps the original text verbatim for comparison with upstream. Titles use a colon instead of an
+// em dash, in the form "Product name: description". This metadata is a static build-time value, so it does not react
+// to switching languages at runtime (acceptable, since it is just a one-line tab title).
 const META_BY_LOCALE: Record<Locale, { title: string; description: string }> = {
   en: {
     title: "ARTEX: Autonomous Penetration Testing Console",

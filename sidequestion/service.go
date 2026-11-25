@@ -11,7 +11,7 @@ import (
 // User-facing side-question outputs are Korean. The agent-brain prompts
 // (request.go:instruction, context.go:summaryInstruction) stay in their
 // benchmarked Chinese; only text and errors shown to the user are localized
-// (BRIEF 현지화 방침: 출력 언어만 한국어, 프롬프트 본문은 보존).
+// (BRIEF localization policy: only the output language is Korean; the prompt bodies are preserved).
 var (
 	errSideModelInterrupted = errors.New("모델 응답이 중단되었습니다. 다시 질문해 주세요.")
 	errSideNoAnswer         = errors.New("모델이 답변을 반환하지 않았습니다.")

@@ -7,11 +7,12 @@ import (
 	"testing"
 )
 
-// 상류 a951e4a 이식(백로그: 인증 읽기 fail-closed + 최초 설정 원자화 + 비밀번호 상한)의
-// 회귀 방어. GetSetting 은 "키 없음"과 "읽기 실패"의 반환값이 error 하나만 다르다(둘 다
-// value=""). 비밀번호 핸들러가 error 를 "미설정"으로 취급하면 데이터베이스 장애 중 초기화
-// 입구가 열린다. 아래 두 테스트는 커넥션 풀을 닫아 읽기 실패를 만들어 fail-closed(503)를
-// 확인한다.
+// Regression guard for the port of upstream a951e4a (backlog: fail-closed auth reads +
+// atomic first-time setup + password length cap). GetSetting's return values for "key
+// missing" and "read failed" differ only in the error (both have value=""). If a password
+// handler treats the error as "not set", the initialization entrypoint opens up during a
+// database outage. The two tests below close the connection pool to force a read failure
+// and verify fail-closed behavior (503).
 func TestAuthStatusFailsClosedWhenDataSourceUnavailable(t *testing.T) {
 	m, err := NewManager(t.TempDir(), "")
 	if err != nil {
@@ -60,8 +61,8 @@ func TestAuthInitFailsClosedWhenDataSourceUnavailable(t *testing.T) {
 	}
 }
 
-// 비밀번호 바이트 상한(bcrypt 72바이트)을 서버가 강제하는지 확인한다. 73바이트는 400 으로
-// 거부되어야 한다(이전에는 bcrypt 가 해시 단계에서 실패해 500 이 났다).
+// Verifies that the server enforces the password byte cap (bcrypt's 72 bytes). 73 bytes
+// must be rejected with a 400 (previously bcrypt failed at the hashing step and caused a 500).
 func TestAuthInitRejectsTooLongPasswordDB(t *testing.T) {
 	rig := newAuthTestRig(t)
 	tok := rig.s.currentSetupToken()
@@ -73,8 +74,9 @@ func TestAuthInitRejectsTooLongPasswordDB(t *testing.T) {
 	rig.expect(400, code, body, authErrPasswordTooLong)
 }
 
-// 토큰 검증과 기동 시 첫 실행 처리도 읽기 실패를 "비밀번호 없음"으로 접으면 안 된다. 접으면
-// 빈 해시가 캐시되고(passHashLoaded=true), signingKey("") 가 원시 jwt.key 로 떨어진다.
+// Token validation and first-run handling at startup must not collapse a read failure into
+// "no password" either. If they do, an empty hash gets cached (passHashLoaded=true) and
+// signingKey("") falls back to the raw jwt.key.
 func TestVerifyTokenFailsClosedWhenDataSourceUnavailable(t *testing.T) {
 	m, err := NewManager(t.TempDir(), "")
 	if err != nil {
@@ -116,8 +118,8 @@ func TestBootstrapAuthSkipsFirstRunWhenDataSourceUnavailable(t *testing.T) {
 	}
 }
 
-// ARTEX_ADMIN_PASSWORD 초기화도 최초 1회만 써야 한다: 다른 값으로 기동한 두 번째 인스턴스가
-// 기존 비밀번호를 덮어쓰면 안 된다.
+// ARTEX_ADMIN_PASSWORD initialization must also write only once, the first time: a second
+// instance started with a different value must not overwrite the existing password.
 func TestBootstrapAdminPasswordEnvDoesNotOverwriteDB(t *testing.T) {
 	rig := newAuthTestRig(t)
 	t.Setenv(adminPasswordEnv, "first-admin-pass-123")
@@ -127,8 +129,8 @@ func TestBootstrapAdminPasswordEnvDoesNotOverwriteDB(t *testing.T) {
 		t.Fatalf("첫 인스턴스가 비밀번호를 초기화해야 합니다 (err=%v)", err)
 	}
 
-	// 두 번째 인스턴스: 시작 시점 읽기는 비어 있지 않으므로 바로 돌아가야 하지만, 읽기와
-	// 쓰기 사이의 경합을 흉내 내려고 쓰기 경로를 직접 확인한다.
+	// Second instance: the read at startup is non-empty so it should return right away, but
+	// to simulate a race between the read and the write we check the write path directly.
 	inserted, err := rig.s.m.pg.InsertSettingIfAbsent(authPassKey, "second-hash")
 	if err != nil {
 		t.Fatal(err)

@@ -356,7 +356,7 @@ flowchart TB
   - **[ホストトリアージスクリプト (detections/triage/)](detections/triage/)**: SIEM もネットワークセンサーもない、疑わしい単一ホストのシェルの前に立つ対応者のための、読み取り専用スクリプト [`artex_host_triage.py`](detections/triage/artex_host_triage.py) です。上記のルールと同じ指紋を確認し、さらに — そのマシン上で — 指標 CSV が意図的に Sigma ルールなしで携える 3 つのホスト/DB 指標（サーバーのリッスンポート、記録プロキシのエンドポイント、PostgreSQL の探索スキーマ）も確認します。これらはログでもネットワークでも観察できないためです。標準ライブラリだけで動き、インストールするものは何もありません。どの検出結果もトリアージの手がかりであり、その指標行と同じ但し書きを携え、それ自体で帰属を断定するものではありません。
   - 上記のルール・レイヤー・指標、そしてホストトリアージスクリプトのセルフテストは、すべてリポジトリのテスト（[detections/tests/](detections/tests/)）で再実行・検証されます。実行できない検知ルールは主張にすぎません。
 
-> この資料は継続的に拡充しています。追加の検知ルールやハードニング項目は issue で提案してください。ルールを直接送る場合は、[コントリビューションガイドの「Contributing detection rules and detection tests」の節](CONTRIBUTING.en.md#contributing-detection-rules-and-detection-tests)の取り決めに従ってください（どの指標も観察可能な事実に根拠を置き、限界を述べ、静的検証を通し、再現可能なテストを含めること）。
+> この資料は継続的に拡充しています。追加の検知ルールやハードニング項目は issue で提案してください。ルールを直接送る場合は、[コントリビューションガイドの「Contributing detection rules and detection tests」の節](CONTRIBUTING.md#contributing-detection-rules-and-detection-tests)の取り決めに従ってください（どの指標も観察可能な事実に根拠を置き、限界を述べ、静的検証を通し、再現可能なテストを含めること）。
 
 ---
 
@@ -375,7 +375,7 @@ flowchart TB
 
 その他の開発トピック（手動での脆弱性の再検証など）については、[`README.zh.md`](README.zh.md#开发) の「开发」（開発）の節を参照してください。
 
-このグローバル版が上流の ARTEX に加えた変更は、[変更履歴 (CHANGELOG.en.md)](CHANGELOG.en.md) に記録されています。
+このグローバル版が上流の ARTEX に加えた変更は、[変更履歴 (CHANGELOG.md)](CHANGELOG.md) に記録されています。
 
 ---
 

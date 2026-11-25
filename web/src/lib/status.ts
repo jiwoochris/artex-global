@@ -1,5 +1,5 @@
 // Centralised status → color semantics, reused across the whole app.
-// Spec §8.3: 意图 / 覆盖 / 任务 / 严重度 each have a consistent color set.
+// Spec §8.3: 意图 / 覆盖 / 任务 / 严重度 (intent / coverage / task / severity) each have a consistent color set.
 // User-facing labels live in the "status" message namespace (ko/zh); the maps
 // here only carry the color tone, keyed by the same status value.
 
@@ -11,7 +11,7 @@ export const toneClasses: Record<Tone, string> = {
   green: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
   amber: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20",
   red: "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/20",
-  // rose 用作「严重」——实心高强调,视觉上明显高于「高危」的软红描边。
+  // rose is used for "critical" — solid, high emphasis, visually clearly above the soft red outline of "high".
   rose: "bg-rose-600 text-white border-rose-600 dark:bg-rose-600 dark:text-white",
   violet: "bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/20",
   slate: "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20",
@@ -37,13 +37,13 @@ const intent: Record<string, StatusMeta> = {
   running: { tone: "blue" },
   paused: { tone: "amber" },
   done: { tone: "green" },
-  // blocked = 模型/API/网络故障重试用尽，这条意图基本没真正探成（非目标拦截）。
+  // blocked = model/API/network failure with retries exhausted; this intent was essentially never really probed (not a target-side block).
   blocked: { tone: "red" },
-  // exhausted = 达到步数/时间预算被中途掐断、只写回部分结果（非方向已探尽）。
+  // exhausted = cut off midway by hitting the step/time budget, with only partial results written back (not "direction fully explored").
   exhausted: { tone: "violet" },
-  // stopped = 历史软删除状态（保留,历史数据）。
+  // stopped = legacy soft-delete status (kept for historical data).
   stopped: { tone: "slate" },
-  // deleted = 用户假删除了该意图（保留节点与血缘，删除原因见 delete_reason 字段）。
+  // deleted = the user soft-deleted this intent (node and lineage are kept; the deletion reason is in the delete_reason field).
   deleted: { tone: "slate" },
 };
 
@@ -100,8 +100,8 @@ const node: Record<string, StatusMeta> = {
   tombstoned: { tone: "neutral" },
 };
 
-// 推送投递状态。sending 用 blue 而不是 amber：它不是「有问题」，
-// 而是「已被领取、正在发」，与 pending 的等待语义要能区分开。
+// Push delivery status. sending uses blue rather than amber: it is not "something is wrong"
+// but "claimed and being sent", and it must be distinguishable from pending's waiting semantics.
 const delivery: Record<string, StatusMeta> = {
   pending: { tone: "amber" },
   sending: { tone: "blue" },

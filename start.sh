@@ -1,21 +1,21 @@
 #!/bin/sh
-# ARTEX 데몬 시작 스크립트(Linux / macOS / Docker ENTRYPOINT)
+# ARTEX daemon start script (Linux / macOS / Docker ENTRYPOINT)
 #
-# 사용법:
-#   ./start.sh                       포그라운드 실행(Ctrl-C 로 중지)
-#   nohup ./start.sh >artex.log 2>&1 &   백그라운드 상주
-#   ./start.sh -addr :9000           추가 인자는 artex 로 그대로 전달
+# Usage:
+#   ./start.sh                       run in the foreground (stop with Ctrl-C)
+#   nohup ./start.sh >artex.log 2>&1 &   keep running in the background
+#   ./start.sh -addr :9000           extra arguments are passed through to artex as is
 #
-# 이 스크립트는 한 가지만 합니다. artex 를 실행하고, 프로세스가 종료되면 종료 코드를 보고 다시 띄울지 결정합니다.
+# This script does exactly one thing: it runs artex, and when the process exits it looks at the exit code to decide whether to relaunch it.
 #
-#   0      사용자가 정상 중지     → 루프 종료
-#   75     프로그램이 재시작 요청  → 즉시 다시 실행(화면에서 "원클릭 업데이트" 또는 "롤백"을 누름)
-#   그 외  비정상 종료          → 백오프 후 다시 실행(1→2→4…최대 60초)
+#   0      user stopped it normally   → exit the loop
+#   75     program requested restart  → relaunch immediately (the user clicked "one-click update" or "rollback" in the UI)
+#   other  abnormal exit              → relaunch after backoff (1→2→4… up to 60s)
 #
-# 다운로드·SHA256 체크섬 검증·버전 교체는 일부러 여기서 하지 않습니다. 그 로직은 sh 와 bat 에 두 벌을 써야 하고,
-# 하필 가장 틀리면 안 되는 부분입니다. 실행되지 않는 바이너리로 한번 교체되면 이 스크립트는 그것을 충실히
-# 반복해서 띄우고, 사용자는 기계에 직접 들어가 수동으로 복구하는 수밖에 없습니다. 그래서 검증·교체는 전부 Go(selfupdate 패키지)에 두어
-# artex 가 기동할 때 스스로 처리하게 하고, 스크립트는 단순하게 유지합니다.
+# Downloading, SHA256 checksum verification and version swapping are deliberately not done here. That logic would have to be written
+# twice, in sh and in bat, and it is precisely the part that must never be wrong. Once the binary is swapped for one that does not run,
+# this script would faithfully relaunch it over and over, and the user's only option would be to log into the machine and recover by
+# hand. So all verification and swapping lives in Go (the selfupdate package), artex handles it itself at startup, and the script stays simple.
 set -u
 
 cd "$(dirname "$0")" || exit 1
@@ -29,11 +29,11 @@ MAX_DELAY=60
 child=0
 stopping=0
 
-# artex 본체로 중지 신호를 전달합니다.
+# Forward stop signals to the artex process.
 #
-# Docker 에서는 이것이 필수입니다. docker stop 은 SIGTERM 을 PID 1(즉 이 스크립트)에만 보내고
-# 자식 프로세스에는 보내지 않습니다. 전달하지 않으면 artex 가 신호를 받지 못해 우아한 종료를 못 하고,
-# 10초 뒤 SIGKILL 로 강제 종료되어 실행 중이던 작업이 도중에 끊깁니다.
+# This is essential under Docker. docker stop sends SIGTERM only to PID 1 (i.e. this script), not to
+# child processes. Without forwarding, artex never receives the signal and cannot shut down gracefully;
+# after 10 seconds it is SIGKILLed and any running task is cut off midway.
 forward() {
 	stopping=1
 	if [ "$child" -ne 0 ]; then
@@ -47,8 +47,8 @@ while :; do
 	"$BIN" "$@" &
 	child=$!
 
-	# 신호는 wait 를 중단시켜 128 보다 큰 값을 반환하게 합니다. 이때 자식 프로세스는 아직 우아한 종료를 진행 중이므로,
-	# 한 번 더 wait 해야 진짜 종료 코드를 얻을 수 있습니다.
+	# The signal interrupts wait, making it return a value greater than 128. The child is still in the middle of shutting down
+	# gracefully at that point, so we must wait once more to get the real exit code.
 	wait "$child"
 	code=$?
 	if [ "$code" -gt 128 ]; then
@@ -68,7 +68,7 @@ while :; do
 			exit 0
 			;;
 		"$RESTART_CODE")
-			# 업데이트/롤백이 준비되었습니다. 다시 실행하면 artex 가 기동 시 버전 교체를 완료합니다(selfupdate.Bootstrap 참조).
+			# An update/rollback is ready. On relaunch, artex completes the version swap at startup (see selfupdate.Bootstrap).
 			echo "[artex] 재시작 요청(새 버전 적용)…"
 			delay=1
 			;;

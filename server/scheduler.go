@@ -50,7 +50,7 @@ func (sc *Scheduler) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-t.C:
-			sc.s.reconcileConcurrency() // 并发上限:有空位就把排队任务补位启动
+			sc.s.reconcileConcurrency() // concurrency cap: whenever a slot frees up, start a queued task to fill it
 			sc.step()
 		}
 	}
@@ -142,13 +142,13 @@ func (sc *Scheduler) fireIntervals(triggers []*db.AgentTrigger) {
 			continue
 		}
 		_ = sc.pg.TouchTriggerFire(tr.ID)
-		// [F10/F19 경계 판정 · 두뇌 입력 보존] 이 파일의 트리거 합성부(정기·finding·목표·초과·
-		// 생성·도구 fire* 메서드)가 만드는 `【本次…触发】…` 컨텍스트 블록과 trunc 의 `…(已截断…)`
-		// 절단 표시는 번역하지 않는다. StartTriggeredRun 의 message 인자로 들어가
-		// finalTriggerMessage → ca.Chat 의 에이전트 입력(두뇌)이자 전사에 노출되는 이중 용도
-		// 문자열이다(BRIEF 경계 #1·F16 동형, conversations.go taskContextHeader 보존 주석 참조).
-		// title 인자(`定时触发 · …` 등)는 ca.Chat 에 안 가는 표시 전용이나, 본문이 중국어로
-		// 고정되어 제목만 바꾸면 대화 안에서 언어가 섞이므로(F7·F8·F12) 함께 보존한다.
+		// [F10/F19 boundary decision · brain input preserved] The `【本次…触发】…` context blocks built by this file's
+		// trigger composition (the scheduled, finding, goal, overrun, creation and tool fire* methods) and trunc's
+		// `…(已截断…)` truncation marker are not translated. They go into StartTriggeredRun's message argument and are
+		// dual-use strings: agent input (the brain) via finalTriggerMessage → ca.Chat, and also shown in the transcript
+		// (same shape as BRIEF boundary #1 / F16; see the preservation comment on taskContextHeader in conversations.go).
+		// The title argument (`定时触发 · …` etc.) is display-only and never reaches ca.Chat, but because the body is fixed
+		// in Chinese, changing only the title would mix languages within the conversation (F7, F8, F12), so it is preserved too.
 		ctx := "\n\n【本次为定时触发】" + now.Format(" 2006-01-02 15:04:05 MST")
 		sc.s.StartTriggeredRun(tr.AgentKey, fmt.Sprintf("定时触发 · %s", now.Format("15:04")), tr.IntervalMessage+ctx, 0, false, "", "")
 	}

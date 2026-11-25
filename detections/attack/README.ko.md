@@ -76,4 +76,4 @@ detections/tests/attack/run.sh
 
 규칙을 추가하거나 다시 태그하면 이 레이어도 맞춰 갱신하십시오. 규칙의 기법이 레이어에 없거나
 레이어의 기법이 규칙에 없으면 테스트가 실패합니다. [`../README.ko.md`](../README.ko.md)와
-[`../../CONTRIBUTING.md`](../../CONTRIBUTING.md)를 참조하십시오.
+[`../../CONTRIBUTING.ko.md`](../../CONTRIBUTING.ko.md)를 참조하십시오.

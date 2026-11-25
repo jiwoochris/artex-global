@@ -56,7 +56,7 @@ func TestServerMgmtConstantsLocalized(t *testing.T) {
 		"errMgmtTmplSyntax":         errMgmtTmplSyntax,
 		"errMgmtTmplVarPre":         errMgmtTmplVarPre,
 		"errMgmtTmplVarPost":        errMgmtTmplVarPost,
-		// 형식 문자열은 실제 포매팅 결과로 검사한다(한국어 + verb 보존).
+		// Format strings are checked against their actual formatted output (Korean + verbs preserved).
 		"errMgmtAPIReturned": fmt.Sprintf(errMgmtAPIReturned, 404, "detail"),
 	}
 	for label, msg := range cases {
@@ -76,7 +76,7 @@ func TestServerMgmtAPIReturnedFormat(t *testing.T) {
 }
 
 // TestServerMgmtSkillExistsSentinel guards the cross-stack contract: the server's
-// duplicate-skill message must carry the "이미 존재" marker that
+// duplicate-skill message must carry the "이미 존재" ("already exists") marker that
 // web/src/app/(main)/system/skills/page.tsx greps (msg.includes("이미 존재")) to
 // switch into the overwrite-confirm flow. Drift here silently disables overwrite.
 func TestServerMgmtSkillExistsSentinel(t *testing.T) {

@@ -23,9 +23,9 @@ import (
 	"github.com/Autumn-27/norma/transcript"
 )
 
-// User-facing side-question (곁질문) messages surfaced through the HTTP API and
-// the exchange status, localized to Korean (BRIEF 현지화 방침). "Worker" and
-// "메인 에이전트"/"메인 대화" match the UI terms; "[btw]" log lines stay as-is.
+// User-facing side-question messages surfaced through the HTTP API and
+// the exchange status, localized to Korean (per the BRIEF localization policy). "Worker" and
+// "메인 에이전트" (main agent) / "메인 대화" (main conversation) match the UI terms; "[btw]" log lines stay as-is.
 const (
 	sideErrCtxNotSaved        = "곁질문 컨텍스트가 아직 저장되지 않았습니다. 다시 시도해 주세요."
 	sideErrModelConfigChanged = "모델 설정이 삭제되었거나 변경되었습니다. 먼저 메인 에이전트를 실행해 컨텍스트를 갱신해 주세요."

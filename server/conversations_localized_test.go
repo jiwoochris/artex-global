@@ -9,12 +9,14 @@ import (
 	"testing"
 )
 
-// conversations.go 의 대화(채팅) API 에러 응답을 한국어로 유지하는 회귀 방어 테스트다.
-// 한국어 판정은 F3a 가 만든 assertKoreanError(한글 포함·중국어 한자 0)를 재사용한다.
+// Regression guard test that keeps the error responses of the conversation (chat) API in
+// conversations.go in Korean. The Korean check reuses assertKoreanError (contains Hangul ·
+// zero Chinese Han), built in F3a.
 
-// TestConversationErrorConstantsLocalized 는 응답 상수 12종이 전부 한국어임을 단언한다.
-// 핸들러는 s.pg(w)(DB)를 먼저 거쳐 DB 없는 이 호스트에서 끝까지 못 도므로, 상수 자체를
-// 단언한다(auth.go 선례). %d 가 든 형식 문자열은 실제 인자로 채워 최종 문구를 검사한다.
+// TestConversationErrorConstantsLocalized asserts that all 12 response constants are Korean.
+// The handlers go through s.pg(w) (DB) first and cannot run end to end on this DB-less host,
+// so the constants themselves are asserted (auth.go precedent). Format strings containing
+// %d are filled with real arguments and the final text is checked.
 func TestConversationErrorConstantsLocalized(t *testing.T) {
 	cases := []struct {
 		name string
@@ -38,12 +40,12 @@ func TestConversationErrorConstantsLocalized(t *testing.T) {
 	}
 }
 
-// TestDecodeConversationRequestTooLargeLocalized 는 요청 본문 초과 경로를 실제 HTTP 응답
-// 본문까지 검사한다. decodeConversationRequest 는 Server(DB)를 거치지 않는 패키지 함수라
-// DB 없이 돌 수 있고, 상수가 응답에 실제로 실리는 연결까지 확인한다(요청 본문 초과 →
-// 413 + 한국어 문구).
+// TestDecodeConversationRequestTooLargeLocalized checks the oversized-request-body path down
+// to the actual HTTP response body. decodeConversationRequest is a package function that does
+// not go through Server (DB), so it can run without a DB, and it also confirms the constant is
+// really wired into the response (oversized request body → 413 + Korean text).
 func TestDecodeConversationRequestTooLargeLocalized(t *testing.T) {
-	// 64KB 한도를 넘기는 유효 JSON 본문. MaxBytesReader 가 읽기 도중 한도 초과를 돌려준다.
+	// A valid JSON body exceeding the 64KB limit. MaxBytesReader returns a limit-exceeded error mid-read.
 	body := `{"title":"` + strings.Repeat("a", maxConversationRequestBytes+1024) + `"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/conversations", strings.NewReader(body))
 	rec := httptest.NewRecorder()
@@ -68,9 +70,11 @@ func TestDecodeConversationRequestTooLargeLocalized(t *testing.T) {
 	assertKoreanError(t, "decode.too_large.response", resp.Error)
 }
 
-// TestConversationDefaultTitlesLocalized 는 대화 기본 제목 두 상수(F8)가 한국어이고 서로
-// 구별됨을 단언한다. convDefaultTitle 은 생성 기본값이자 자동 제목 분기의 센티넬이므로,
-// 중국어 "新对话" 로 되돌아가면 사용자가 대화 목록·삭제 다이얼로그에서 중국어를 보게 된다.
+// TestConversationDefaultTitlesLocalized asserts that the two default conversation title
+// constants (F8) are Korean and distinct from each other. convDefaultTitle is both the
+// creation default and the sentinel of the auto-title branch, so if it reverted to the
+// Chinese "新对话" (new conversation), users would see Chinese in the conversation list ·
+// delete dialog.
 func TestConversationDefaultTitlesLocalized(t *testing.T) {
 	assertKoreanError(t, "default_title", convDefaultTitle)
 	assertKoreanError(t, "attachment_title", convAttachmentTitle)
@@ -79,9 +83,10 @@ func TestConversationDefaultTitlesLocalized(t *testing.T) {
 	}
 }
 
-// TestIsDefaultConversationTitle 는 자동 제목 분기의 판정을 핀 고정한다. 생성 기본값
-// (convDefaultTitle)과 빈 제목은 자동 제목 대상이고, 사용자가 지은 제목은 아니다. 생성
-// 기본값과 센티넬이 같은 상수라 둘이 어긋나 자동 제목이 안 붙는 회귀를 막는다.
+// TestIsDefaultConversationTitle pins the check used by the auto-title branch. The creation
+// default (convDefaultTitle) and an empty title are auto-title targets; a title the user
+// chose is not. The creation default and the sentinel are the same constant, which prevents
+// a regression where the two drift apart and no auto title gets applied.
 func TestIsDefaultConversationTitle(t *testing.T) {
 	if !isDefaultConversationTitle("") {
 		t.Fatal("빈 제목은 자동 제목 대상이어야 한다")
@@ -94,18 +99,21 @@ func TestIsDefaultConversationTitle(t *testing.T) {
 	}
 }
 
-// TestConversationRetestReasonsLocalized 는 재검증 종결 사유 세 상수(F9)가 한국어임을
-// 단언한다. 이 값들은 finding_retests.error 컬럼에 저장돼 재검증 패널 item.error 로
-// 노출되므로, 중국어로 되돌아가면 사용자가 패널에서 중국어 사유를 보게 된다.
+// TestConversationRetestReasonsLocalized asserts that the three retest termination reason
+// constants (F9) are Korean. These values are stored in the finding_retests.error column and
+// shown as item.error in the retest panel, so if they reverted to Chinese users would see
+// Chinese reasons in the panel.
 func TestConversationRetestReasonsLocalized(t *testing.T) {
 	assertKoreanError(t, "retest_failed_to_start", convRetestFailedToStart)
 	assertKoreanError(t, "retest_status_read_failed", convRetestStatusReadFailed)
 	assertKoreanError(t, "retest_stopped_or_closed", convRetestStoppedOrClosed)
 }
 
-// TestTranscriptErrorSummaryLocalized 는 활동 전사 오류 래퍼(F9)를 핀 고정한다. 채팅 턴
-// (라벨 없음)과 작업 메인 에이전트("메인 에이전트") 두 호출이 같은 "(…오류: …)" 형태로
-// 나오고, 안쪽 err 원문은 그대로 보존되며 래퍼에 중국어 한자·전각 부호가 없어야 한다.
+// TestTranscriptErrorSummaryLocalized pins the activity transcript error wrapper (F9). Both
+// calls — the chat turn (no label) and the task main agent ("메인 에이전트", main agent) —
+// must come out in the same "(…오류: …)" ("(…error: …)") form, the inner original err text
+// must be preserved verbatim, and the wrapper must contain no Chinese Han characters ·
+// full-width punctuation.
 func TestTranscriptErrorSummaryLocalized(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -124,12 +132,13 @@ func TestTranscriptErrorSummaryLocalized(t *testing.T) {
 		if !strings.Contains(got, c.errm) {
 			t.Fatalf("%s: err 원문이 보존되지 않았습니다: %q", c.name, got)
 		}
-		// 전각 괄호·콜론이 ASCII 로 치환됐는지 확인한다(F1·fluent-korean 방침).
+		// Check that full-width parentheses · colons were replaced with ASCII (F1 · fluent-korean policy).
 		if strings.ContainsAny(got, "（）：") {
 			t.Fatalf("%s: 전각 부호가 남아 있습니다: %q", c.name, got)
 		}
-		// 래퍼 라벨에 한글이 있고 중국어 한자가 없어야 한다(err 원문은 검사 대상이 아니라
-		// ASCII 로 고정). 라벨이 없는 채팅 턴도 "오류" 한글을 포함한다.
+		// The wrapper label must contain Hangul and no Chinese Han characters (the original err
+		// text is not under test and is fixed as ASCII). A chat turn with no label also contains
+		// the Hangul "오류" (error).
 		wrapper := strings.ReplaceAll(got, c.errm, "")
 		assertKoreanError(t, c.name+".wrapper", wrapper)
 	}

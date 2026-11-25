@@ -60,7 +60,7 @@ tested AS (
 // it carries neither the fact-anchor union nor the tested set — it is pure "in
 // declared scope", independent of what has already been touched. Used by the
 // agent's list_assets so a query returns the task's relevant assets, not the
-// whole shared库.
+// whole shared library.
 const scopeTargetCTE = `
 context_tasks AS (
   SELECT t.id AS task_id

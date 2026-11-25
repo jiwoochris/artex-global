@@ -4,11 +4,11 @@ import { useTranslations } from "next-intl";
 
 import toolSources from "./builtin-tool-sources.json";
 
-// 기본 차단 규칙 이름·자산 규칙 메모·도구 설명은 DB 시드 데이터라 언어별로 둘 수 없다.
-// 화면에서만 메시지 파일(web/messages/*.json 의 builtinRules, builtinAssetNotes, builtinTools)로
-// 번역하고, DB 값이 시드 원문과 다르면(사용자가 고친 값, 코드에서 바뀐 설명) 그대로 보여 준다.
-// 도구 설명 DB 값은 모델에게 전달되는 지침이므로 편집 폼에는 번역문을 넣지 않는다.
-// 원문에 중괄호가 있어 ICU 파싱을 거치지 않도록 t.raw 로 읽는다.
+// Default block-rule names, asset-rule notes and tool descriptions are DB seed data, so they cannot be stored per language.
+// They are translated only in the UI, via the message files (builtinRules, builtinAssetNotes, builtinTools in web/messages/*.json),
+// and when the DB value differs from the original seed text (a user-edited value, or a description changed in code) it is shown as-is.
+// A tool description's DB value is the instruction passed to the model, so the translation is never put into the edit form.
+// The source text contains curly braces, so it is read with t.raw to avoid ICU parsing.
 
 const RULE_KEYS: Record<string, string> = {
   "[内置] 递归强制删除 rm -rf": "rmRf",
@@ -42,8 +42,8 @@ const ASSET_NOTE_KEYS: Record<string, string> = {
 
 const TOOL_SOURCES: Record<string, string> = toolSources;
 
-// 보고서 에이전트 프롬프트(agent/promptcatalog.go)가 지정한 중국어 소제목. 저장된 보고서는
-// 고치지 않고 표시할 때만 바꾼다. 복사·내보내기는 원문 그대로다. PoC 는 번역하지 않는다.
+// The Chinese section headings mandated by the reporter agent prompt (agent/promptcatalog.go). Stored reports
+// are not modified; the headings are swapped only for display. Copy/export keep the original text. PoC is not translated.
 const REPORT_HEADING_KEYS: Record<string, string> = {
   概述: "overview",
   影响与危害: "impact",
@@ -78,7 +78,7 @@ export function useBuiltinLabels() {
       return tool.description;
     };
 
-    // 코드 블록 안의 줄은 증거 원문이므로 건드리지 않는다.
+    // Lines inside a code block are original evidence text, so leave them untouched.
     const reportHeadings = (markdown: string): string => {
       let inFence = false;
       return markdown

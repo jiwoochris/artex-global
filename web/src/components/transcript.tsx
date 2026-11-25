@@ -179,11 +179,11 @@ function toolInputText(tool: string, raw: string): string {
 }
 
 // InterceptCard renders an inline intercept_request approval card. The pending_id
-// is extracted from the summary (format: "도구 X 승인 요청 (#N)") so buttons are
+// is extracted from the summary (format: "도구 X 승인 요청 (#N)", i.e. "tool X approval request (#N)") so buttons are
 // available immediately without waiting for the detail load.
 function InterceptCard({ step, getDetail }: { step: Activity; getDetail: (seq: number) => Promise<string> }) {
   const t = useTranslations("transcript");
-  // extract pending_id from summary: "도구 Bash 승인 요청 (#42)"
+  // extract pending_id from summary: "도구 Bash 승인 요청 (#42)" ("tool Bash approval request (#42)")
   const pendingId = React.useMemo(() => {
     const m = /\(#(\d+)\)/.exec(step.summary);
     return m ? parseInt(m[1], 10) : null;

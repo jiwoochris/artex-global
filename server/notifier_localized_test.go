@@ -12,7 +12,7 @@ import (
 
 // TestNotifierDeliveryReasonsLocalized guards F17: every delivery failure/defer
 // reason that notifier.go writes into notification_deliveries.last_error — which
-// notify_api.go echoes back to the "전달 기록" table in delivery-list.tsx — must be
+// notify_api.go echoes back to the "전달 기록" (delivery history) table in delivery-list.tsx — must be
 // Korean (Hangul present, no Chinese Han). Diagnostic log.Printf lines stay in the
 // original language (Z2) and are intentionally not covered here.
 func TestNotifierDeliveryReasonsLocalized(t *testing.T) {

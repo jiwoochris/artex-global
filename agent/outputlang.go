@@ -1,24 +1,24 @@
 package agent
 
-// 사용자 대면 출력 언어(展示语言) 선택. artex-global 은 영어·한국어·중국어·스페인어·일본어
-// 다섯 언어 중 하나로 에이전트가 사용자에게 보이는 자연어를 쓰도록 강제한다. 에이전트의
-// "뇌"(벤치마크된 중국어 추론 본문 段[A])는 언어와 무관하게 그대로 둔다. 여기서 정하는
-// 것은 오직 사용자가 읽는 표면의 언어다.
+// Selection of the user-facing output language (display language). artex-global forces the agent to write the natural language the user sees
+// in one of five languages: English, Korean, Chinese, Spanish or Japanese. The agent's
+// "brain" (the benchmarked Chinese reasoning body, segment [A]) is left as-is regardless of language. What is decided here
+// is only the language of the surface the user reads.
 
-// OutputLanguage 는 서버가 설정(config 의 ARTEX_LANG, 런타임 settings KV)에서 고른
-// 출력 언어 코드("en"/"ko"/"zh"/"es"/"ja")를 돌려주도록 서버가 배선하는 훅이다. nil 이거나
-// 빈 값이면 아래 기본값으로 떨어진다. PromptOverride 와 같은 방식으로 서버가 주입한다.
+// OutputLanguage is a hook the server wires up to return the output language code ("en"/"ko"/"zh"/"es"/"ja")
+// chosen from configuration (ARTEX_LANG in config, the runtime settings KV). If it is nil or
+// returns an empty value, the default below is used. The server injects it the same way as PromptOverride.
 var OutputLanguage func() string
 
-// 서버가 훅을 배선하지 않은 경우(예: 에이전트 패키지 단독 테스트)의 기본 출력 언어.
-// 기본값은 한국어다(에이전트 패키지 단독 테스트의 폴백이며, 운영에서는 서버가 설정
-// 계층의 기본값인 영어로 OutputLanguage 훅을 배선한다). 영어·중국어·스페인어·일본어는 설정으로 전환한다.
+// The default output language when the server has not wired the hook (e.g. testing the agent package on its own).
+// The default is Korean (it is the fallback for testing the agent package on its own; in production the server wires the OutputLanguage hook
+// with the configuration layer's default, English). English, Chinese, Spanish and Japanese are switched to via configuration.
 const defaultOutputLang = "ko"
 
-// SupportedOutputLangs 는 전환할 수 있는 출력 언어 코드 목록이다.
+// SupportedOutputLangs is the list of output language codes that can be switched to.
 var SupportedOutputLangs = []string{"en", "ko", "zh", "es", "ja"}
 
-// normalizeLang 은 지원 목록 밖의 코드를 기본값으로 좁힌다.
+// normalizeLang narrows codes outside the supported list to the default.
 func normalizeLang(code string) string {
 	for _, c := range SupportedOutputLangs {
 		if c == code {
@@ -28,8 +28,8 @@ func normalizeLang(code string) string {
 	return defaultOutputLang
 }
 
-// resolveOutputLang 은 현재 적용할 출력 언어 코드를 돌려준다. 서버가 배선한 훅을 먼저
-// 보고, 없으면 기본값을 쓴다.
+// resolveOutputLang returns the output language code to apply right now. It checks the hook wired by the server
+// first, and uses the default if there is none.
 func resolveOutputLang() string {
 	if OutputLanguage != nil {
 		if code := OutputLanguage(); code != "" {
@@ -39,8 +39,8 @@ func resolveOutputLang() string {
 	return defaultOutputLang
 }
 
-// langPhrase 는 (중국어로 쓰인) 지시문 안에서 "이 언어로 써라"라고 지목할 때 쓰는 표기다.
-// 괄호 안에 자국어 표기를 함께 둬서 모델이 어떤 언어인지 혼동하지 않게 한다.
+// langPhrase is the wording used to name the language ("write in this language") inside the directive (which is written in Chinese).
+// It also includes the language's native name in parentheses so the model doesn't confuse which language is meant.
 var langPhrase = map[string]string{
 	"ko": "韩语（한국어）",
 	"en": "英语（English）",
@@ -49,7 +49,7 @@ var langPhrase = map[string]string{
 	"ja": "日语（日本語）",
 }
 
-// langBare 는 지시문 안에서 반복 지목할 때 쓰는 짧은 언어명이다.
+// langBare is the short language name used when naming it repeatedly inside the directive.
 var langBare = map[string]string{
 	"ko": "韩语",
 	"en": "英语",

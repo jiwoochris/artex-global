@@ -1,24 +1,24 @@
-# check-external-links.py 가 읽는 "알려진 DOWN" allowlist.
+# "Known DOWN" allowlist read by check-external-links.py.
 #
-# 여기 적힌 URL 이 생존 점검에서 DOWN 으로 나오면 ALLOWED 로 분류하고 --strict 종료
-# 코드에 넣지 않는다. 우리가 소유하지 않아 고칠 수 없는, 상류 원문 보존 파일이 물려받은
-# 죽은 링크만 넣는다(우리 저장소가 큐레이션한 링크가 깨지면 allowlist 가 아니라 고친다).
-# 새 항목을 넣을 때는 반드시 "왜 고칠 수 없는가"를 주석으로 남긴다.
+# When a URL listed here comes back DOWN in the liveness check, it is classified as ALLOWED and not
+# counted toward the --strict exit code. Only dead links inherited by upstream files preserved
+# verbatim, which we do not own and cannot fix, go here (if a link curated by our repository breaks,
+# we fix it rather than allowlisting it). When adding a new entry, always leave a comment explaining "why it cannot be fixed".
 #
-# 형식: 한 줄에 URL 하나. `#` 뒤는 주석, 빈 줄·주석 전용 줄은 무시.
+# Format: one URL per line. Everything after `#` is a comment; blank and comment-only lines are ignored.
 
-# 상류(Autumn-27/ARTEX) CHANGELOG.zh.md:539 가 크레딧한 기여자 GitHub 프로필.
-# 계정이 개명·삭제돼 404. 상류 원문 보존 방침(BRIEF 경계 #1·MAINTAINING 2절)상
-# CHANGELOG.zh.md 는 상류 그대로 두므로 우리가 고치지 않는다. 2026-10-07 확인.
+# Contributor's GitHub profile credited by upstream (Autumn-27/ARTEX) CHANGELOG.zh.md:539.
+# 404 because the account was renamed or deleted. Under the policy of preserving upstream text verbatim
+# (BRIEF boundary #1, MAINTAINING §2), CHANGELOG.zh.md is left as upstream has it, so we don't fix it. Verified 2026-10-07.
 https://github.com/begininvoke
 
-# 상류(Autumn-27/ARTEX) 저장소·온라인 데모·릴리스/compare 자산이 공개 접근 불가(404), 2026-10 확인.
-# 아래 URL 은 이 포크가 기반·크레딧으로 가리키는 상류 자산이다. 2026-10 현재 전부 404 로
-# 접속되지 않는다. AGPL-3.0 출처 표기를 유지해야 하므로(BRIEF 경계 #1) 링크 자체는 지우지
-# 않고, 큐레이션 문서(README·CONTRIBUTING·MAINTAINING·SECURITY·docs/defense)에서는 각 링크
-# 옆에 "(현재 접속 불가, 2026-10 확인)" 주석을 달아 둔다(G138a 결정 A). 상류 소유 자산이라
-# 우리가 되살릴 수 없어 allowlist 로 둔다. compare·releases 링크는 상류 원문 보존 파일
-# (CHANGELOG.zh.md·README.zh.md)이 물려받은 것이라 원문 그대로 둔다.
+# Upstream (Autumn-27/ARTEX) repository, online demo and release/compare assets are not publicly accessible (404), verified 2026-10.
+# The URLs below are upstream assets this fork points to as its base and for credit. As of 2026-10 they all return 404
+# and cannot be reached. Because the AGPL-3.0 attribution must be kept (BRIEF boundary #1), the links themselves are not
+# removed; in the curated documents (README, CONTRIBUTING, MAINTAINING, SECURITY, docs/defense) each link carries a
+# "(현재 접속 불가, 2026-10 확인)" ("currently unreachable, verified 2026-10") note next to it (G138a decision A).
+# They are upstream-owned assets that we cannot revive, so they stay on the allowlist. The compare and releases links
+# were inherited by upstream files preserved verbatim (CHANGELOG.zh.md, README.zh.md), so they are left as in the original.
 https://artex-demo.vercel.app/
 https://github.com/Autumn-27/ARTEX
 https://github.com/Autumn-27/norma

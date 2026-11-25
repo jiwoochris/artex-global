@@ -80,17 +80,17 @@ func (c *Compactor) OnPlannerRound(ctx context.Context, ts *db.ExplorationStore)
 		return
 	}
 	if !c.tryStart(ts.ID()) {
-		return // already running, or within cooldown —派生态最终一致，下轮再压
+		return // already running, or within cooldown — the derived state is eventually consistent; compress again next round
 	}
 	go func() {
 		defer c.finish(ts.ID())
 		bg, cancel := context.WithTimeout(context.WithoutCancel(ctx), c.maxDur)
 		defer cancel()
-		// 压缩是裸 provider 调用（compress 里直接 prov.Complete），不经过 agentcore
-		// 的会话循环，所以 ctx 上没有 session id；按 session-id 头做提示缓存/粘性
-		// 路由的网关（opencode zen 缺 x-opencode-session 直接 400）就收不到该头。
-		// 这里补一个按探索稳定的 id：同一探索的所有压缩请求共享它，既能带上头，
-		// 也让 llmrec 能把这次调用的 token 归因回该探索（此前记不到）。
+		// Compression is a bare provider call (compress calls prov.Complete directly) and does not go through agentcore's
+		// session loop, so there is no session id on ctx; gateways that do prompt caching / sticky routing by a session-id header
+		// (opencode zen returns a straight 400 without x-opencode-session) would never receive that header.
+		// So attach an id that is stable per exploration here: all compression requests of the same exploration share it, which both supplies the header
+		// and lets llmrec attribute this call's tokens back to that exploration (previously they went unrecorded).
 		bg = transcript.WithSessionID(bg, fmt.Sprintf("exp%d-compactor", ts.ID()))
 		if needMajor {
 			c.major(bg, ts)
@@ -188,7 +188,7 @@ func (c *Compactor) minor(ctx context.Context, ts *db.ExplorationStore) {
 }
 
 // major re-derives the whole grouping from source over ALL eligible-cold nodes
-// (§5.1 回源重压), then reconciles against the active digests by signature:
+// (§5.1 "re-compress from source"), then reconciles against the active digests by signature:
 // unchanged blocks keep their digest (no LLM), stale digests are superseded, and
 // new/changed blocks are compressed afresh. This is where tiered fragments of one
 // direction merge and where "later became connected" blocks unify (§5.2).
@@ -281,7 +281,7 @@ func (c *Compactor) foldBlock(ctx context.Context, ts *db.ExplorationStore, g *c
 	}
 }
 
-// generationFor computes a digest's重摘代次 (§1): 1 for a fresh fold; for a major
+// generationFor computes a digest's re-summarization generation (§1): 1 for a fresh fold; for a major
 // merge, max(generation) over the active digests that overlap this block's
 // members, +1.
 func (c *Compactor) generationFor(b block, active []*db.Node) int {
@@ -455,7 +455,7 @@ func nodeConfidence(n *db.Node) string {
 // buildCompressionInput renders the connected sub-graph for the §4 prompt:
 // member nodes (summary + id + kind + state + confidence), the internal blood
 // edges among members, and — for a §3.1 shared-parent group — the anchor parents
-// as context ("共同父 #p"), which are NOT members.
+// as context ("共同父 #p", i.e. "shared parent #p"), which are NOT members.
 func buildCompressionInput(g *coldGraph, b block, nodeByID map[int64]*db.Node) string {
 	memberSet := make(map[int64]bool, len(b.Members))
 	for _, m := range b.Members {

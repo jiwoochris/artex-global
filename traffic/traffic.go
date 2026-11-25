@@ -1269,10 +1269,11 @@ func (t *Traffic) stageTreesForArchive(dirs, hosts []string, archiveID, taskID i
 		}
 		planned = append(planned, stagedTrafficPath{source: source})
 	}
-	// 归档路径即使一个历史 host 目录都没有(新装机的流量只落在 SQLite + _blobs)
-	// 也必须留下 journal：崩溃点若落在 PostgreSQL 提交与 SQLite 提交之间，重启后
-	// SQLite 事务被回滚，只有这份 journal 能让恢复流程补做 host 行的删除。少了它，
-	// 已转冷任务的独占流量会永久留在热库里。
+	// The archive path must leave a journal even when there is not a single historical host directory (on a
+	// fresh install traffic lands only in SQLite + _blobs): if a crash happens between the PostgreSQL commit
+	// and the SQLite commit, the SQLite transaction is rolled back on restart, and only this journal lets the
+	// recovery flow redo the deletion of the host rows. Without it, the exclusive traffic of tasks already
+	// moved to cold storage would stay in the hot store forever.
 	uniqueHosts := uniqueArchiveHosts(hosts)
 	if len(planned) == 0 && len(uniqueHosts) == 0 {
 		return "", nil, nil
@@ -2037,7 +2038,7 @@ func (t *Traffic) Tools() []actool.CoreTool {
 			if len(rows) == 0 {
 				return actool.Text("无匹配流量。"), nil
 			}
-			// 精简为最小索引：仅保留定位所需字段 + 响应码/长度，不带任何响应内容。
+			// Trimmed down to a minimal index: keep only the fields needed for lookup + response code/length, with no response content at all.
 			type liteRow struct {
 				ID      string `json:"id"`
 				Method  string `json:"method"`

@@ -15,8 +15,8 @@ services:
     restart: unless-stopped
 
   artex:
-    # 이 포크가 릴리스 태그(v*)마다 GitHub Container Registry 에 발행하는 이미지입니다
-    # (.github/workflows/release.yml 의 docker 잡). 상류 autumn27/artex 는 Docker Hub 에서 내려갔습니다.
+    # The image this fork publishes to the GitHub Container Registry for every release tag (v*)
+    # (the docker job in .github/workflows/release.yml). Upstream autumn27/artex has been taken down from Docker Hub.
     image: ghcr.io/jiwoochris/artex-global:${ARTEX_TAG:-latest}
     depends_on:
       postgres:
@@ -29,28 +29,28 @@ services:
       ARTEX_LLM_MODEL: ${ARTEX_LLM_MODEL:-}
       ARTEX_LLM_BASE_URL: ${ARTEX_LLM_BASE_URL:-}
       ARTEX_LLM_PROXY: ${ARTEX_LLM_PROXY:-}
-      # 첫 실행 보호. 비워 두면 기동 로그에 무작위 설정 토큰이 찍히고, /setup 에서 그 값을
-      # 입력해야 관리자 비밀번호를 만들 수 있습니다(docker compose logs artex 로 확인).
-      # ARTEX_ADMIN_PASSWORD 를 주면 /setup 없이 그 값으로 바로 초기화합니다(8자 이상).
+      # First-run protection. If left empty, a random setup token is printed in the startup log, and you must enter
+      # that value at /setup before you can create the admin password (check it with docker compose logs artex).
+      # If ARTEX_ADMIN_PASSWORD is given, the server initializes with that value directly, skipping /setup (8+ characters).
       ARTEX_SETUP_TOKEN: ${ARTEX_SETUP_TOKEN:-}
       ARTEX_ADMIN_PASSWORD: ${ARTEX_ADMIN_PASSWORD:-}
-      # 브라우저 교차 출처 허용 목록(쉼표 구분). 내장 UI 는 동일 출처라 보통 비워 둡니다.
+      # Browser cross-origin allowlist (comma-separated). The built-in UI is same-origin, so this is usually left empty.
       ARTEX_CORS_ORIGINS: ${ARTEX_CORS_ORIGINS:-}
-      # 서버 쪽 기본 출력 언어(ko·en·zh·es). 비우면 한국어입니다. 에이전트 출력·오류 메시지는 설정 화면의
-      # "표시 언어"가 우선하고, 서버 콘솔 로그는 이 값만 따릅니다.
+      # Server-side default output language (en·ko·zh·es·ja). Empty means English. For agent output and error messages, the
+      # "display language" on the settings screen takes precedence; the server console log follows only this value.
       ARTEX_LANG: ${ARTEX_LANG:-}
     ports:
-      # 기본값은 호스트의 127.0.0.1 에만 게시합니다. 다른 기기에서 직접 접속하려면 .env 에
-      # ARTEX_BIND=0.0.0.0 을 두되, 그 전에 반드시 초기 설정(관리자 비밀번호)을 마치고
-      # 가능하면 README 의 리버스 프록시(HTTPS) 구성을 쓰십시오.
+      # By default it is published only on the host's 127.0.0.1. To connect directly from another machine, put
+      # ARTEX_BIND=0.0.0.0 in .env, but before that be sure to finish the initial setup (admin password) and,
+      # if possible, use the reverse proxy (HTTPS) setup described in the README.
       - "${ARTEX_BIND:-127.0.0.1}:8787:8787"
       - "127.0.0.1:8788:8788"
     volumes:
-      # 데이터 디렉터리(jwt.key, SQLite 등 포함)를 프로젝트 루트의 data/ 에 바인드합니다.
-      # 호스트에서 바로 확인·백업할 수 있고, 컨테이너를 다시 만들어도 사라지지 않습니다.
+      # Bind-mounts the data directory (including jwt.key, SQLite, etc.) to data/ in the project root.
+      # You can inspect and back it up directly on the host, and it survives recreating the container.
       - ./data:/app/data
-      # 프로젝트 루트의 skills 를 컨테이너에 마운트합니다(이미지에 내장된 /app/skills 를 덮어씁니다).
-      # skill 을 고치면 이미지를 다시 빌드할 필요 없이, 컨테이너가 호스트의 이 파일을 그대로 읽습니다.
+      # Mounts the project root's skills into the container (overriding the /app/skills built into the image).
+      # When you edit a skill, there is no need to rebuild the image; the container reads this file on the host as is.
       - ./skills:/app/skills
     restart: unless-stopped
 

@@ -9,10 +9,11 @@ import (
 	"time"
 )
 
-// 첫 실행 관리자 계정 선점(/api/auth/init 무인증 호출) 제보에 대한 수정을 DB 없이
-// 지키는 단위 테스트다. 설정 토큰 비교, 비밀번호 해시에 묶인 토큰 서명, CORS 허용
-// 목록, 실패 시도 제한, 루프백 바인딩 판정을 각각 확인한다. DB 를 거치는 전체 흐름은
-// auth_init_db_test.go 가 맡는다.
+// Unit tests that protect, without a DB, the fix for the reported first-run admin account
+// takeover (unauthenticated call to /api/auth/init). They separately check setup token
+// comparison, token signing bound to the password hash, the CORS allowlist, failed attempt
+// throttling, and loopback binding detection. The full flow that goes through the DB is
+// covered by auth_init_db_test.go.
 
 func TestSigningKeyBoundToPasswordHash(t *testing.T) {
 	s := &Server{jwtKey: []byte(strings.Repeat("k", 32))}

@@ -39,7 +39,7 @@ func TestPreToolUsePassthrough(t *testing.T) {
 // TestSystemBlockMessagePreservedIsBrainInput pins the platform-governance framing
 // (systemBlockMessage) to its original Chinese bytes. That framing is the model-facing
 // tool_result that steers the pentest agent away from bypassing an intercept block
-// (see guard.go doc comment + the F14 보존 판단). For the ask-block paths the same
+// (see guard.go doc comment + the F14 preservation decision). For the ask-block paths the same
 // framed string also lands in the /api/audit record via g.record, so one string serves
 // both the agent input and the audit display — it must NOT be translated, or benchmarked
 // agent behavior could drift. This test fails if the framing is accidentally localized.
