@@ -670,6 +670,7 @@ var shellIFS = regexp.MustCompile(`\$(?:IFS\b|\{IFS[^}]*\})`)
 func normalizeCommand(s string) string {
 	s = shellIFS.ReplaceAllString(s, " ")
 	s = strings.ReplaceAll(s, "\"", "")
+	s = strings.ReplaceAll(s, "'", "")
 	s = strings.ReplaceAll(s, "\\", "")
 	return cmdPathToken.ReplaceAllStringFunc(s, func(m string) string {
 		boundary, p := "", m

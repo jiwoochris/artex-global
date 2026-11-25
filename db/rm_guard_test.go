@@ -75,7 +75,7 @@ func TestDataRootAlternativesIncludeExecutableDataDir(t *testing.T) {
 
 func TestBuiltInToolScopesIncludeAliases(t *testing.T) {
 	command := strings.Join(commandToolNames(), " ")
-	for _, alias := range []string{"Bash", "bash", "BASH", "shell_open", "shell_send"} {
+	for _, alias := range []string{"Bash", "bash", "BASH", "shell_open", "shell_send", "ExecuteExtraTool", "execute_extra_tool"} {
 		if !strings.Contains(command, alias) {
 			t.Errorf("command scope missing alias %q: %s", alias, command)
 		}

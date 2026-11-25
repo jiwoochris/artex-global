@@ -87,6 +87,8 @@ func TestNormalizeCommandExpandsIFS(t *testing.T) {
 		"rm -rf$IFS/etc":             "rm -rf /etc",
 		"rm${IFS}-rf${IFS}/app/data": "rm -rf /app/data",
 		"rm -rf${IFS%?}/etc":         "rm -rf /etc",
+		"rm -rf '/etc'":              "rm -rf /etc",
+		"r''m -rf /etc":              "rm -rf /etc",
 	} {
 		if got := normalizeCommand(in); got != want {
 			t.Errorf("normalizeCommand(%q) = %q, want %q", in, got, want)

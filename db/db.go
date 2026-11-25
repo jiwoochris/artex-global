@@ -286,6 +286,9 @@ ON CONFLICT (name) DO NOTHING`,
 	if err := d.seedDefaultInterceptRulesV4(); err != nil {
 		return fmt.Errorf("seed intercept rules v4: %w", err)
 	}
+	if err := d.seedDefaultInterceptRulesV5(); err != nil {
+		return fmt.Errorf("seed intercept rules v5: %w", err)
+	}
 	if err := d.seedDefaultAssetInterceptRules(); err != nil {
 		return fmt.Errorf("seed asset intercept rules: %w", err)
 	}
@@ -376,17 +379,16 @@ func isHTTPBuiltIn(name string) bool {
 // commandToolNames lists the canonical execution tools and the aliases the
 // tool catalog registers for them (agent/toolcatalog.go addToolAliases).
 func commandToolNames() []string {
-	return []string{"Bash", "bash", "BASH", "shell_open", "shell_send"}
+	return []string{
+		"Bash", "bash", "BASH", "shell_open", "shell_send",
+		"ExecuteExtraTool", "executeextratool", "execute_extra_tool", "EXECUTEEXTRATOOL",
+	}
 }
 
 // httpToolNames adds the HTTP-capable tools and their registered aliases.
 func httpToolNames() []string {
-	return []string{
-		"Bash", "bash", "BASH", "shell_open", "shell_send",
-		"WebFetch", "webfetch", "web_fetch", "WEBFETCH",
-		"ExecuteExtraTool", "executeextratool", "execute_extra_tool", "EXECUTEEXTRATOOL",
-		"oob_generate", "oob_poll",
-	}
+	names := append([]string{}, commandToolNames()...)
+	return append(names, "WebFetch", "webfetch", "web_fetch", "WEBFETCH", "oob_generate", "oob_poll")
 }
 
 // dataRootAlternatives returns regex alternatives for the data roots this
@@ -749,4 +751,52 @@ UPDATE intercept_rules
 		}
 	}
 	return d.SetSetting("intercept_default_rules_v4", "done")
+}
+
+// seedDefaultInterceptRulesV5 repairs two gaps left by earlier migrations on
+// installations where v4 had already been marked done:
+//   - the narrowed rm patterns were only applied when the stored text exactly
+//     matched the pre-R1 literal; an intermediate manual pattern silently
+//     survived and left /app/data/tasks|sessions|db unprotected;
+//   - command-scoped rules did not include ExecuteExtraTool, so an MCP tool
+//     that delegates a shell command bypassed the same guard.
+//
+// It runs once under its own setting. The three safety patterns are reset to
+// the code's current definitions; arbitrary operator edits to those three
+// patterns are intentionally superseded by this security migration.
+func (d *DB) seedDefaultInterceptRulesV5() error {
+	if v, _, _ := d.GetSetting("intercept_default_rules_v5"); v == "done" {
+		return nil
+	}
+	recursive, critical := rmGuardPatterns()
+	for _, m := range []struct{ name, pattern string }{
+		{name: "[内置] 递归强制删除 rm -rf", pattern: recursive},
+		{name: "[内置] 删除系统关键目录", pattern: critical},
+		{name: "[内置] 破坏性系统命令", pattern: `(?i)(rms+-rfs+/(?:["'s*?]|$)|mkfs|dds+if=|:()s*{|shutdown|reboot|>s*/dev/sd)`},
+	} {
+		if _, err := d.Exec(`UPDATE intercept_rules SET pattern=$2 WHERE name=$1`, m.name, m.pattern); err != nil {
+			return fmt.Errorf("repair rm pattern %q: %w", m.name, err)
+		}
+	}
+	oldCommand, _ := json.Marshal([]string{"Bash", "bash", "BASH", "shell_open", "shell_send"})
+	oldHTTP, _ := json.Marshal([]string{
+		"Bash", "bash", "BASH", "shell_open", "shell_send",
+		"WebFetch", "webfetch", "web_fetch", "WEBFETCH",
+		"ExecuteExtraTool", "executeextratool", "execute_extra_tool", "EXECUTEEXTRATOOL",
+	})
+	commandTools, _ := json.Marshal(commandToolNames())
+	httpTools, _ := json.Marshal(httpToolNames())
+	if _, err := d.Exec(`
+UPDATE intercept_rules SET tool_names=$1::jsonb
+ WHERE name LIKE '[内置]%' AND tool_names=$2::jsonb`,
+		string(commandTools), string(oldCommand)); err != nil {
+		return fmt.Errorf("scope command rules to ExecuteExtraTool: %w", err)
+	}
+	if _, err := d.Exec(`
+UPDATE intercept_rules SET tool_names=$1::jsonb
+ WHERE name LIKE '[内置]%' AND tool_names=$2::jsonb`,
+		string(httpTools), string(oldHTTP)); err != nil {
+		return fmt.Errorf("scope HTTP rules to oob tools: %w", err)
+	}
+	return d.SetSetting("intercept_default_rules_v5", "done")
 }
