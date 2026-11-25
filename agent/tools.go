@@ -1074,7 +1074,7 @@ func (t *ToolSet) addOneIntent(it intentItem) (int64, error) {
 	// Open/running intents are already-dispatched tasks. Re-issuing the same
 	// direction while a copy sits in the queue only multiplies work on one route;
 	// stop/blocked/exhausted intents are repeatable (no verdict about the direction).
-	existing, err := t.ts.ListByKind(db.KindIntent, 2000)
+	existing, err := t.ts.ListOpenIntents(2000)
 	if err != nil {
 		// Fail open, but leave a trace: a silent skip would look like a clean
 		// duplicate check while the queue fills with copies.

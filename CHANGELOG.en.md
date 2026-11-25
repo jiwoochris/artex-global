@@ -8,9 +8,14 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 
 ## [Unreleased]
 
+### OOB (out-of-band verification)
+
+- **Added the `oob_generate` / `oob_poll` worker tools.** They mint a callback address for blind SSRF, XXE and deserialization checks and wait for the response. The default server is the public Interactsh instance `oast.me`; the `oob` block in `config.json` or the `ARTEX_OOB_*` environment variables point it at a self-hosted server (HTTPS + token). A session opens and closes per run, and the RSA private key stays in memory.
+- **A callback is intermediate evidence only.** `progress` (callback received), `no_interaction` (healthy window, empty), `observation_incomplete` (window not completed) and `service_unavailable` (service failure) are recorded as distinct outcomes, and no finding or severity is produced from a callback alone. Service health is tracked separately so an outage is never read as "no vulnerability".
+- The client is implemented on the standard library only (registration, address minting, polling, AES-CTR/RSA-OAEP decryption). It does not pull the NTLM relay code that the external OOB library brings in, so it is not blocked by Windows Defender.
 ### Planner
 
-- **Stopped the planner from re-issuing an open or running intent.** A queued intent is already dispatched work, so `add_intent` now rejects a duplicate direction (summary similarity 0.45, or 0.25 when the intents share a target asset). Intents that ended without a verdict — stopped, blocked, exhausted — stay re-issuable. This closes an observed loop where one direction was issued four times in 38 minutes while two copies remained open.
+- **Stopped the planner from re-issuing an open or running intent.** A queued intent is already dispatched work, so `add_intent` now rejects a duplicate direction (0.6 for short summaries, 0.25 for summaries of eight or more word tokens, 0.75 when no target comparison is possible). Intents that ended without a verdict — stopped, blocked, exhausted — stay re-issuable. This closes an observed loop where one direction was issued four times in 38 minutes while two copies remained open.
 
 ### Localization (i18n)
 

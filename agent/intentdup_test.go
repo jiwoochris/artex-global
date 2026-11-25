@@ -89,6 +89,22 @@ func TestDuplicateOpenIntentBlocksExpandedTargetSet(t *testing.T) {
 	}
 }
 
+// CJK bigrams must not lower the short-summary floor: two different checks on
+// the same asset share a long generic prefix but remain separate directions.
+func TestDuplicateOpenIntentCJKDifferentDirections(t *testing.T) {
+	pairs := [][2]string{
+		{"检查用户登录接口的越权访问", "检查用户登录接口的SQL注入"},
+		{"对后台管理面板做目录遍历测试", "对后台管理面板做上传功能测试"},
+		{"测试登录页面的XSS", "测试登录页面的CSRF"},
+	}
+	for _, p := range pairs {
+		queued := intentNode(1, "open", p[0], 7)
+		if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, p[1], []int64{7}); dup {
+			t.Errorf("different CJK directions on one asset must not collapse: %q vs %q", p[0], p[1])
+		}
+	}
+}
+
 // Legacy intents stored target_ids/target_id; the guard must read them too.
 func TestDuplicateOpenIntentReadsLegacyTargetKeys(t *testing.T) {
 	payload, _ := json.Marshal(map[string]any{

@@ -736,6 +736,25 @@ WHERE exploration_id=$1 AND kind=$2 ORDER BY id DESC LIMIT $3`, s.expID, kind, l
 	return scanNodes(rows)
 }
 
+// ListOpenIntents returns the live queue only: open, running and paused
+// intents. The duplicate check must not be diluted by thousands of finished
+// nodes, so this query filters by state and is backed by
+// idx_expnodes_intent_state.
+func (s *ExplorationStore) ListOpenIntents(limit int) ([]*Node, error) {
+	if limit <= 0 {
+		limit = 2000
+	}
+	rows, err := s.db.Query(`SELECT `+nodeCols+` FROM exploration_nodes
+WHERE exploration_id=$1 AND kind='intent'
+  AND state IN ('open','running','paused')
+ORDER BY id DESC LIMIT $2`, s.expID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanNodes(rows)
+}
+
 // ListByKindPage returns one newest-first page of nodes of a kind for reverse
 // pagination: up to `limit` nodes with id < `before` (before<=0 = the newest page).
 // hasMore reports whether still-older nodes exist, so a client (e.g. the worker

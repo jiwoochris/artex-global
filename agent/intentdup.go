@@ -29,15 +29,18 @@ var intentRegisterMu sync.Mutex
 // repeatable: they carry no conclusion, so the planner may issue the direction
 // again. Only open/running intents block.
 //
-// Three floors: 0.75 when no target comparison is possible (unanchored pairs
-// can describe different hosts), 0.45 on wording alone, and 0.35 when the two
-// intents share a target asset. The anchored floor stays above the similarity
-// of short summaries that share only a generic noun and the target name.
+// Floors: 0.75 when no target comparison is possible (unanchored pairs can
+// describe different hosts), 0.6 for short anchored summaries, and 0.25 when
+// both anchored summaries carry at least eight word tokens. CJK character
+// bigrams feed similarity but not the word count, so a CJK summary cannot
+// silently lower its own short-summary floor by producing many bigrams.
 const (
-	dupSimilarityFloor           = 0.45
 	dupAnchoredSimilarityFloor   = 0.25
 	dupUnanchoredSimilarityFloor = 0.75
 	dupShortSummaryFloor         = 0.6
+	dupCJKShortFloor             = 0.35
+	dupCJKLongFloor              = 0.25
+	dupCJKLongRunes              = 16
 	dupLongSummaryMinTokens      = 8
 )
 
@@ -77,17 +80,25 @@ var intentStopwords = map[string]struct{}{
 }
 
 func intentTokens(s string) map[string]struct{} {
-	return intentTokensMode(s, false)
+	return intentTokensMode(s, false, true)
 }
 
 // intentTokensWithHost keeps the hostname as a token. It is used when no asset
 // anchors are available: the host is then the only target signal, and two
 // identical summaries about different hosts must not collapse.
 func intentTokensWithHost(s string) map[string]struct{} {
-	return intentTokensMode(s, true)
+	return intentTokensMode(s, true, true)
 }
 
-func intentTokensMode(s string, keepHost bool) map[string]struct{} {
+// intentWordCount counts only whitespace-delimited word tokens (no CJK
+// bigrams). It decides whether a summary is long enough for the low anchored
+// floor; using the bigram-expanded set would make every CJK summary look long
+// and disable the short-summary protection.
+func intentWordCount(s string) int {
+	return len(intentTokensMode(s, false, false))
+}
+
+func intentTokensMode(s string, keepHost, withBigrams bool) map[string]struct{} {
 	toks := map[string]struct{}{}
 	var hosts []string
 	if keepHost {
@@ -109,7 +120,7 @@ func intentTokensMode(s string, keepHost bool) map[string]struct{} {
 			continue
 		}
 		toks[w] = struct{}{}
-		if containsCJK(w) {
+		if withBigrams && containsCJK(w) {
 			for _, g := range cjkBigrams(w) {
 				toks[g] = struct{}{}
 			}
@@ -141,6 +152,34 @@ func cjkBigrams(s string) []string {
 		}
 	}
 	return out
+}
+
+func cjkRuneCount(s string) int {
+	n := 0
+	for _, r := range s {
+		if unicode.Is(unicode.Han, r) || unicode.Is(unicode.Hiragana, r) || unicode.Is(unicode.Katakana, r) {
+			n++
+		}
+	}
+	return n
+}
+
+// sharesDifferentCJKTail reports a long common prefix followed by different
+// endings. Two checks on one asset often start with the same generic object
+// ("check the login API...") and diverge into different techniques; those are
+// separate directions, even though character bigrams make them look similar.
+// A paraphrase usually reorders the wording instead of sharing a long prefix.
+func sharesDifferentCJKTail(a, b string) bool {
+	ar, br := []rune(a), []rune(b)
+	limit := min(len(ar), len(br))
+	prefix := 0
+	for prefix < limit && ar[prefix] == br[prefix] {
+		prefix++
+	}
+	if prefix < 4 || prefix >= limit {
+		return false
+	}
+	return float64(prefix)/float64(limit) >= 0.5
 }
 
 func jaccard(a, b map[string]struct{}) float64 {
@@ -225,11 +264,20 @@ func duplicateOpenIntent(nodes []*db.Node, summary string, anchors []int64) (int
 			}
 			continue
 		}
+		isCJK := containsCJK(summary) || containsCJK(existing)
+		if isCJK && sharesDifferentCJKTail(summary, existing) {
+			continue
+		}
 		// Long summaries carry enough distinguishing detail for a low floor;
 		// short ones need a high one so "stored XSS" and "reflected XSS" on one
 		// asset do not collapse into a single direction.
 		floor := dupShortSummaryFloor
-		if min(len(newTokens), len(existingTokens)) >= dupLongSummaryMinTokens {
+		switch {
+		case isCJK && min(cjkRuneCount(summary), cjkRuneCount(existing)) >= dupCJKLongRunes:
+			floor = dupCJKLongFloor
+		case isCJK:
+			floor = dupCJKShortFloor
+		case min(intentWordCount(summary), intentWordCount(existing)) >= dupLongSummaryMinTokens:
 			floor = dupAnchoredSimilarityFloor
 		}
 		if sim >= floor {
