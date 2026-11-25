@@ -10,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -347,6 +349,62 @@ ON CONFLICT (agent_id, skill_name) DO NOTHING`, key, skillName); err != nil {
 	return nil
 }
 
+// httpBuiltInRules are the built-in rules that must also match HTTP tools.
+// Classification is by stable rule name: priority is operator-editable and
+// must not decide which tools a rule covers.
+var httpBuiltInRules = []string{
+	"[内置] curl / wget 发送 DELETE 请求",
+	"[内置] Python HTTP 客户端 DELETE（requests/httpx/aiohttp）",
+	"[内置] 脚本中声明 HTTP DELETE 方法（JS/通用）",
+	"[内置] 批量清空 / 清除接口路径",
+	"[内置] 删除类接口路径",
+}
+
+func isHTTPBuiltIn(name string) bool {
+	for _, n := range httpBuiltInRules {
+		if n == name {
+			return true
+		}
+	}
+	return false
+}
+
+// commandToolNames lists the canonical execution tools and the aliases the
+// tool catalog registers for them (agent/toolcatalog.go addToolAliases).
+func commandToolNames() []string {
+	return []string{"Bash", "bash", "BASH", "shell_open", "shell_send"}
+}
+
+// httpToolNames adds the HTTP-capable tools and their registered aliases.
+func httpToolNames() []string {
+	return []string{
+		"Bash", "bash", "BASH", "shell_open", "shell_send",
+		"WebFetch", "web_fetch", "WEBFETCH",
+		"ExecuteExtraTool", "execute_extra_tool", "EXECUTEEXTRATOOL",
+	}
+}
+
+// dataRootAlternatives returns regex alternatives for the data roots this
+// installation may use: the Docker path, the relative default, and the
+// executable-adjacent default that cmd/artex passes as -data.
+func dataRootAlternatives() string {
+	alts := []string{`/app/data`, `\.?/?\bdata`}
+	if dir := config.BaseDir(); dir != "" && dir != "." {
+		alts = append(alts, regexp.QuoteMeta(filepath.ToSlash(filepath.Join(dir, "data"))))
+	}
+	return strings.Join(alts, "|")
+}
+
+// rmGuardPatterns returns the narrowed recursive-delete and critical-path
+// patterns. They protect system roots, the data roots and root globs while
+// allowing cleanup below /app/data/tasks/<id>.
+func rmGuardPatterns() (recursive, critical string) {
+	dataAlts := dataRootAlternatives()
+	recursive = `(?i)\brm\b.{0,80}(?:-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*|--recursive|--no-preserve-root)\s+["']?(?:/(?:etc|bin|usr|boot|var|lib|sys|proc|dev|sbin|root)(?:/|["'\s*?]|$)|(?:` + dataAlts + `)/?(?:["'\s*?]|$)|/(?:["'\s*?]|$))`
+	critical = `\brm\b[^"'\n]{0,60}["'\s](/(?:etc|bin|usr|boot|var|lib|sys|proc|dev|sbin|root)(?:/|["'\s*?]|$)|(?:` + dataAlts + `)/?(?:["'\s*?]|$)|/(?:["'\s*?]|$))`
+	return recursive, critical
+}
+
 // seedDefaultInterceptRules inserts built-in safety intercept rules once on
 // first startup. The seed is gated by a settings flag so user edits (disable,
 // delete, re-order) are never overwritten on subsequent restarts.
@@ -354,6 +412,7 @@ func (d *DB) seedDefaultInterceptRules() error {
 	if v, _, _ := d.GetSetting("intercept_default_rules_v1"); v == "done" {
 		return nil
 	}
+	recursivePattern, criticalPattern := rmGuardPatterns()
 	type rule struct {
 		name     string
 		target   string // tool_name | tool_input
@@ -370,7 +429,7 @@ func (d *DB) seedDefaultInterceptRules() error {
 			name:     "[内置] 递归强制删除 rm -rf",
 			target:   "tool_input",
 			typ:      "regex",
-			pattern:  `(?i)\brm\b.{0,80}(?:-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*|--recursive|--no-preserve-root)\s+["']?(?:/(?:etc|bin|usr|boot|var|lib|sys|proc|dev|sbin|root)(?:/|["'\s]|$)|/app/data/?(?:["'\s]|$)|/(?:["'\s]|$))`,
+			pattern:  recursivePattern,
 			action:   "deny",
 			message:  "禁止执行递归强制删除（rm -rf / rm --recursive），可能永久损坏系统或靶机环境",
 			priority: 100,
@@ -379,7 +438,7 @@ func (d *DB) seedDefaultInterceptRules() error {
 			name:     "[内置] 删除系统关键目录",
 			target:   "tool_input",
 			typ:      "regex",
-			pattern:  `\brm\b[^"'\n]{0,60}["'\s](/(?:etc|bin|usr|boot|var|lib|sys|proc|dev|sbin|root)(?:/|["'\s]|$)|/app/data/?(?:["'\s]|$)|/(?:["'\s]|$))`,
+			pattern:  criticalPattern,
 			action:   "deny",
 			message:  "禁止删除系统关键路径",
 			priority: 100,
@@ -527,11 +586,10 @@ func (d *DB) seedDefaultInterceptRules() error {
 		},
 	}
 	for _, r := range rules {
-		if len(r.tools) == 0 {
-			r.tools = []string{"Bash", "shell_open", "shell_send"}
-		}
-		if r.priority == 80 {
-			r.tools = []string{"Bash", "shell_open", "shell_send", "WebFetch", "ExecuteExtraTool"}
+		if isHTTPBuiltIn(r.name) {
+			r.tools = httpToolNames()
+		} else {
+			r.tools = commandToolNames()
 		}
 		toolsJSON, _ := json.Marshal(r.tools)
 		if _, err := d.Exec(`
@@ -568,8 +626,8 @@ func (d *DB) seedDefaultInterceptRulesV2() error {
 	}{
 		{
 			name:     "[内置] 破坏性系统命令",
-			pattern:  `(?i)\b(rm\s+-rf\s+/(?:["'\s]|$)|mkfs|dd\s+if=|:\(\)\s*\{|shutdown|reboot|>\s*/dev/sd)`,
-			tools:    []string{"Bash", "shell_open", "shell_send"},
+			pattern:  `(?i)\b(rm\s+-rf\s+/(?:["'\s*?]|$)|mkfs|dd\s+if=|:\(\)\s*\{|shutdown|reboot|>\s*/dev/sd)`,
+			tools:    commandToolNames(),
 			action:   "deny",
 			message:  "破坏性命令被拒绝（rm -rf / / mkfs / dd / fork bomb / 关机重启 / 覆写磁盘设备）",
 			enabled:  true,
@@ -578,7 +636,7 @@ func (d *DB) seedDefaultInterceptRulesV2() error {
 		{
 			name:     "[内置] 数据外泄管道",
 			pattern:  `(?i)(curl|wget|nc|ncat)\b[^|]*\b(\|\s*(curl|wget|nc))`,
-			tools:    []string{"Bash", "shell_open", "shell_send"},
+			tools:    commandToolNames(),
 			action:   "deny",
 			message:  "疑似数据外泄管道被拒绝（命令输出经 curl/wget/nc 外传）",
 			enabled:  false,
@@ -620,7 +678,7 @@ func (d *DB) seedDefaultInterceptRulesV3() error {
 		return nil
 	}
 	const name = "[内置] 删除类接口路径"
-	toolsJSON, _ := json.Marshal([]string{"Bash", "shell_open", "shell_send", "WebFetch", "ExecuteExtraTool"})
+	toolsJSON, _ := json.Marshal(httpToolNames())
 	if _, err := d.Exec(`
 INSERT INTO intercept_rules(name, enabled, priority, match_target, match_type, pattern, tool_names, action, message, timeout_enabled, timeout_seconds, timeout_action)
 SELECT $1, true, 80, 'tool_input', 'regex', $2, $3, 'deny', $4, false, 60, 'deny'
@@ -643,13 +701,39 @@ func (d *DB) seedDefaultInterceptRulesV4() error {
 	if v, _, _ := d.GetSetting("intercept_default_rules_v4"); v == "done" {
 		return nil
 	}
-	commandTools, _ := json.Marshal([]string{"Bash", "shell_open", "shell_send"})
-	httpTools, _ := json.Marshal([]string{"Bash", "shell_open", "shell_send", "WebFetch", "ExecuteExtraTool"})
+	commandTools, _ := json.Marshal(commandToolNames())
+	httpTools, _ := json.Marshal(httpToolNames())
 	if _, err := d.Exec(`
 UPDATE intercept_rules
-   SET tool_names = CASE WHEN priority = 80 THEN $2::jsonb ELSE $1::jsonb END
- WHERE name LIKE '[内置]%' AND tool_names = '[]'::jsonb`, string(commandTools), string(httpTools)); err != nil {
+   SET tool_names = CASE WHEN name IN ($3,$4,$5,$6,$7) THEN $2::jsonb ELSE $1::jsonb END
+ WHERE name LIKE '[内置]%' AND tool_names = '[]'::jsonb`,
+		string(commandTools), string(httpTools),
+		httpBuiltInRules[0], httpBuiltInRules[1], httpBuiltInRules[2], httpBuiltInRules[3], httpBuiltInRules[4]); err != nil {
 		return fmt.Errorf("scope intercept rules: %w", err)
+	}
+	// Existing installations still carry the pre-narrowing rm patterns. Replace
+	// them only when untouched, so operator edits survive.
+	recursive, critical := rmGuardPatterns()
+	for _, m := range []struct{ name, old, new string }{
+		{
+			name: "[内置] 递归强制删除 rm -rf",
+			old:  `(?i)\brm\b.{0,80}(?:-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*|--recursive|--no-preserve-root)`,
+			new:  recursive,
+		},
+		{
+			name: "[内置] 删除系统关键目录",
+			old:  `\brm\b[^"'\n]{0,60}["'\s](/|/etc|/bin|/usr|/boot|/var|/lib|/sys|/proc|/dev|/sbin|/root)`,
+			new:  critical,
+		},
+		{
+			name: "[内置] 破坏性系统命令",
+			old:  `(?i)\b(rm\s+-rf\s+/|mkfs|dd\s+if=|:\(\)\s*\{|shutdown|reboot|>\s*/dev/sd)`,
+			new:  `(?i)\b(rm\s+-rf\s+/(?:["'\s*?]|$)|mkfs|dd\s+if=|:\(\)\s*\{|shutdown|reboot|>\s*/dev/sd)`,
+		},
+	} {
+		if _, err := d.Exec(`UPDATE intercept_rules SET pattern=$3 WHERE name=$1 AND pattern=$2`, m.name, m.old, m.new); err != nil {
+			return fmt.Errorf("migrate rm pattern %q: %w", m.name, err)
+		}
 	}
 	return d.SetSetting("intercept_default_rules_v4", "done")
 }

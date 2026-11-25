@@ -582,10 +582,50 @@ func ruleMatches(r compiledRule, toolName string, input []byte) bool {
 	default:
 		return false
 	}
-	if r.MatchType == "regex" {
-		return r.re != nil && r.re.MatchString(subject)
+	// Tool input arrives as JSON, so a command such as rm -rf "/etc" is stored
+	// with escaped quotes. Match the raw payload and every decoded string value.
+	subjects := []string{subject}
+	if r.MatchTarget == "tool_input" {
+		subjects = append(subjects, jsonStringValues(input)...)
 	}
-	return strings.Contains(subject, r.Pattern)
+	for _, s := range subjects {
+		if r.MatchType == "regex" {
+			if r.re != nil && r.re.MatchString(s) {
+				return true
+			}
+		} else if strings.Contains(s, r.Pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// jsonStringValues returns every string value in a JSON payload, unescaped.
+// A tool_input rule must see the command the model actually wrote, not its
+// JSON serialization.
+func jsonStringValues(input []byte) []string {
+	var v any
+	if err := json.Unmarshal(input, &v); err != nil {
+		return nil
+	}
+	var out []string
+	var walk func(any)
+	walk = func(x any) {
+		switch t := x.(type) {
+		case string:
+			out = append(out, t)
+		case []any:
+			for _, item := range t {
+				walk(item)
+			}
+		case map[string]any:
+			for _, item := range t {
+				walk(item)
+			}
+		}
+	}
+	walk(v)
+	return out
 }
 
 func defaultMessage(action, name string) string {
