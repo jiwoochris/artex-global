@@ -659,10 +659,16 @@ func jsonStringValues(input []byte) []string {
 // boundary), so only command operands are normalised.
 var cmdPathToken = regexp.MustCompile(`(^|[\s"'=])((?:/|\.{1,2}/)[^\s"';|&]*)`)
 
+// shellIFS matches the shell's IFS variable, which expands to whitespace.
+// Without this, "rm -rf$IFS/etc" and "rm${IFS}-rf${IFS}/app/data" reach the
+// shell as the protected commands but fail a text rule that expects a space.
+var shellIFS = regexp.MustCompile(`\$(?:IFS\b|\{IFS[^}]*\})`)
+
 // normalizeCommand removes shell quoting/escaping and canonicalises path
 // operands, so r""m, r\m, /et""c, /app/data/. and /app/data/tasks/58/../..
 // cannot hide a protected operand from a text rule.
 func normalizeCommand(s string) string {
+	s = shellIFS.ReplaceAllString(s, " ")
 	s = strings.ReplaceAll(s, "\"", "")
 	s = strings.ReplaceAll(s, "\\", "")
 	return cmdPathToken.ReplaceAllStringFunc(s, func(m string) string {

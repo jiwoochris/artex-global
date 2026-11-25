@@ -81,3 +81,15 @@ func TestRuleMatchesToolScope(t *testing.T) {
 		t.Fatal("empty tool scope must preserve legacy all-tools behavior")
 	}
 }
+
+func TestNormalizeCommandExpandsIFS(t *testing.T) {
+	for in, want := range map[string]string{
+		"rm -rf$IFS/etc":             "rm -rf /etc",
+		"rm${IFS}-rf${IFS}/app/data": "rm -rf /app/data",
+		"rm -rf${IFS%?}/etc":         "rm -rf /etc",
+	} {
+		if got := normalizeCommand(in); got != want {
+			t.Errorf("normalizeCommand(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
