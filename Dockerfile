@@ -12,6 +12,8 @@
 #   docker build -t artex:local .
 FROM python:3.12-slim-bookworm
 ARG TARGETARCH
+# 브라우저를 /root 가 아닌 공용 경로에 설치한다: 아래에서 root 권한을 버리고 실행하므로 비 root 사용자가 읽을 수 있어야 한다.
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 # 상용 도구: ripgrep / curl / vim 에 더해 recon 에 자주 쓰는 도구 묶음(필요에 따라 추가·삭제).
 # Node 는 NodeSource 에서 20.x 를 설치한다: bookworm 기본 apt nodejs 는 18 이고, Playwright 는 >=20 을 요구한다.
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -28,7 +30,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN npm install -g @playwright/mcp@latest @playwright/cli@latest playwright@latest \
     && playwright-cli --help \
     && playwright install --with-deps chromium \
+    && chmod -R a+rX /ms-playwright \
     && rm -rf /var/lib/apt/lists/*
+# 비 root 실행 사용자. LLM 이 고른 명령(bash 도구·MCP·사용자 정의 도구)이 전부 이 사용자 권한으로 돈다.
+# 컨테이너가 침해돼도 root 권한(패키지 설치, 시스템 파일 변경, 커널 공격면)을 쥐지 못하게 한다.
+RUN groupadd --system --gid 10001 artex \
+    && useradd --system --uid 10001 --gid artex --create-home --home-dir /home/artex --shell /usr/sbin/nologin artex
 WORKDIR /app
 # 미리 컴파일한 해당 아키텍처 바이너리(dist/amd64/artex 또는 dist/arm64/artex)
 COPY dist/${TARGETARCH}/artex /app/artex
@@ -36,10 +43,19 @@ COPY dist/${TARGETARCH}/artex /app/artex
 # 이 스크립트는 동시에 SIGTERM 을 artex 로 전달하는 일도 맡는다: docker stop 은 신호를 PID 1 에만 보내므로,
 # 전달하지 않으면 artex 가 신호를 받지 못해 우아한 종료를 못 하고 10 초 뒤 SIGKILL 로 강제 종료된다.
 COPY start.sh /app/start.sh
-RUN chmod +x /app/artex /app/start.sh
+# 시작 시 root 로 data/ 소유권만 맞춘 뒤 artex 사용자로 권한을 내려 start.sh 를 실행한다(비 root 로 기동).
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod 0755 /app/artex /app/start.sh /app/docker-entrypoint.sh
 COPY skills/ /app/skills/
-# data/(SQLite + jwt.key) 영속화 지점
-VOLUME ["/app/data"]
+# /app(실행 파일 포함)은 root 소유로 둔다: 같은 사용자로 도는 에이전트가 artex 바이너리를 덮어써 재시작 뒤에도 남는 것을 막는다.
+# 쓰기가 필요한 곳은 두 군데뿐이다. data/ (SQLite·작업 공간) 와 state/ (jwt.key: 서버가 실행 파일 옆에 쓰므로 심볼릭 링크로 state/ 에 둔다).
+# 작업 공간(data/)에서 내려받을 수 있는 파일과 서명 키가 섞이지 않도록 state/ 는 data/ 와 분리한다.
+RUN mkdir -p /app/data /app/state \
+    && chown artex:artex /app/data /app/state \
+    && chmod 0700 /app/state \
+    && ln -s /app/state/jwt.key /app/jwt.key
+# data/(SQLite + 작업 공간) 와 state/(jwt.key) 영속화 지점
+VOLUME ["/app/data", "/app/state"]
 EXPOSE 8787 8788
-ENTRYPOINT ["/app/start.sh"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["-addr", ":8787", "-proxy", ":8788"]
