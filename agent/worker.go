@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -70,6 +71,10 @@ type Worker struct {
 	// extraTools are host-provided tools (e.g. traffic query, oast) appended to
 	// the worker's graph write-back tools.
 	extraTools []actool.CoreTool
+	// oobFactory, when set, opens a fresh OOB session for THIS run and returns
+	// its cleanup (StopPolling→Close). Each run gets an independent session;
+	// nil = the OOB tools are not assembled for the worker.
+	oobFactory func() (oobSession, func(), error)
 	// injectConstraints resolves whether this task's operation constraints get
 	// injected into the worker system prompt. Read per run so the settings toggle
 	// takes effect without rebuilding the agent. nil = inject (default).
@@ -190,6 +195,10 @@ func (w *Worker) SetProxy(addr, caCert string) { w.proxyAddr, w.proxyCACert = ad
 
 // SetWebSearch selects the web_search backend for this worker (off by default).
 func (w *Worker) SetWebSearch(o WebSearchOpts) { w.webSearch = o }
+
+// SetOOBSessionFactory wires the per-run OOB session factory. nil disables the
+// OOB tools for this worker.
+func (w *Worker) SetOOBSessionFactory(fn func() (oobSession, func(), error)) { w.oobFactory = fn }
 
 // proxyEnv builds the Bash-subprocess env that routes child-command HTTP through
 // the egress proxy (the recording MITM when capture is on, or the global proxy
@@ -374,6 +383,17 @@ func (w *Worker) execute(ctx context.Context, name string, taskID int64, as *db.
 	// then augment with the agent's visible skills/MCP. During the SDK settlement
 	// phase, Bash is hidden via Settlement.DisabledTools (no local gating needed).
 	base := append(tsx.WorkerTools(), w.extraTools...)
+	// OOB 会话：本 run 独立建立（per-run，不共享，不在启动时连接）。
+	// 工厂失败不阻断无关任务——OOB 只是能力缺失，run 照常执行（工具不装配）。
+	if w.oobFactory != nil {
+		sess, oobCleanup, err := w.oobFactory()
+		if err == nil {
+			base = append(base, oobToolsForRun(tsx, sess)...)
+			defer oobCleanup() // run 结束 → StopPolling→Close，私钥随之丢弃
+		} else {
+			log.Printf("[oob] worker run %s intent=%d session assembly failed: %v", name, intent.ID, err)
+		}
+	}
 	// worker 刻意不给 MultiEdit/Glob/Grep：文件精改用 Edit、检索走 Bash(grep/find)，
 	// 收敛工具面、减少低价值调用。其余 SDK 默认工具(Read/Write/Edit/LS/Bash/Sleep)照常。
 	base = append(base, defaultToolsExcept("MultiEdit", "Glob", "Grep")...)

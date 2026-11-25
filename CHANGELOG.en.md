@@ -8,6 +8,12 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 
 ## [Unreleased]
 
+### OOB (out-of-band verification)
+
+- **Added the `oob_generate` / `oob_poll` worker tools.** They mint a callback address for blind SSRF, XXE and deserialization checks and wait for the response. The default server is the public Interactsh instance `oast.me`; the `oob` block in `config.json` or the `ARTEX_OOB_*` environment variables point it at a self-hosted server (HTTPS + token). A session opens and closes per run, and the RSA private key stays in memory.
+- **A callback is intermediate evidence only.** `progress` (callback received), `no_interaction` (healthy window, empty), `observation_incomplete` (window not completed) and `service_unavailable` (service failure) are recorded as distinct outcomes, and no finding or severity is produced from a callback alone. Service health is tracked separately so an outage is never read as "no vulnerability".
+- The client is implemented on the standard library only (registration, address minting, polling, AES-CTR/RSA-OAEP decryption). It does not pull the NTLM relay code that the external OOB library brings in, so it is not blocked by Windows Defender.
+
 ### Localization (i18n)
 
 - **Server console logs and the startup banner are now always English,** regardless of the display language, and a test fails if a non-ASCII message enters a log call. Runtime values such as model-written text and target names are printed as they are.
