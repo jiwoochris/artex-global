@@ -2,8 +2,10 @@ package agent
 
 import (
 	"encoding/json"
+	"net/url"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/Autumn-27/artex/db"
 )
@@ -19,13 +21,16 @@ import (
 // repeatable: they carry no conclusion, so the planner may issue the direction
 // again. Only open/running intents block.
 //
-// Two floors: 0.45 on summary similarity alone, and 0.25 when the two intents
-// also share at least one target asset (same anchor makes near-identical wording
-// likelier to mean the same route, while unrelated directions on one host stay
-// well below).
+// Three floors: 0.75 when no target comparison is possible (unanchored pairs
+// can describe different hosts), 0.45 on wording alone, and 0.35 when the two
+// intents share a target asset. The anchored floor stays above the similarity
+// of short summaries that share only a generic noun and the target name.
 const (
-	dupSimilarityFloor         = 0.45
-	dupAnchoredSimilarityFloor = 0.25
+	dupSimilarityFloor           = 0.45
+	dupAnchoredSimilarityFloor   = 0.25
+	dupUnanchoredSimilarityFloor = 0.75
+	dupShortSummaryFloor         = 0.6
+	dupLongSummaryMinTokens      = 8
 )
 
 var intentNonWord = regexp.MustCompile(`[^\p{L}\p{N}]+`)
@@ -48,6 +53,7 @@ var intentStopwords = map[string]struct{}{
 	"test": {}, "check": {}, "verify": {}, "probe": {}, "scan": {},
 	"проверить": {}, "проверка": {}, "проверки": {}, "проверять": {},
 	"исследование": {}, "исследовать": {}, "выполнить": {},
+	"инъекции": {}, "инъекция": {}, "injection": {},
 	// Russian function words: short enough to survive the length cutoff but
 	// carrying no direction.
 	"а": {}, "без": {}, "более": {}, "бы": {}, "в": {}, "во": {}, "вот": {},
@@ -63,8 +69,30 @@ var intentStopwords = map[string]struct{}{
 }
 
 func intentTokens(s string) map[string]struct{} {
+	return intentTokensMode(s, false)
+}
+
+// intentTokensWithHost keeps the hostname as a token. It is used when no asset
+// anchors are available: the host is then the only target signal, and two
+// identical summaries about different hosts must not collapse.
+func intentTokensWithHost(s string) map[string]struct{} {
+	return intentTokensMode(s, true)
+}
+
+func intentTokensMode(s string, keepHost bool) map[string]struct{} {
 	toks := map[string]struct{}{}
-	s = intentURL.ReplaceAllString(s, " ")
+	var hosts []string
+	if keepHost {
+		s = intentURL.ReplaceAllStringFunc(s, func(m string) string {
+			if u, err := url.Parse(m); err == nil && u.Hostname() != "" {
+				hosts = append(hosts, u.Hostname())
+				return " "
+			}
+			return m
+		})
+	} else {
+		s = intentURL.ReplaceAllString(s, " ")
+	}
 	for _, w := range intentNonWord.Split(strings.ToLower(s), -1) {
 		if len([]rune(w)) < 2 {
 			continue
@@ -73,8 +101,38 @@ func intentTokens(s string) map[string]struct{} {
 			continue
 		}
 		toks[w] = struct{}{}
+		if containsCJK(w) {
+			for _, g := range cjkBigrams(w) {
+				toks[g] = struct{}{}
+			}
+		}
+	}
+	for _, h := range hosts {
+		toks["host:"+h] = struct{}{}
 	}
 	return toks
+}
+
+// containsCJK reports whether a token needs character n-grams: CJK text has no
+// spaces, so word splitting alone makes every summary a single opaque token.
+func containsCJK(s string) bool {
+	for _, r := range s {
+		if unicode.Is(unicode.Han, r) || unicode.Is(unicode.Hiragana, r) || unicode.Is(unicode.Katakana, r) {
+			return true
+		}
+	}
+	return false
+}
+
+func cjkBigrams(s string) []string {
+	rs := []rune(s)
+	out := make([]string, 0, len(rs))
+	for i := 0; i+1 < len(rs); i++ {
+		if unicode.Is(unicode.Han, rs[i]) || unicode.Is(unicode.Hiragana, rs[i]) || unicode.Is(unicode.Katakana, rs[i]) {
+			out = append(out, string(rs[i:i+2]))
+		}
+	}
+	return out
 }
 
 func jaccard(a, b map[string]struct{}) float64 {
@@ -121,7 +179,8 @@ func intentSummaryAndAnchors(n *db.Node) (string, []int64) {
 // duplicateOpenIntent returns the queued intent the new summary duplicates.
 func duplicateOpenIntent(nodes []*db.Node, summary string, anchors []int64) (int64, string, bool) {
 	ns := intentTokens(summary)
-	if len(ns) == 0 {
+	nsHost := intentTokensWithHost(summary)
+	if len(ns) == 0 && len(nsHost) == 0 {
 		return 0, "", false
 	}
 	newAnchors := map[int64]struct{}{}
@@ -132,42 +191,52 @@ func duplicateOpenIntent(nodes []*db.Node, summary string, anchors []int64) (int
 		if n == nil || n.Kind != db.KindIntent {
 			continue
 		}
-		if n.State != "open" && n.State != "running" {
+		if n.State != "open" && n.State != "running" && n.State != "paused" {
 			continue
 		}
 		existing, exAnchors := intentSummaryAndAnchors(n)
 		if existing == "" {
 			continue
 		}
-		// Both intents target known assets: the new direction is a duplicate
-		// only when the queued intent already covers every target. Disjoint or
-		// expanded target sets are new work, however similar the wording.
+		// Both intents target known assets: disjoint target sets are never the
+		// same direction. Overlapping sets are evaluated by similarity, so an
+		// expanded target set cannot bypass the check by adding one asset.
 		bothAnchored := len(newAnchors) > 0 && len(exAnchors) > 0
-		if bothAnchored && !anchorsCovered(exAnchors, newAnchors) {
+		if bothAnchored && !anchorsOverlap(newAnchors, exAnchors) {
 			continue
 		}
-		sim := jaccard(ns, intentTokens(existing))
-		if sim >= dupSimilarityFloor {
-			return n.ID, existing, true
+		newTokens := ns
+		existingTokens := intentTokens(existing)
+		if !bothAnchored {
+			newTokens, existingTokens = nsHost, intentTokensWithHost(existing)
 		}
-		if bothAnchored && sim >= dupAnchoredSimilarityFloor {
+		sim := jaccard(newTokens, existingTokens)
+		if !bothAnchored {
+			if sim >= dupUnanchoredSimilarityFloor {
+				return n.ID, existing, true
+			}
+			continue
+		}
+		// Long summaries carry enough distinguishing detail for a low floor;
+		// short ones need a high one so "stored XSS" and "reflected XSS" on one
+		// asset do not collapse into a single direction.
+		floor := dupShortSummaryFloor
+		if min(len(newTokens), len(existingTokens)) >= dupLongSummaryMinTokens {
+			floor = dupAnchoredSimilarityFloor
+		}
+		if sim >= floor {
 			return n.ID, existing, true
 		}
 	}
 	return 0, "", false
 }
 
-// anchorsCovered reports whether every target of the new intent is already
-// covered by the queued intent.
-func anchorsCovered(existing []int64, newSet map[int64]struct{}) bool {
-	covered := make(map[int64]struct{}, len(existing))
-	for _, v := range existing {
-		covered[v] = struct{}{}
-	}
-	for v := range newSet {
-		if _, ok := covered[v]; !ok {
-			return false
+// anchorsOverlap reports whether the two target sets share at least one asset.
+func anchorsOverlap(set map[int64]struct{}, b []int64) bool {
+	for _, v := range b {
+		if _, ok := set[v]; ok {
+			return true
 		}
 	}
-	return true
+	return false
 }

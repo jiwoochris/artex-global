@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -1071,10 +1072,13 @@ func (t *ToolSet) addOneIntent(it intentItem) (int64, error) {
 	// Open/running intents are already-dispatched tasks. Re-issuing the same
 	// direction while a copy sits in the queue only multiplies work on one route;
 	// stop/blocked/exhausted intents are repeatable (no verdict about the direction).
-	if existing, err := t.ts.ListByKind(db.KindIntent, 2000); err == nil {
-		if id, s, dup := duplicateOpenIntent(existing, it.Summary, anchors); dup {
-			return 0, fmt.Errorf("方向「%s」已作为意图 #%d（%s）在队列中等待执行：open/running 意图是【已下发、等待执行】的任务，不是尚未安排的空白方向，即使它迟迟未被 worker 领取也不能重复下发同一方向。请等待它执行；若确需调整，用 steer_work 向它发消息。只有此前同方向意图以 stopped/blocked/exhausted 等非成功、非失败的原因终止后，才可重新下发该方向。", it.Summary, id, s)
-		}
+	existing, err := t.ts.ListByKind(db.KindIntent, 2000)
+	if err != nil {
+		// Fail open, but leave a trace: a silent skip would look like a clean
+		// duplicate check while the queue fills with copies.
+		log.Printf("[planner] duplicate check skipped: %v", err)
+	} else if id, s, dup := duplicateOpenIntent(existing, it.Summary, anchors); dup {
+		return 0, fmt.Errorf("方向「%s」已作为意图 #%d（%s）在队列中等待执行：open/running/paused 意图是【已下发、等待执行】的任务，不是尚未安排的空白方向，即使它迟迟未被 worker 领取也不能重复下发同一方向。请等待它执行或调整措辞与目标；如需覆盖额外资产，为它们单独下发 intent，不要复制同一方向。只有此前同方向意图以 stopped/blocked/exhausted 等非成功、非失败的原因终止后，才可重新下发该方向。", it.Summary, id, s)
 	}
 	id, err := t.ts.AddIntent(payload, priority, anchors, "planner")
 	if err != nil {

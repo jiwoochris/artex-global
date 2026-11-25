@@ -77,14 +77,15 @@ func TestDuplicateOpenIntentIgnoresSharedTargetContext(t *testing.T) {
 	}
 }
 
-// Expanding the same check to a new target is new work: the queued intent does
-// not cover the extra host, so the whole request must not be rejected.
-func TestDuplicateOpenIntentRequiresCompleteTargetCoverage(t *testing.T) {
+// Adding one asset to the same direction must not bypass the check: the queued
+// intent already covers the shared target, so the duplicate is rejected and the
+// planner is told to split the extra target into its own intent.
+func TestDuplicateOpenIntentBlocksExpandedTargetSet(t *testing.T) {
 	queued := intentNode(1, "open",
 		"Verify authentication bypass on https://alpha.example.com", 101)
 	expanded := "Verify authentication bypass on https://alpha.example.com and https://bravo.example.com"
-	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, expanded, []int64{101, 202}); dup {
-		t.Fatal("an expanded target set must not be treated as a duplicate")
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, expanded, []int64{101, 202}); !dup {
+		t.Fatal("an expanded target set must still be checked for duplication")
 	}
 }
 
@@ -95,9 +96,59 @@ func TestDuplicateOpenIntentReadsLegacyTargetKeys(t *testing.T) {
 		"target_ids": []int64{101},
 	})
 	queued := &db.Node{ID: 1, Kind: db.KindIntent, State: "open", Payload: payload}
-	other := "Verify authentication bypass on https://bravo.example.com"
-	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, other, []int64{202}); dup {
-		t.Fatal("legacy target_ids must participate in the coverage check")
+	other := "Verify authentication bypass on https://alpha.example.com"
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, other, []int64{101}); !dup {
+		t.Fatal("legacy target_ids must participate in the duplicate check")
+	}
+}
+
+// A paused intent is live work that can be resumed; re-issuing the same
+// direction would run two copies after resume.
+func TestDuplicateOpenIntentBlocksPaused(t *testing.T) {
+	paused := intentNode(10, "paused", "Проверить SSRF в вебхуках", 4175)
+	if _, _, dup := duplicateOpenIntent([]*db.Node{paused}, "Проверить SSRF в вебхуках", []int64{4175}); !dup {
+		t.Fatal("paused intent must block a duplicate")
+	}
+}
+
+// Short summaries on one asset must not collapse different techniques or
+// functions: the anchored floor stays above their similarity.
+func TestDuplicateOpenIntentAllowsDistinctTechniquesOnOneAsset(t *testing.T) {
+	cases := [][2]string{
+		{"Проверить SSRF в вебхуках", "Проверить SSRF в загрузке аватара"},
+		{"Проверить SQL-инъекции в billmgr", "Проверить NoSQL-инъекции в billmgr"},
+		{"Проверить хранимые XSS в тикетах", "Проверить отражённые XSS в тикетах"},
+	}
+	for _, c := range cases {
+		queued := intentNode(1, "open", c[0], 4175)
+		if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, c[1], []int64{4175}); dup {
+			t.Errorf("distinct directions wrongly blocked: %q vs %q", c[0], c[1])
+		}
+	}
+}
+
+// CJK summaries have no spaces; without character n-grams a paraphrase is a
+// single opaque token and duplicates are never caught.
+func TestDuplicateOpenIntentHandlesCJK(t *testing.T) {
+	queued := intentNode(1, "open", "测试登录页面的SQL注入", 7)
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, "对登录页面做SQL注入测试", []int64{7}); !dup {
+		t.Fatal("CJK paraphrase must be recognized as a duplicate")
+	}
+	other := "测试支付接口的越权访问"
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, other, []int64{7}); dup {
+		t.Fatal("different CJK directions must not collapse")
+	}
+}
+
+// Without anchors the host is the only target signal: identical wording about
+// different hosts must not be treated as the same direction.
+func TestDuplicateOpenIntentUsesHostWhenUnanchored(t *testing.T) {
+	queued := intentNode(1, "open", "Test SQL injection on https://a.example.com")
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, "Test SQL injection on https://b.example.com", nil); dup {
+		t.Fatal("different hosts must not collapse when no anchors are present")
+	}
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, "Test SQL injection on https://a.example.com", nil); !dup {
+		t.Fatal("same host and wording must still be caught without anchors")
 	}
 }
 
