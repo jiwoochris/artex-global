@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -133,7 +132,7 @@ func (t *ToolSet) oobPoll(s oobSession) actool.CoreTool {
 				case errors.Is(err, errSessionClosed):
 					out["hint"] = "本次 OOB 会话已关闭（run 结束或重启失效），观察窗口未完成；继续验证请用 oob_generate 重新分配回调地址。"
 				case errors.Is(err, errStaleProbe):
-					out["hint"] = "probe_id не выдан в текущей сессии (например, пришёл из восстановленной истории воркера). Выполните oob_generate заново и используйте новый адрес."
+					out["hint"] = "probe_id 不属于当前会话（例如来自恢复的 worker 历史）。请重新执行 oob_generate 并使用新地址。"
 				case outcome == "service_unavailable":
 					out["hint"] = "OOB 服务当前不可用，不影响其他验证；如需稳定带外验证可在 config.json 的 oob 块配置自建 Interactsh 服务（server_url + token），或稍后重试。"
 				case outcome == "observation_incomplete":
@@ -167,6 +166,10 @@ func (t *ToolSet) oobPoll(s oobSession) actool.CoreTool {
 				}
 				pending = remaining
 			}
+			if a.ProbeID == "" && len(pending) > 0 {
+				its = append(its, pending...)
+				pending = nil
+			}
 			if len(its) == 0 {
 				// Keep observing until the requested window completes: a batch
 				// holding another probe's callback says nothing about this probe
@@ -175,15 +178,6 @@ func (t *ToolSet) oobPoll(s oobSession) actool.CoreTool {
 				healthy := false
 				for {
 					polled, err := s.Poll(time.Until(deadline))
-					if err != nil {
-						// A successful poll already completed during this
-						// observation; a later quiet tick must not erase it.
-						if errors.Is(err, errNoCompletedPoll) && healthy && !time.Now().Before(deadline) {
-							break
-						}
-						return observationFailed(err)
-					}
-					healthy = true
 					pending = append(pending, polled...)
 					remaining := make([]OOBInteraction, 0, len(pending))
 					for _, interaction := range pending {
@@ -194,7 +188,19 @@ func (t *ToolSet) oobPoll(s oobSession) actool.CoreTool {
 						}
 					}
 					pending = remaining
-					if len(its) > 0 || !time.Now().Before(deadline) {
+					if len(its) > 0 {
+						break
+					}
+					if err != nil {
+						// A successful poll already completed during this
+						// observation; a later quiet tick must not erase it.
+						if errors.Is(err, errNoCompletedPoll) && healthy && !time.Now().Before(deadline) {
+							break
+						}
+						return observationFailed(err)
+					}
+					healthy = true
+					if !time.Now().Before(deadline) {
 						break
 					}
 				}
@@ -202,7 +208,7 @@ func (t *ToolSet) oobPoll(s oobSession) actool.CoreTool {
 			out := map[string]any{
 				"interactions": its,
 				"status":       "ok",
-				"count":        strconv.Itoa(len(its)),
+				"count":        len(its),
 			}
 			outcome := "no_interaction"
 			summary := "OOB 观察窗口内暂无回调（不代表目标无漏洞）"

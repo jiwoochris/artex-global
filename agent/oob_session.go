@@ -224,6 +224,11 @@ func rawInteractionHost(raw string) string {
 // A service failure recorded during the window is returned as an error so the
 // tool records service_unavailable instead of a false no_interaction.
 func (ls *liveSession) Poll(wait time.Duration) ([]OOBInteraction, error) {
+	// Already-delivered callbacks answer first. A later live-poll failure must
+	// not hide a callback the pump has already recorded.
+	if out := ls.takeBuffered(); len(out) > 0 {
+		return out, nil
+	}
 	deadline := time.Now().Add(wait)
 	start := time.Now()
 	// Complete one real poll inside the requested window even when wait is
@@ -231,18 +236,16 @@ func (ls *liveSession) Poll(wait time.Duration) ([]OOBInteraction, error) {
 	// anything and reports observation_incomplete.
 	if ls.src != nil {
 		if err := ls.src.PollOnce(ls.handle); err != nil {
+			if out := ls.takeBuffered(); len(out) > 0 {
+				return out, nil
+			}
 			return nil, err
 		}
 	}
 	for {
-		ls.mu.Lock()
-		if len(ls.buf) > 0 {
-			out := ls.buf
-			ls.buf = nil
-			ls.mu.Unlock()
+		if out := ls.takeBuffered(); len(out) > 0 {
 			return out, nil
 		}
-		ls.mu.Unlock()
 		if ls.isClosed() {
 			return nil, errSessionClosed
 		}
@@ -256,10 +259,21 @@ func (ls *liveSession) Poll(wait time.Duration) ([]OOBInteraction, error) {
 	}
 }
 
+func (ls *liveSession) takeBuffered() []OOBInteraction {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	if len(ls.buf) == 0 {
+		return nil
+	}
+	out := ls.buf
+	ls.buf = nil
+	return out
+}
+
 var (
 	errNoCompletedPoll = errors.New("oob: 观察窗口内没有完成一次轮询，无法判断是否有交互")
 	errSessionClosed   = errors.New("oob: 会话已关闭，观察窗口未完成")
-	errStaleProbe      = errors.New("oob: probe_id не выдан в текущей сессии")
+	errStaleProbe      = errors.New("oob: probe_id 不属于当前会话")
 )
 
 // trackedSession records the probe IDs issued in the current run. A resumed

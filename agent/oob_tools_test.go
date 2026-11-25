@@ -163,6 +163,25 @@ func TestOOBPollNoInteractions(t *testing.T) {
 	}
 }
 
+// A live poll can fail after callbacks were already delivered (a later bad
+// item, a timeout). Those callbacks are still valid evidence and must not be
+// replaced by service_unavailable.
+func TestOOBPollReturnsCallbacksWhenLivePollAlsoFails(t *testing.T) {
+	fs := &fakeSession{
+		url:          "xxxx.oast.me",
+		interactions: []OOBInteraction{{UniqueID: "u1", FullID: "u1.oast.me", Protocol: "dns"}},
+		err:          errNoCompletedPoll,
+	}
+	res, err := (&ToolSet{}).oobPoll(fs).Call(t.Context(), json.RawMessage(`{"wait":1}`), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := decode(t, res.Flatten())
+	if out["status"] != "ok" || out["count"] != float64(1) {
+		t.Fatalf("delivered callback must survive a later poll failure, got %v", out)
+	}
+}
+
 func TestOOBPollIncompleteObservationIsNotNoInteraction(t *testing.T) {
 	fs := &fakeSession{url: "xxxx.oast.me", err: errNoCompletedPoll}
 	res, err := (&ToolSet{}).oobPoll(fs).Call(t.Context(), json.RawMessage(`{}`), nil)

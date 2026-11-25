@@ -55,6 +55,28 @@ func TestPollRejectsUndecodablePayload(t *testing.T) {
 	}
 }
 
+func TestPollRejectsUndecodableExtra(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/register":
+			_ = json.NewEncoder(w).Encode(map[string]string{"message": "registration successful"})
+		case "/poll":
+			_ = json.NewEncoder(w).Encode(pollResponse{Extra: []string{"garbage"}})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	s, err := newTestSession(t, srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = s.poll(func(Interaction) {})
+	if !errors.Is(err, errPayloadUndecodable) {
+		t.Fatalf("an undecodable extra item must not look like a healthy empty poll, got %v", err)
+	}
+}
+
 func TestValidate(t *testing.T) {
 	if err := Validate(Config{Enabled: false}); err != nil {
 		t.Fatalf("禁用时不应报错: %v", err)

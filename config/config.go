@@ -25,8 +25,9 @@ type Database struct {
 }
 
 // OOB is the out-of-band verification (Interactsh) block of config.json. An
-// absent block means the built-in default: enabled against the public service
-// at oast.me. Enabled is a pointer so an omitted field keeps the default.
+// absent block means the built-in default: disabled. When enabled without a
+// server URL it uses the public service at oast.me. Enabled is a pointer so an
+// omitted field keeps the default.
 type OOB struct {
 	Enabled   *bool  `json:"enabled"`
 	ServerURL string `json:"server_url"`

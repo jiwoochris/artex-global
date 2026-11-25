@@ -38,6 +38,7 @@ const (
 	correlationIDLength = 20
 	nonceLength         = 13
 	requestTimeout      = 10 * time.Second
+	maxOOBResponseBytes = 1 << 20
 )
 
 // errPayloadUndecodable means the server returned an HTTP 200 poll whose
@@ -50,8 +51,9 @@ var errPayloadUndecodable = errors.New("oob: callback payload could not be decry
 const zbase32Alphabet = "ybndrfg8ejkmcpqxot1uwisza345h769"
 
 // Config is the resolved OOB configuration. It comes from the on-disk config
-// file (config.json "oob" block) with sane defaults: enabled, public service.
-// A self-hosted address is optional; a token is only used if set.
+// file (config.json "oob" block). It is disabled by default; when enabled
+// without a server URL it uses the public service. A self-hosted address is
+// optional; a token is only used if set.
 type Config struct {
 	Enabled   bool   `json:"enabled"`
 	ServerURL string `json:"server_url"`
@@ -63,8 +65,8 @@ type Config struct {
 	CACertFile string `json:"ca_cert_file"`
 }
 
-// DefaultConfig returns the shipped defaults: enabled against the public
-// Interactsh service at oast.me.
+// DefaultConfig returns the shipped defaults: disabled, with oast.me as the
+// address to use when an operator enables it without overriding the URL.
 func DefaultConfig() Config {
 	return Config{Enabled: false, ServerURL: DefaultServerURL}
 }
@@ -354,19 +356,48 @@ func (s *Session) poll(cb func(Interaction)) error {
 			bad++
 			continue
 		}
-		cb(in)
+		cb(capInteraction(in))
 	}
+	extraTotal := 0
 	for _, raw := range append(append([]string{}, resp.Extra...), resp.TLDData...) {
+		extraTotal++
 		var in Interaction
 		if err := json.Unmarshal([]byte(raw), &in); err != nil {
+			bad++
 			continue
 		}
-		cb(in)
+		cb(capInteraction(in))
 	}
 	if bad > 0 {
-		return fmt.Errorf("%w: %d of %d", errPayloadUndecodable, bad, len(resp.Data))
+		total := len(resp.Data) + extraTotal
+		if bad == total {
+			return fmt.Errorf("%w: all %d items", errPayloadUndecodable, total)
+		}
+		return fmt.Errorf("%w: %d of %d", errPayloadUndecodable, bad, total)
 	}
 	return nil
+}
+
+// capInteraction bounds server-controlled fields before they reach a tool
+// result, logs, or a persisted fact. Raw text has its own 2048-byte cap in the
+// session layer; the metadata fields need much smaller limits.
+func capInteraction(in Interaction) Interaction {
+	in.Protocol = truncateRunes(in.Protocol, 32)
+	in.UniqueID = truncateRunes(in.UniqueID, 128)
+	in.FullID = truncateRunes(in.FullID, 128)
+	in.QType = truncateRunes(in.QType, 32)
+	in.SMTPFrom = truncateRunes(in.SMTPFrom, 256)
+	in.Remote = truncateRunes(in.Remote, 128)
+	in.Raw = truncateRunes(in.Raw, 2048)
+	return in
+}
+
+func truncateRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[:n]) + "…"
 }
 
 // decryptMessage decrypts one AES-CTR message whose key was encrypted to this
@@ -490,13 +521,13 @@ func (s *Session) do(req *http.Request, out any) error {
 		return errors.New("oob: 服务拒绝了 token")
 	}
 	if resp.StatusCode != http.StatusOK {
-		data, _ := io.ReadAll(resp.Body)
+		data, _ := io.ReadAll(io.LimitReader(resp.Body, maxOOBResponseBytes))
 		return fmt.Errorf("oob: 服务返回 HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(data)))
 	}
 	if out == nil {
 		return nil
 	}
-	return json.NewDecoder(resp.Body).Decode(out)
+	return json.NewDecoder(io.LimitReader(resp.Body, maxOOBResponseBytes)).Decode(out)
 }
 
 func encodePublicKey(pub *rsa.PublicKey) (string, error) {
