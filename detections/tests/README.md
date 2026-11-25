@@ -2,15 +2,12 @@
 
 English · [한국어](README.ko.md)
 
-> 한국어: 이 디렉터리는 [`../`](../)의 탐지 규칙이 실제로 발화하는지를 재현 가능하게 증명하는
-> 회귀 테스트입니다. 바이너리 캡처를 저장소에 넣지 않고, 패킷 캡처를 매번 결정론적으로 생성한 뒤
-> [Suricata](https://suricata.io)로 직접 돌려 경보 수를 확인합니다. 모든 테스트는 자신이 소유하거나
-> 서면 허가를 받은 시스템을 지키는 **방어·탐지 목적에만** 쓰십시오. 한국어 전체 문서는
-> **[README.ko.md](README.ko.md)** 를 보십시오.
-
 Reproducible regression tests that prove the rules under [`../`](../) actually fire — and, just as
 important, stay silent on benign traffic. A detection rule you cannot run is a claim; these tests turn the
 claims in the rule files and the defense guide into something a reviewer can re-run from source.
+
+> Use every test here **only for defense and detection**, to protect systems you own or have written
+> authorization to protect. The full Korean version of this document is **[README.ko.md](README.ko.md)**.
 
 No binary packet capture is committed. The capture is **synthesized deterministically on every run** and
 removed afterwards, so the test ships as readable source, not as an opaque fixture, and never bloats the
@@ -454,7 +451,7 @@ library with `PYMISP_VERSION` if you mirror them internally.
 A new detection rule is stronger with a test that shows it firing. Tests should synthesize their own input
 deterministically, assert engine-version-independent properties exactly (and softer ones as floors with a
 recorded reference), and avoid any content that reads as attack guidance. See
-[`../../CONTRIBUTING.en.md`](../../CONTRIBUTING.en.md) and the rule indexes in [`../README.md`](../README.md).
+[`../../CONTRIBUTING.md`](../../CONTRIBUTING.md) and the rule indexes in [`../README.md`](../README.md).
 
 All eight suites run in CI (see [`../../.github/workflows/detections.yml`](../../.github/workflows/detections.yml))
 on every push or pull request that touches `detections/` — and the indicator test also runs when the upstream

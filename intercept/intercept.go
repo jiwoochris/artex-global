@@ -25,10 +25,10 @@ import (
 	"github.com/Autumn-27/artex/db"
 )
 
-// 사용자에게 노출되는 가로채기 판정·승인 메시지(한국어). judge 판정 결과·규칙 메시지는
-// 승인 기록(reason)·활동 스트림·409 응답으로 표시된다. 성능에 영향을 주는 에이전트 두뇌
-// (판정 프롬프트 본문)는 번역하지 않으며, [模型] 센티넬(decision_source 분류용 · UI 에서
-// 표시 전 제거 · db SQL LIKE·HasPrefix 소비처와 결합)도 원문 그대로 둔다.
+// User-facing interception verdict and approval messages (in Korean). Judge verdicts and rule messages
+// are shown in the approval record (reason), the activity stream and 409 responses. The agent brain that affects performance
+// (the judge prompt body) is not translated, and the [模型] ("model") sentinel (used for decision_source classification · stripped in the UI
+// before display · coupled to the db SQL LIKE / HasPrefix consumers) is also left verbatim.
 const (
 	msgReviewContextIncomplete = "검토 맥락이 완전하지 않아 사람의 확인이 필요합니다: "
 	msgModelApprovalFailed     = "모델 승인에 실패하여 실패 정책에 따라 처리합니다: "

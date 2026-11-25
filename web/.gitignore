@@ -36,7 +36,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# i18n — 생성물. zh.json/ko.json 은 커밋하되, 키별 출처(파일:줄) 색인은
-# 용량이 크고 소스 수정 때마다 줄 번호가 밀려 diff 가 요동쳐 제외한다.
-# `npm run extract:i18n` 으로 언제든 재생성된다(B2 배선·B3 번역 때 사용).
+# i18n — generated files. zh.json/ko.json are committed, but the per-key source (file:line) index is
+# excluded: it is large, and every source edit shifts line numbers and makes the diff churn.
+# `npm run extract:i18n` regenerates it at any time (used during the B2 wiring and B3 translation).
 /messages/zh.sources.json

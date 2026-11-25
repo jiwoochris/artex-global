@@ -2,17 +2,19 @@ package server
 
 import "testing"
 
-// finding_retests.go 의 사용자 노출 HTTP 에러 응답 문구를 한국어로 유지하는 회귀 방어
-// 테스트다. 한국어 판정은 F3a 가 만든 assertKoreanError(한글 포함·중국어 한자 0)를
-// 재사용한다. 네 문구를 반환하는 startFindingRetest 핸들러는 맨 앞에서 s.pg(w)(DB)
-// 게이트를 지나므로 DB 없는 이 호스트에서 끝까지 돌 수 없어, 상수 자체를 핀 고정한다
-// (finding_traffic·goals_api·notify_api 의 DB 게이트 경로와 같은 방식). 누군가 이
-// 리터럴을 중국어로 되돌리면 이 테스트가 실패한다.
+// Regression guard test that keeps the user-facing HTTP error response text of
+// finding_retests.go in Korean. The Korean check reuses assertKoreanError (contains Hangul ·
+// zero Chinese Han), built in F3a. The startFindingRetest handler that returns the four
+// messages goes through the s.pg(w) (DB) gate right at the start, so it cannot run end to end
+// on this DB-less host; the constants themselves are pinned instead (same approach as the
+// DB-gated paths in finding_traffic · goals_api · notify_api). This test fails if someone
+// reverts these literals to Chinese.
 //
-// 도구 설명(get_finding_retest_context·record_finding_retest_result)·파라미터 설명·
-// actool.Errorf(회차 미연결 안내)와 seedFindingRetester 의 DB 시드 에이전트 이름·
-// 프로필·note 는 에이전트가 읽는 두뇌 입력이거나 시드라 의도적으로 원문(중국어)을
-// 보존하며, 이 테스트의 단언 대상이 아니다(finding_retests.go 상수 블록 주석 참조).
+// The tool descriptions (get_finding_retest_context · record_finding_retest_result) ·
+// parameter descriptions · actool.Errorf (the round-not-linked notice) and
+// seedFindingRetester's DB-seeded agent name · profile · note are either brain input the
+// agent reads or seed data, so their originals (Chinese) are intentionally preserved and are
+// not asserted by this test (see the comment on the constant block in finding_retests.go).
 func TestFindingRetestErrorsLocalized(t *testing.T) {
 	for _, c := range []struct {
 		label, msg string

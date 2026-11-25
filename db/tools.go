@@ -17,8 +17,8 @@ type Tool struct {
 	Agents      []string        `json:"agents"`
 	Enabled     bool            `json:"enabled"`
 	Kind        string          `json:"kind"`     // builtin | command | script | http
-	Exec        json.RawMessage `json:"exec"`     // 自定义工具执行规格(kind!=builtin)
-	Deferred    bool            `json:"deferred"` // schema 延迟(走 SearchExtraTools/ExecuteExtraTool)
+	Exec        json.RawMessage `json:"exec"`     // custom tool execution spec (kind!=builtin)
+	Deferred    bool            `json:"deferred"` // deferred schema (goes through SearchExtraTools/ExecuteExtraTool)
 	Calls       int             `json:"calls"`    // runtime ledger aggregate; not stored in tools
 }
 

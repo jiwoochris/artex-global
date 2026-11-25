@@ -30,8 +30,8 @@ func assertKorean(t *testing.T, label, msg string) {
 }
 
 // TestSideQuestionOutputsLocalized guards F21: every user-facing side-question
-// (곁질문) error and answer-text literal produced by this package must be Korean.
-// These surface through /api/.../side-questions into the chat 곁질문 panel, so a
+// error and answer-text literal (the Korean UI calls the feature 곁질문) produced by this package must be Korean.
+// These surface through /api/.../side-questions into the chat side-question panel, so a
 // revert to Chinese here is a user-visible regression and must fail the build.
 func TestSideQuestionOutputsLocalized(t *testing.T) {
 	assertKorean(t, "ErrContextBudget", ErrContextBudget.Error())
@@ -57,8 +57,8 @@ func TestSideQuestionBudgetSentinelPreserved(t *testing.T) {
 
 // TestSideQuestionBrainPreserved: the agent-brain prompts (the answering
 // instruction and the summary instruction) must stay in their benchmarked
-// Chinese. BRIEF 현지화 방침은 두뇌 본문을 번역하지 말고 출력 언어만 한국어로
-// 강제하라는 것이라, 이 두 프롬프트가 한국어로 바뀌면 벤치마크 동작이 드리프트한다.
+// Chinese. The BRIEF localization policy is to not translate the brain bodies and to force only the output
+// language to Korean, so if these two prompts were changed to Korean, the benchmarked behavior would drift.
 func TestSideQuestionBrainPreserved(t *testing.T) {
 	for _, c := range []struct{ label, text string }{
 		{"instruction", instruction},

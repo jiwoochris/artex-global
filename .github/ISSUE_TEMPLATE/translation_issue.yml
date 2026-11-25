@@ -8,7 +8,7 @@ body:
       value: |
         글로벌판의 번역 품질을 높이는 데 도움을 주셔서 고맙습니다.
         이 저장소의 현지화 방침은 **사용자에게 보이는 산출물만 설정한 언어로 바꾸고, 에이전트의 내부 추론 프롬프트와 명령·페이로드·코드·로그 원문은 원문 그대로 둔다**는 것입니다.
-        자세한 원칙은 [CONTRIBUTING.md](https://github.com/jiwoochris/artex-global/blob/main/CONTRIBUTING.md#현지화-방침)에 있습니다.
+        자세한 원칙은 [CONTRIBUTING.ko.md](https://github.com/jiwoochris/artex-global/blob/main/CONTRIBUTING.ko.md#현지화-방침)에 있습니다.
   - type: dropdown
     id: kind
     attributes:

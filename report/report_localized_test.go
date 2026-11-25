@@ -10,8 +10,8 @@ import (
 	"github.com/Autumn-27/artex/db"
 )
 
-// containsHan 은 문자열에 CJK 한자(중국어)가 섞여 있으면 true 를 돌려준다.
-// 한글(unicode.Hangul)·영문·숫자·기호는 한자가 아니므로 걸리지 않는다.
+// containsHan returns true if the string contains CJK Han characters (Chinese).
+// Hangul (unicode.Hangul), English letters, digits and symbols are not Han, so they don't trigger it.
 func containsHan(s string) (rune, bool) {
 	for _, r := range s {
 		if unicode.Is(unicode.Han, r) {
@@ -64,8 +64,8 @@ func sampleDBFinding() *db.DBFinding {
 	}
 }
 
-// TestReportMarkdownLocalized 는 탐색 그래프 보고서(report.Markdown)의 골격이 한국어이고
-// 중국어 한자가 전혀 없음을 검증한다.
+// TestReportMarkdownLocalized verifies that the skeleton of the exploration graph report (report.Markdown) is in Korean
+// and contains no Chinese Han characters at all.
 func TestReportMarkdownLocalized(t *testing.T) {
 	out := Markdown(Input{
 		Title:       "데모 작업",
@@ -92,7 +92,7 @@ func TestReportMarkdownLocalized(t *testing.T) {
 	}
 }
 
-// TestReportMarkdownEmptyLocalized 는 취약점이 없을 때의 안내 문구가 한국어임을 검증한다.
+// TestReportMarkdownEmptyLocalized verifies that the notice shown when there are no vulnerabilities is in Korean.
 func TestReportMarkdownEmptyLocalized(t *testing.T) {
 	out := Markdown(Input{Title: "빈 작업", GeneratedAt: time.Now()})
 	if r, ok := containsHan(out); ok {
@@ -103,8 +103,8 @@ func TestReportMarkdownEmptyLocalized(t *testing.T) {
 	}
 }
 
-// TestFindingsMarkdownLocalized 는 취약점 요약/상세 Markdown 익스포트 골격과 심각도 라벨이
-// 한국어이고 중국어 한자가 없음을 검증한다.
+// TestFindingsMarkdownLocalized verifies that the skeleton and severity labels of the vulnerability summary/detail Markdown export
+// are in Korean and contain no Chinese Han characters.
 func TestFindingsMarkdownLocalized(t *testing.T) {
 	f := sampleDBFinding()
 	out := FindingsMarkdown([]*db.DBFinding{f}, time.Date(2026, 10, 4, 2, 30, 0, 0, time.UTC))
@@ -117,7 +117,7 @@ func TestFindingsMarkdownLocalized(t *testing.T) {
 		"- **취약점 총계**: 1건",
 		"## 요약",
 		"| 심각도 | 개수 |",
-		"| 심각 |", "| 높음 |", "| 중간 |", "| 낮음 |", // 심각도 라벨(UI status.severity 와 동일)
+		"| 심각 |", "| 높음 |", "| 중간 |", "| 낮음 |", // severity labels (same as UI status.severity)
 		"## 취약점 상세",
 		"- **유형**: SQL Injection",
 		"- **상태**: confirmed",
@@ -151,8 +151,8 @@ func TestFindingsMarkdownLocalized(t *testing.T) {
 	}
 }
 
-// TestFindingsCSVLocalized 는 CSV 익스포트 헤더가 한국어이고 중국어 한자가 없음을 검증한다.
-// (BOM 뒤 헤더 행만 한국어면 된다. 데이터 값은 원본 그대로 둔다.)
+// TestFindingsCSVLocalized verifies that the CSV export header is in Korean and contains no Chinese Han characters.
+// (Only the header row after the BOM needs to be Korean. Data values are left as in the original.)
 func TestFindingsCSVLocalized(t *testing.T) {
 	raw := FindingsCSV([]*db.DBFinding{sampleDBFinding()})
 	out := strings.TrimPrefix(string(raw), "\xEF\xBB\xBF")

@@ -21,9 +21,9 @@ export default function SetupPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
-  // 초기화 상태를 확인하지 못했을 때 "미초기화"로 간주하면 안 된다. 이미 비밀번호가 있는
-  // 인스턴스에 초기화 폼을 띄우게 되고, 그대로 입력하면 기존 비밀번호를 덮어쓸 수 있으므로
-  // 이때는 입구를 닫는다.
+  // If we could not determine the initialization state, we must not treat it as "not initialized". That would show
+  // the setup form on an instance that already has a password, and submitting it could overwrite the existing password,
+  // so in that case we close the entrance.
   const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {

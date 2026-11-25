@@ -13,8 +13,8 @@ import (
 	"github.com/Autumn-27/norma/llm"
 )
 
-// User-facing side-question context errors are Korean (BRIEF 현지화 방침). The
-// summaryInstruction prompt and the "[此前摘要]"/"[新材料片段]" framing below are
+// User-facing side-question context errors are Korean (BRIEF localization policy). The
+// summaryInstruction prompt and the "[此前摘要]"/"[新材料片段]" ("[previous summary]"/"[new material chunk]") framing below are
 // agent-brain text sent to the model, so they stay in their benchmarked Chinese.
 var (
 	errSideSummaryCallCap    = errors.New("곁질문 컨텍스트 정리가 이번 처리 상한에 도달했습니다. 질문 범위를 좁힌 뒤 다시 시도해 주세요.")

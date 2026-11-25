@@ -24,7 +24,7 @@ func TestWebUIStubErrorLocalized(t *testing.T) {
 	}
 	body := strings.TrimSpace(rec.Body.String())
 	assertKoreanError(t, "webui.stub", body)
-	// 명령 참조는 원문 그대로 보존되어야 한다(번역 대상 아님).
+	// Command references must be preserved verbatim (they are not translated).
 	for _, want := range []string{"next dev", "-tags embedui"} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("명령 참조 %q 가 응답에 없습니다: %q", want, body)

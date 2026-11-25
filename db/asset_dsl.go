@@ -553,7 +553,7 @@ func (s *AssetStore) QueryDSL(dsl, typ string, taskID int64, limit, offset int) 
 // direct source tasks') declared scope — membership, not literal value: a
 // root_domain scope returns every subdomain / service / endpoint under it. This is
 // the agent-facing list_assets path, so an agent queries the task's relevant assets
-// instead of the whole shared库. taskID<=0 (non-task contexts: Auto / pentest / chat)
+// instead of the whole shared library. taskID<=0 (non-task contexts: Auto / pentest / chat)
 // has no scope to honor and falls back to the plain global QueryDSL. Rows carry the
 // same per-task source metadata as QueryByTask.
 func (s *AssetStore) QueryDSLInScope(dsl, typ string, taskID int64, limit, offset int) ([]*Asset, error) {

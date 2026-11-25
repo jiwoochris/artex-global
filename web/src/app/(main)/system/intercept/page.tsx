@@ -31,14 +31,14 @@ import type {
   Tool,
 } from "@/lib/types";
 
-// fmtTokens 는 token 수를 짧은 표기(1.2k / 3.4M)로 줄인다. 판정 사용량 통계에 쓴다.
+// fmtTokens shortens a token count to compact notation (1.2k / 3.4M). Used for the judge usage stats.
 function fmtTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
   return String(n);
 }
 
-// JudgeStat 은 통계 숫자 한 칸(라벨 + 값)이다.
+// JudgeStat is a single stat cell (label + value).
 function JudgeStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border bg-muted/20 px-3 py-2">
@@ -48,7 +48,7 @@ function JudgeStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-// JudgeSparkbars 는 최근 N일 일별 소비(입력+출력)를 차트 라이브러리 없이 div 로 그린 미니 막대 차트다.
+// JudgeSparkbars is a mini bar chart of daily consumption (input + output) over the last N days, drawn with divs and no chart library.
 function JudgeSparkbars({ daily }: { daily: JudgeDayUsage[] }) {
   const t = useTranslations("interceptPage");
   const max = Math.max(1, ...daily.map((d) => d.input_tokens + d.output_tokens));
@@ -142,7 +142,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 // ---- LLM fallback judge card ----
 
-const FOLLOW_ACTIVE = "0"; // profile_id 0 = 활성/기본 설정 따르기
+const FOLLOW_ACTIVE = "0"; // profile_id 0 = follow the active/default setting
 
 const defaultJudge = (): JudgeConfig => ({
   enabled: false,
@@ -162,12 +162,12 @@ function JudgeCard() {
   const [saving, setSaving] = React.useState(false);
   const [usage, setUsage] = React.useState<JudgeUsage | null>(null);
 
-  // 판정 사용량 통계: 실패해도 설정 화면을 막지 않으며, 켜져 있을 때만 불러온다.
+  // Judge usage stats: a failure must not block the settings screen, and they are loaded only when enabled.
   const loadUsage = React.useCallback(async () => {
     try {
       setUsage(await api.interceptJudgeUsage(30));
     } catch {
-      // 무시: 통계를 못 불러와도 설정 편집에는 영향이 없어야 한다
+      // Ignore: failing to load stats must not affect editing the settings
     }
   }, []);
 
@@ -188,7 +188,7 @@ function JudgeCard() {
     void load();
   }, [load]);
 
-  // 켜졌을 때(처음 불러온 설정이 켜짐인 경우 포함) 판정 사용량 통계를 불러온다.
+  // When enabled (including when the initially loaded setting is enabled), load the judge usage stats.
   React.useEffect(() => {
     if (cfg.enabled) void loadUsage();
   }, [cfg.enabled, loadUsage]);
@@ -202,7 +202,7 @@ function JudgeCard() {
     try {
       await api.interceptSetJudgeConfig(cfg);
       toast.success(t("judge.configSaved"));
-      await load(); // 되읽기: 프롬프트를 비우면 내장 템플릿을 다시 채운다
+      await load(); // re-read: clearing the prompt refills it with the built-in template
     } catch (e) {
       toast.error(t("toast.saveFailed", { error: (e as Error).message }));
     } finally {
@@ -211,7 +211,7 @@ function JudgeCard() {
   }
 
   async function restorePrompt() {
-    // 프롬프트를 비우고 저장하면 서버가 다음 응답에 내장 템플릿 전문을 돌려주고, 입력창에 다시 채워진다.
+    // If the prompt is cleared and saved, the server returns the full built-in template in the next response and it is refilled into the input.
     setSaving(true);
     try {
       await api.interceptSetJudgeConfig({ ...cfg, prompt: "" });
@@ -227,7 +227,7 @@ function JudgeCard() {
 
   return (
     <div className="space-y-4">
-      {/* 사용 스위치 — 독립 강조 바 */}
+      {/* Enable switch — standalone highlighted bar */}
       <div
         className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${
           cfg.enabled ? "border-violet-400/50 bg-violet-50/40 dark:bg-violet-950/20" : "bg-muted/40"
@@ -253,7 +253,7 @@ function JudgeCard() {
         </div>
       </div>
 
-      {/* 판정 Token 사용량 통계(전역 누적, 모델 프로필별 통계와 별도) */}
+      {/* Judge token usage stats (global cumulative, separate from the per-model-profile stats) */}
       {cfg.enabled && usage && (
         <Card>
           <CardContent className="p-4">
@@ -287,7 +287,7 @@ function JudgeCard() {
 
       {cfg.enabled && (
         <div className="grid gap-4 lg:grid-cols-5">
-          {/* 왼쪽: 프롬프트 편집기(바로 펼침, 주 영역) */}
+          {/* Left: prompt editor (expanded by default, main area) */}
           <Card className="lg:col-span-3">
             <CardContent className="flex h-full flex-col gap-2 p-4">
               <div className="flex items-center justify-between">
@@ -312,7 +312,7 @@ function JudgeCard() {
             </CardContent>
           </Card>
 
-          {/* 오른쪽: 판정 매개변수(설정 칸) */}
+          {/* Right: judge parameters (settings column) */}
           <Card className="lg:col-span-2">
             <CardContent className="space-y-5 p-4">
               <div className="space-y-4">
@@ -420,7 +420,7 @@ export default function InterceptPage() {
   const [form, setForm] = React.useState<RuleForm>(defaultForm());
   const [saving, setSaving] = React.useState(false);
   const [regexErr, setRegexErr] = React.useState("");
-  const [regexWarn, setRegexWarn] = React.useState(false); // true = JS 는 못 파싱하지만 Go 에서는 유효한 문법일 수 있음
+  const [regexWarn, setRegexWarn] = React.useState(false); // true = JS cannot parse it, but it may be valid syntax in Go
 
   // ---- tool scope dialog ----
   const [scopeOpen, setScopeOpen] = React.useState(false);
@@ -428,7 +428,7 @@ export default function InterceptPage() {
   const [enabledTools, setEnabledTools] = React.useState<Set<string>>(new Set());
   const [scopeLoading, setScopeLoading] = React.useState(false);
   const [scopeSaving, setScopeSaving] = React.useState(false);
-  const [scopeTools, setScopeTools] = React.useState<string[]>([]); // 페이지 머리 정보 바: 현재 가로채기에 들어간 도구
+  const [scopeTools, setScopeTools] = React.useState<string[]>([]); // page header info bar: tools currently covered by interception
 
   // ---- data ----
 
@@ -437,7 +437,7 @@ export default function InterceptPage() {
       const cfg = await api.interceptGetToolConfig();
       setScopeTools(cfg.enabled_tools);
     } catch {
-      // 정보 바는 핵심이 아니라 실패하면 조용히 넘긴다
+      // The info bar is not essential, so fail silently
     }
   }, []);
 
@@ -468,8 +468,8 @@ export default function InterceptPage() {
       setRegexErr("");
       setRegexWarn(false);
     } catch {
-      // JS RegExp 는 Go RE2 확장 문법(예: (?i) 인라인 플래그)을 지원하지 않는다.
-      // 여기서의 미리 보기 검증 실패가 Go 에서 무효하다는 뜻은 아니며, 최종 검증은 서버에 맡긴다.
+      // JS RegExp does not support Go RE2 extended syntax (e.g. the (?i) inline flag).
+      // A failed preview validation here does not mean it is invalid in Go; final validation is left to the server.
       setRegexErr("");
       setRegexWarn(true);
     }
@@ -611,7 +611,7 @@ export default function InterceptPage() {
     const sys: Tool[] = [],
       custom: Tool[] = [];
     for (const tool of allTools) {
-      if (SDK_KEYS.has(tool.key)) continue; // 하드코딩 그룹에서 이미 다룸
+      if (SDK_KEYS.has(tool.key)) continue; // already handled in the hardcoded group
       if (tool.system) sys.push(tool);
       else custom.push(tool);
     }
@@ -636,7 +636,7 @@ export default function InterceptPage() {
         </div>
       </div>
 
-      {/* ---- 가로채기 범위 정보 바(규칙 대조와 모델 폴백 공용: 범위 밖 도구는 둘 다 개입 안 함) ---- */}
+      {/* ---- Interception scope info bar (shared by rule matching and the model fallback: neither intervenes on out-of-scope tools) ---- */}
       <div
         className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-2.5 ${
           scopeTools.length === 0 ? "border-amber-400/60 bg-amber-50/50 dark:bg-amber-950/20" : "bg-muted/40"

@@ -54,7 +54,7 @@ func TestSkillRelPath(t *testing.T) {
 	bad := []string{
 		"", "../etc/passwd", "a/../../b", "/abs/path", "a//b", `..\..\x`,
 		"%2e%2e/x", "a\x00b", "中文 名.md", "中‮文.md", "a#b.md", "a?b.md",
-		"a:b.md", string([]byte{0xd6, 0xd0}) + ".md", // 裸 GBK 字节：非法 UTF-8
+		"a:b.md", string([]byte{0xd6, 0xd0}) + ".md", // raw GBK bytes: invalid UTF-8
 		strings.Repeat("a", maxSkillPathLen+1),
 	}
 	for _, in := range bad {
@@ -73,7 +73,7 @@ type zipFile struct {
 	name    string
 	body    string
 	method  uint16
-	nonUTF8 bool // write the name bytes as-is (GBK 包)
+	nonUTF8 bool // write the name bytes as-is (GBK archive)
 }
 
 func buildZip(t *testing.T, files ...zipFile) []byte {
@@ -81,8 +81,8 @@ func buildZip(t *testing.T, files ...zipFile) []byte {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 	zw.RegisterCompressor(zipMethodZstd, zstd.ZipCompressor())
-	// Deflate64 没有纯 Go 编码器；这里原样写入，只是为了给条目打上 method 9 的标记 ——
-	// 断言的是「方法不支持时给什么提示」，不会真去解压它。
+	// Deflate64 has no pure-Go encoder; the data is written as-is here just to tag the entry with method 9 —
+	// the assertion is about "what message is shown when the method is unsupported"; it never actually decompresses it.
 	zw.RegisterCompressor(zipMethodDeflate64, func(w io.Writer) (io.WriteCloser, error) {
 		return nopWriteCloser{w}, nil
 	})
@@ -128,7 +128,7 @@ func uploadZip(t *testing.T, skillDir string, filename string, data []byte) (*ht
 
 const zhSkillMD = "---\nname: 中文技能\ndescription: 测试\n---\n正文\n"
 
-// A zstd-compressed archive (WinZip 的可选压缩方式) used to blow up with
+// A zstd-compressed archive (an optional compression method in WinZip) used to blow up with
 // "zip: unsupported compression"; it now installs like any Deflate archive.
 func TestUploadSkillZstdAndChineseNames(t *testing.T) {
 	dir := t.TempDir()
@@ -151,7 +151,7 @@ func TestUploadSkillZstdAndChineseNames(t *testing.T) {
 	}
 }
 
-// GBK-named entries (7-Zip / 资源管理器 on Chinese Windows) must be decoded rather
+// GBK-named entries (7-Zip / File Explorer on Chinese Windows) must be decoded rather
 // than rejected as invalid UTF-8 paths.
 func TestUploadSkillGBKNames(t *testing.T) {
 	gbk := func(s string) string {

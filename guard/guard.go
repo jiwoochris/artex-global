@@ -3,8 +3,8 @@
 // Every tool call passes through the PreToolUse hook before executing.
 // (The RoE authorization-scope mechanism was removed; a replacement may be added
 // later.) Destructive/exfil gating is no longer hard-coded here — it lives in the
-// DB intercept rules (seeded as ordinary [内置] rules, so users can disable or
-// delete them), evaluated via applyIntercept.
+// DB intercept rules (seeded as ordinary [内置] ("built-in") rules, so users can
+// disable or delete them), evaluated via applyIntercept.
 package guard
 
 import (
@@ -100,7 +100,8 @@ func (g *Guard) applyIntercept(ctx context.Context, ev hook.Event) hook.Result {
 	}
 	switch dec.Action {
 	case "deny":
-		// 观测:deny 命中不阻塞审批,直接记一条 denied（历史/任务拦截页可见）。
+		// Observability: a deny hit does not block on approval; it is recorded directly as
+		// "denied" (visible in the history / task intercept pages).
 		g.interceptor.Log(ctx, intercept.ConvIDFromContext(ctx), dec, ev.ToolName, ev.Input, "denied")
 		return g.block(ev.ToolName, systemBlockMessage(dec.Message), "")
 	case "allow":
@@ -108,14 +109,18 @@ func (g *Guard) applyIntercept(ctx context.Context, ev hook.Event) hook.Result {
 		g.interceptor.Log(ctx, intercept.ConvIDFromContext(ctx), dec, ev.ToolName, ev.Input, "allowed")
 		return hook.Result{}
 	case "ask":
-		// F14 두뇌 보존 판단: 아래 두 차단 사유와 systemBlockMessage 프레이밍은 번역하지
-		// 않고 중국어 원문을 유지한다. 이 문자열은 g.block → hook.Result.Message 로 에이전트
-		// 에게 돌아가는 tool_result(펜테스트 에이전트가 차단을 표적 방어로 오인해 우회를
-		// 시도하지 않도록 유도하는 의도적 조종 문구, BRIEF 段[A] 성능 보존 대상)이다. 더구나
-		// ask 차단 경로는 deny 경로와 달리 Interceptor.Log 를 타지 않아, g.block → g.record 가
-		// 같은 프레이밍 전문을 감사 로그(GET /api/audit → entries[].reason)에도 그대로 싣는다.
-		// 즉 하나의 문자열이 에이전트 입력과 표시를 겸한다(F16 동형). 표시만 한국어로 떼어내려면
-		// g.block 이 두 문자열을 나르도록 구조를 바꿔야 하는데 고위험·저가치라 보류한다.
+		// F14 brain-preservation decision: the two block reasons below and the
+		// systemBlockMessage framing are not translated; they keep the original Chinese.
+		// These strings are the tool_result returned to the agent via g.block →
+		// hook.Result.Message (deliberate steering text that keeps the pentest agent from
+		// mistaking the block for a target-side defense and trying to bypass it; covered by
+		// the performance-preservation rule in BRIEF §A). Moreover, unlike the deny path, the
+		// ask block path does not go through Interceptor.Log, so g.block → g.record also
+		// writes the same full framing verbatim into the audit log (GET /api/audit →
+		// entries[].reason). In other words, one string serves both as agent input and as
+		// display text (same shape as F16). Splitting off a Korean display-only string would
+		// require restructuring g.block to carry two strings, which is high-risk and
+		// low-value, so it is deferred.
 		//
 		// If the worker context is already cancelled (task stopped / killed), block
 		// immediately without creating a pending record — avoids orphaned DB entries

@@ -55,15 +55,15 @@ export default function SystemSettingsPage() {
   const [pyInterp, setPyInterp] = React.useState("");
   const [workers, setWorkers] = React.useState("3");
   const [savingWorkers, setSavingWorkers] = React.useState(false);
-  // 操作约束注入范围(默认都开)。
+  // Scope of operation-constraint injection (all on by default).
   const [injectPlanner, setInjectPlanner] = React.useState(true);
   const [injectWorker, setInjectWorker] = React.useState(true);
-  // 实验功能:noa 上下文压缩(默认关)。
+  // Experimental feature: noa context compression (off by default).
   const [noaCompaction, setNoaCompaction] = React.useState(false);
-  // 纯前端偏好：不走 /api/settings，直接读写 localStorage。
+  // Pure frontend preference: doesn't go through /api/settings; reads and writes localStorage directly.
   const sendMode = useChatSendMode();
   const sendModeOptions = useChatSendModeOptions();
-  // 표시 언어도 순수 프런트엔드 환경설정이라 /api/settings 를 거치지 않고 쿠키·localStorage 로만 둔다.
+  // The display language is also a pure frontend preference, so it skips /api/settings and lives only in a cookie and localStorage.
   const activeLocale = useActiveLocale();
 
   const apply = React.useCallback((s: Settings) => {
@@ -118,9 +118,9 @@ export default function SystemSettingsPage() {
       .catch(() => undefined)
       .finally(() => setSaving(false));
   };
-  // 표시 언어 변경: UI 는 브라우저 로컬 설정이라 즉시 전환하고, 에이전트가 생성하는
-  // 리포트·요약·대화 응답의 언어(서버 설정 output_language)도 같은 값으로 맞춘다. 서버
-  // 저장이 실패해도 UI 전환은 그대로 유지하고 오류만 알린다.
+  // Display language change: the UI is a local browser setting and switches immediately, and the language of agent-generated
+  // reports, summaries and chat replies (server setting output_language) is set to the same value. If saving on the server
+  // fails, the UI switch stays in place and only the error is reported.
   const changeLanguage = (v: string) => {
     const loc = v as Locale;
     setActiveLocale(loc);
@@ -292,10 +292,10 @@ export default function SystemSettingsPage() {
         <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
       </div>
 
-      {/* 多列而非 grid：网络搜索卡片比其余高数倍，且高度随所选后端变化（brave/tavily
-          的 key 输入是条件渲染）。grid 会按最高的一张撑满整行、在旁边留下大片空白，
-          多列则自动按内容高度平衡填充。卡片间距靠 mb 而非 gap——多列布局下
-          column-gap 只管列间距，行间距要由子元素自己给。 */}
+      {/* Multi-column rather than grid: the web search card is several times taller than the rest, and its height varies with the selected backend (the brave/tavily
+          key input is conditionally rendered). A grid stretches the whole row to the tallest card and leaves big empty gaps beside it,
+          whereas columns balance automatically by content height. Card spacing uses mb rather than gap — in a multi-column layout
+          column-gap only controls the space between columns; vertical spacing has to come from the children themselves. */}
       <div className="columns-1 gap-4 md:gap-6 lg:columns-2">
         <UpdateCard />
 

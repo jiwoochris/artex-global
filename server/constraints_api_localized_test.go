@@ -7,11 +7,12 @@ import (
 	"testing"
 )
 
-// constraints_api.go 의 제약(约束) 관리 API 에러 응답을 한국어로 유지하는 회귀 방어
-// 테스트다. 한국어 판정은 F3a 의 assertKoreanError(한글 포함·중국어 한자 0)를, 응답 본문
-// 추출은 task_categories 테스트의 decodeErrorField 를 재사용한다(같은 package server).
+// Regression guard test that keeps the error responses of the constraint (约束) management
+// API in constraints_api.go in Korean. It reuses F3a's assertKoreanError (contains Hangul ·
+// zero Chinese Han) for the Korean check, and decodeErrorField from the task_categories
+// tests to extract the response body (same package server).
 
-// TestConstraintErrorConstantsLocalized 는 응답 상수 5종이 전부 한국어임을 단언한다.
+// TestConstraintErrorConstantsLocalized asserts that all 5 response constants are Korean.
 func TestConstraintErrorConstantsLocalized(t *testing.T) {
 	cases := map[string]string{
 		"task_deleting_add":    errConstraintTaskDeletingAdd,
@@ -25,18 +26,19 @@ func TestConstraintErrorConstantsLocalized(t *testing.T) {
 	}
 }
 
-// TestConstraintHandlersResponsesLocalized 는 DB 를 건드리지 않고 끝나는 핸들러 경로를
-// 실제 HTTP 응답 본문까지 검사해, 상수가 응답에 실제로 실리는 연결을 확인한다. 세 핸들러
-// 모두 s.m.Task(맵 조회) → s.engine.beginTaskOperation(sync.Map 기반 삭제 장벽) → 요청
-// 본문·필드 검증 순이라, tasks 맵에 작업 하나와 빈 Engine 만 있으면 Store·DB 없이 돈다.
+// TestConstraintHandlersResponsesLocalized checks the handler paths that finish without
+// touching the DB down to the actual HTTP response body, confirming that the constants are
+// really wired into the responses. All three handlers go s.m.Task (map lookup) →
+// s.engine.beginTaskOperation (sync.Map-based deletion barrier) → request body · field
+// validation, so with one task in the tasks map and an empty Engine they run with no Store · DB.
 func TestConstraintHandlersResponsesLocalized(t *testing.T) {
-	// deleting 장벽이 세워진 서버: beginTaskOperation 이 false 를 돌려 409 를 낸다.
+	// Server with the deleting barrier raised: beginTaskOperation returns false and yields a 409.
 	deletingServer := func() *Server {
 		s := &Server{m: &Manager{tasks: map[string]*Task{"t1": {ID: "t1"}}}, engine: &Engine{}}
 		s.engine.deleting.Store("t1", true)
 		return s
 	}
-	// 장벽이 없는 서버: beginTaskOperation 이 true 를 돌려 입력 검증까지 진행한다.
+	// Server without the barrier: beginTaskOperation returns true and proceeds to input validation.
 	liveServer := func() *Server {
 		return &Server{m: &Manager{tasks: map[string]*Task{"t1": {ID: "t1"}}}, engine: &Engine{}}
 	}

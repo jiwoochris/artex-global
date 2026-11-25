@@ -26,16 +26,18 @@ const (
 	maxArchiveBytes = int64(1 << 47) // 128 TiB safety ceiling for corrupt headers.
 )
 
-// errArchiveStagedAndOriginalCoexist 는 보관 패키지를 삭제하려 임시 파일로 옮기는 과정에서
-// 원본 파일과 삭제 임시 파일(.deleting-N)이 동시에 존재하는 모순 상태를 사용자에게 알린다.
+// errArchiveStagedAndOriginalCoexist tells the user about the contradictory state in which, while moving an
+// archive package to a staging file for deletion, the original file and the delete staging file (.deleting-N)
+// both exist.
 //
-// 호출 그래프 판정(사용자 노출 전용): stageTaskArchivePackageDelete(아래 506행) →
-// deleteTaskArchive(task_archives.go:400) → 백그라운드 아카이브 워커 runOneTaskArchiveJob
-// (task_archives.go:102) → FailTaskArchiveJob 이 task_archives.error 컬럼에 저장
-// (db/task_archives.go:435) → API 가 TaskArchive.Error("error" JSON)로 노출 →
-// tasks/page.tsx 의 TaskArchivesPanel 이 {archive.error} 로 화면에 직접 표시.
-// actool·planner 되먹임 경로 0(두뇌 입력 아님)이라 한국어화한다. 같은 전파 경로의 형제 오류
-// (archiveTask 의 task_archives.go:120·132·173, validateArchivePath 의 421·433)도 이미 한국어다.
+// Call graph decision (user-facing only): stageTaskArchivePackageDelete (line 506 below) →
+// deleteTaskArchive (task_archives.go:400) → background archive worker runOneTaskArchiveJob
+// (task_archives.go:102) → FailTaskArchiveJob stores it in the task_archives.error column
+// (db/task_archives.go:435) → the API exposes it as TaskArchive.Error ("error" JSON) →
+// TaskArchivesPanel in tasks/page.tsx shows it directly on screen as {archive.error}.
+// There are zero actool/planner feedback paths (not brain input), so it is localized to Korean. Sibling errors
+// on the same propagation path (archiveTask's task_archives.go:120, 132, 173 and validateArchivePath's 421, 433)
+// are already Korean.
 const errArchiveStagedAndOriginalCoexist = "보관 패키지의 원본 파일과 삭제 임시 파일이 동시에 존재합니다"
 
 type archiveFileMove struct {
@@ -590,9 +592,10 @@ func writeTaskArchivePackage(path, payloadDir string, snapshot *pgdb.TaskArchive
 			return err
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
-			// 归档格式端到端只支持普通文件与目录（解包端对其它类型直接报错），
-			// 无法还原符号链接。跳过而非整包失败：不读取链接目标(lstat，不越出目录树)，
-			// 也不写入 symlink 条目；链接指向树内时目标文件本身仍会被单独遍历归档。
+			// The archive format end to end only supports regular files and directories (the unpacking side
+			// errors out on any other type), so symlinks cannot be restored. Skip rather than fail the whole
+			// package: the link target is not read (lstat, never leaving the directory tree) and no symlink entry
+			// is written; if the link points inside the tree, the target file itself is still walked and archived separately.
 			log.Printf("[task-archive] skipped symlink (not supported in archives, other files unaffected): %s", current)
 			return nil
 		}

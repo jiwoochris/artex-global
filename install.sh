@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ARTEX 설치 스크립트: ① 전부 Docker  ② 로컬 컴파일 실행
+# ARTEX install script: ① everything in Docker  ② local compile and run
 set -euo pipefail
 cd "$(cd "$(dirname "$0")" && pwd)"
 
@@ -10,7 +10,7 @@ die(){  printf '\033[31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
 ask(){  local p="$1" d="${2:-}" a; read -rp "$p${d:+ [$d]}: " a; echo "${a:-$d}"; }
 rand(){ head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 24; }
 
-# ── docker 환경 감지 / 자동 설치 ──────────────────
+# ── docker environment detection / automatic install ──────────────────
 ensure_docker(){
   if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
     ok "docker 와 docker compose 를 확인했습니다"; return
@@ -30,7 +30,7 @@ ensure_docker(){
   esac
 }
 
-# ── ① 전부 Docker ──────────────────────────────
+# ── ① everything in Docker ──────────────────────────────
 install_docker(){
   ensure_docker
   if [ ! -f .env ]; then
@@ -58,7 +58,7 @@ install_docker(){
   info "로그 확인: docker compose logs -f artex"
 }
 
-# ── ② 로컬 컴파일 실행 ────────────────────────────
+# ── ② local compile and run ────────────────────────────
 install_local(){
   echo "데이터베이스 설치 방식:"
   echo "  1) 기존 PostgreSQL 에 연결"
@@ -80,7 +80,7 @@ install_local(){
       DB_SSL="$(ask 'sslmode (disable/require)' disable)" ;;
   esac
 
-  # config.json 생성
+  # generate config.json
   cat > config.json <<JSON
 {
   "database": {
@@ -95,11 +95,11 @@ install_local(){
 JSON
   ok "config.json 파일을 생성했습니다"
 
-  # go 환경 확인
+  # check the go environment
   command -v go >/dev/null 2>&1 || die "Go 를 찾을 수 없습니다. 먼저 Go (>=1.26) 를 설치해 주세요: https://go.dev/dl/"
   ok "Go: $(go version)"
 
-  # 프런트엔드를 내장하려면 node 로 정적 산출물을 만들어야 합니다
+  # embedding the frontend requires node to produce the static output
   if command -v npm >/dev/null 2>&1; then
     info "프런트엔드 정적 산출물을 빌드합니다…"
     ( cd web && npm ci && npm run build:static )

@@ -315,9 +315,10 @@ func (c *Client) wrap(rt remoteTool) actool.CoreTool {
 			for _, blk := range res.Content {
 				text += blk.Text
 			}
-			// 与内置/自定义工具一致：超长输出走 Capture——按会话 MaxOutputChars（默认
-			// 30000）截断，配了 ToolOutputDir 时全量溢写到磁盘只留 head + 指针，避免大
-			// MCP 结果整段灌爆上下文。
+			// Consistent with built-in/custom tools: oversized output goes through Capture — it is
+			// truncated at the session's MaxOutputChars (default 30000), and when ToolOutputDir is
+			// configured the full output is spilled to disk, leaving only the head + a pointer, so
+			// a large MCP result does not flood the context in one piece.
 			return actool.Result{Content: []llm.ContentBlock{llm.TextBlock(actool.Capture(tc, text))}, IsError: res.IsError}, nil
 		},
 	})

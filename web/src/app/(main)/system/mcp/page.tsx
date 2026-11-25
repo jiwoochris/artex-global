@@ -61,7 +61,7 @@ export default function MCPPage() {
       .agents()
       .then(setAgents)
       .catch(() => {
-        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+        /* Ignore lookup failures and keep the default state */
       });
     api
       .mcpServers()
@@ -72,12 +72,12 @@ export default function MCPPage() {
             .resourceVisibility("mcp", s.id)
             .then((ids) => setVisibility((v) => ({ ...v, [s.id]: ids })))
             .catch(() => {
-              /* 가시성 조회 실패는 무시한다 */
+              /* Ignore visibility lookup failures */
             });
         });
       })
       .catch(() => {
-        /* 조회 실패는 무시하고 기본 상태를 유지한다 */
+        /* Ignore lookup failures and keep the default state */
       });
   }, []);
   React.useEffect(() => {
@@ -164,7 +164,7 @@ export default function MCPPage() {
               url: form.url.trim(),
               command: "",
               args: [] as string[],
-              env: parseEnv(form.env), // 远程模式下 env 即请求头
+              env: parseEnv(form.env), // in remote mode, env is the request headers
               insecure: form.insecure,
             }
           : {
@@ -386,8 +386,8 @@ export default function MCPPage() {
                 <Badge variant="outline" className="shrink-0 uppercase">
                   {s.transport}
                 </Badge>
-                {/* biome-ignore lint/a11y/noStaticElementInteractions: 부모 카드로의 클릭 전파만 차단하는 컨테이너다. 이 div 자체는 상호작용 요소가 아니고, 안쪽 Switch·삭제 버튼은 각각 키보드로 접근된다 */}
-                {/* biome-ignore lint/a11y/useKeyWithClickEvents: 위와 같이 클릭 전파 차단 전용이라 별도 키보드 핸들러가 필요 없다 */}
+                {/* biome-ignore lint/a11y/noStaticElementInteractions: a container that only stops click propagation to the parent card. The div itself is not interactive, and the Switch and delete button inside are each keyboard-accessible */}
+                {/* biome-ignore lint/a11y/useKeyWithClickEvents: as above, it only stops click propagation, so no separate keyboard handler is needed */}
                 <div className="ml-auto flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <Switch checked={s.enabled} onCheckedChange={() => toggleEnabled(s)} aria-label={t("enableAria")} />
                   <Button size="icon" variant="outline" aria-label={t("deleteAria")} onClick={() => removeServer(s)}>
@@ -400,8 +400,8 @@ export default function MCPPage() {
               <p className="text-muted-foreground text-sm">
                 {s.tools && s.tools.length > 0 ? t("toolCount", { count: s.tools.length }) : t("noTools")}
               </p>
-              {/* biome-ignore lint/a11y/noStaticElementInteractions: 체크박스 영역의 클릭 전파만 차단하는 컨테이너다. 이 div 자체는 상호작용 요소가 아니고, 안쪽 체크박스는 각각 키보드로 접근된다 */}
-              {/* biome-ignore lint/a11y/useKeyWithClickEvents: 위와 같이 클릭 전파 차단 전용이라 별도 키보드 핸들러가 필요 없다 */}
+              {/* biome-ignore lint/a11y/noStaticElementInteractions: a container that only stops click propagation from the checkbox area. The div itself is not interactive, and the checkboxes inside are each keyboard-accessible */}
+              {/* biome-ignore lint/a11y/useKeyWithClickEvents: as above, it only stops click propagation, so no separate keyboard handler is needed */}
               <div className="grid gap-2" onClick={(e) => e.stopPropagation()}>
                 <span className="text-muted-foreground text-xs">{t("visibilityLabel")}</span>
                 <div className="flex flex-wrap gap-x-4 gap-y-2">

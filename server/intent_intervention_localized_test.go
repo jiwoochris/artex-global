@@ -8,13 +8,15 @@ import (
 	"testing"
 )
 
-// intent_intervention.go 의 Worker 개입 API 에러 응답을 한국어로 유지하는 회귀 방어
-// 테스트다. 한국어 판정은 F3a 가 만든 assertKoreanError(한글 포함·중국어 한자 0)를 재사용한다.
+// Regression guard test that keeps the error responses of the Worker intervention API in
+// intent_intervention.go in Korean. The Korean check reuses assertKoreanError (contains
+// Hangul · zero Chinese Han), built in F3a.
 
-// TestIntentInterventionErrorConstantsLocalized 는 응답 상수 11종이 전부 한국어임을 단언한다.
-// 수명주기·의도 상태 경로는 s.engine·Store 설정이 필요해 DB 없는 이 호스트에서 끝까지 못
-// 도므로, 그 문구들은 상수 자체를 단언한다(conversations.go 선례). 입력 검증 경로 4종은
-// 아래 HTTP 테스트가 응답 본문까지 확인한다.
+// TestIntentInterventionErrorConstantsLocalized asserts that all 11 response constants are
+// Korean. The lifecycle · intent-state paths need s.engine · Store set up and cannot run end
+// to end on this DB-less host, so those messages are asserted as constants (conversations.go
+// precedent). The 4 input-validation paths are checked down to the response body by the HTTP
+// test below.
 func TestIntentInterventionErrorConstantsLocalized(t *testing.T) {
 	cases := []struct {
 		name string
@@ -37,10 +39,11 @@ func TestIntentInterventionErrorConstantsLocalized(t *testing.T) {
 	}
 }
 
-// TestSendWorkerMessageInputValidationLocalized 는 입력 검증 경로 4종을 실제 HTTP 응답
-// 본문까지 검사한다. sendWorkerMessage 의 이 4경로는 s.m.Task(맵 조회)와 요청 본문만 보고
-// s.engine·Store·DB 를 거치지 않으므로, tasks 맵에 작업 하나만 넣으면 DB 없이 끝까지 돈다.
-// 상수가 응답에 실제로 실리는 연결까지 확인한다.
+// TestSendWorkerMessageInputValidationLocalized checks the 4 input-validation paths down to
+// the actual HTTP response body. These 4 paths of sendWorkerMessage look only at s.m.Task
+// (map lookup) and the request body and never go through s.engine · Store · DB, so with just
+// one task in the tasks map they run end to end without a DB. It also confirms the constants
+// are really wired into the responses.
 func TestSendWorkerMessageInputValidationLocalized(t *testing.T) {
 	s := &Server{m: &Manager{tasks: map[string]*Task{"t1": {ID: "t1"}}}}
 
@@ -69,7 +72,7 @@ func TestSendWorkerMessageInputValidationLocalized(t *testing.T) {
 		code int
 		want string
 	}{
-		// 64KB 한도를 넘기는 유효 JSON 본문. MaxBytesReader 가 읽기 도중 한도 초과를 돌려준다.
+		// A valid JSON body exceeding the 64KB limit. MaxBytesReader returns a limit-exceeded error mid-read.
 		{"request_too_large", `{"message":"` + strings.Repeat("a", maxWorkerMessageBytes+1024) + `"}`, http.StatusRequestEntityTooLarge, errIntentRequestTooLarge},
 		{"message_empty", `{"message":"  "}`, http.StatusBadRequest, errIntentMessageEmpty},
 		{"message_too_long", `{"message":"` + strings.Repeat("가", 4001) + `"}`, http.StatusBadRequest, errIntentMessageTooLong},

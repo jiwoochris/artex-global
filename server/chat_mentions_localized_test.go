@@ -9,7 +9,7 @@ import (
 )
 
 // TestChatMentionErrorsLocalized guards F3b chat_mentions.go: every user-facing
-// @멘션(인용) error response must be Korean (Hangul present, no Chinese Han). The
+// @mention (citation) error response must be Korean (Hangul present, no Chinese Han). The
 // wire token labels (chatMentionPattern·chatMentionKinds), the agent-input
 // snapshot header, and the truncation markers fed into that snapshot stay in the
 // original language by design and are intentionally not checked here.

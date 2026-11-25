@@ -8,13 +8,15 @@ import (
 	"testing"
 )
 
-// chatupload.go 의 채팅 첨부 업로드 API 에러 응답을 한국어로 유지하는 회귀 방어 테스트다.
-// 한국어 판정은 F3a 의 assertKoreanError(한글 포함·중국어 한자 0)를, 응답 본문 추출은
-// task_categories 테스트의 decodeErrorField 를 재사용한다(같은 package server).
+// Regression guard test that keeps the error responses of the chat attachment upload API in
+// chatupload.go in Korean. It reuses F3a's assertKoreanError (contains Hangul · zero Chinese
+// Han) for the Korean check, and decodeErrorField from the task_categories tests to extract
+// the response body (same package server).
 
-// TestChatUploadErrorConstantsLocalized 는 응답 상수 7종이 전부 한국어임을 단언한다.
-// ...못했습니다: 세 종류는 뒤에 err.Error() 를 이어 붙이는 접두 상수라 끝에 ": " 가 붙지만,
-// 한글이 들어 있고 중국어 한자가 없으면 판정을 통과한다.
+// TestChatUploadErrorConstantsLocalized asserts that all 7 response constants are Korean.
+// The three ...못했습니다: ("failed to ...") messages are prefix constants followed by
+// err.Error(), so they end in ": ", but they pass the check as long as they contain Hangul
+// and no Chinese Han characters.
 func TestChatUploadErrorConstantsLocalized(t *testing.T) {
 	cases := map[string]string{
 		"scope_invalid": errChatUploadScopeInvalid,
@@ -30,12 +32,13 @@ func TestChatUploadErrorConstantsLocalized(t *testing.T) {
 	}
 }
 
-// TestChatUploadHandlerResponsesLocalized 는 DB 를 건드리지 않고 끝나는 chatUpload 경로를
-// 실제 HTTP 응답 본문까지 검사한다. scope/id 검증은 Manager 를 건드리기 전에 반환하고,
-// no-file 은 scope=session(작업 아님)이라 엔진·DB 없이 임시 디렉터리만으로 끝난다.
-// task-deleting 은 goals 테스트와 같은 삭제 장벽(engine.deleting) 으로 409 를 낸다.
+// TestChatUploadHandlerResponsesLocalized checks, down to the actual HTTP response body, the
+// chatUpload paths that finish without touching the DB. The scope/id validation returns
+// before touching the Manager, and no-file uses scope=session (not a task), so it finishes
+// with only a temp directory and no engine · DB. task-deleting returns 409 via the same
+// deletion barrier (engine.deleting) as the goals tests.
 func TestChatUploadHandlerResponsesLocalized(t *testing.T) {
-	// 필드만 있고 "file" 이 없는 multipart 본문 — ParseMultipartForm 은 통과하되 파일 0건.
+	// A multipart body with fields but no "file" — ParseMultipartForm passes but there are 0 files.
 	noFileBody := func() (*bytes.Buffer, string) {
 		var buf bytes.Buffer
 		mw := multipart.NewWriter(&buf)
@@ -60,7 +63,7 @@ func TestChatUploadHandlerResponsesLocalized(t *testing.T) {
 
 	t.Run("bad-id", func(t *testing.T) {
 		s := &Server{}
-		// scope=session(작업 아님)이라 Manager 를 건드리기 전에 id 검증에서 반환한다.
+		// scope=session (not a task), so it returns at id validation before touching the Manager.
 		req := httptest.NewRequest(http.MethodPost, "/api/chat/upload?scope=session&id=../evil", nil)
 		rec := httptest.NewRecorder()
 		s.chatUpload(rec, req)

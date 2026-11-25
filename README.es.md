@@ -356,7 +356,7 @@ Este repositorio busca ayudar al **lado defensor** a entender cómo funcionan lo
   - **[Script de triaje de host (detections/triage/)](detections/triage/)**: un script de solo lectura, [`artex_host_triage.py`](detections/triage/artex_host_triage.py), para el respondedor que está ante el shell de un único host sospechoso sin SIEM ni sensor de red. Comprueba las mismas huellas que las reglas anteriores, más — en la propia máquina — los tres indicadores de host/BD que el CSV de indicadores lleva deliberadamente sin una regla Sigma porque no son observables por log ni por red (el puerto de escucha del servidor, el endpoint del proxy de registro y el esquema de exploración de PostgreSQL). Se ejecuta solo con la biblioteca estándar, sin nada que instalar, y cada hallazgo es una pista de triaje que lleva la misma advertencia que su fila de indicador, nunca una atribución por sí solo.
   - Las reglas, la capa, los indicadores anteriores y la autoprueba del script de triaje de host se vuelven a ejecutar y verificar mediante los tests del repositorio ([detections/tests/](detections/tests/)): una regla de detección que no se puede ejecutar es solo una afirmación.
 
-> Este material se amplía continuamente. Sugiera reglas de detección o elementos de endurecimiento adicionales como issues, y cuando envíe una regla directamente, siga el contrato de [la sección "Contributing detection rules and detection tests" de la guía de contribución](CONTRIBUTING.en.md#contributing-detection-rules-and-detection-tests) (fundamente cada indicador en un hecho observable, enuncie los límites, pase la validación estática e incluya un test reproducible).
+> Este material se amplía continuamente. Sugiera reglas de detección o elementos de endurecimiento adicionales como issues, y cuando envíe una regla directamente, siga el contrato de [la sección "Contributing detection rules and detection tests" de la guía de contribución](CONTRIBUTING.md#contributing-detection-rules-and-detection-tests) (fundamente cada indicador en un hecho observable, enuncie los límites, pase la validación estática e incluya un test reproducible).
 
 ---
 
@@ -375,7 +375,7 @@ Desarrollo y pruebas locales:
 
 Para otros temas de desarrollo (como la reverificación manual de vulnerabilidades), consulte la sección "开发" (Desarrollo) de [`README.zh.md`](README.zh.md#开发).
 
-Los cambios que esta edición global añade sobre el ARTEX original se registran en el [registro de cambios (CHANGELOG.en.md)](CHANGELOG.en.md).
+Los cambios que esta edición global añade sobre el ARTEX original se registran en el [registro de cambios (CHANGELOG.md)](CHANGELOG.md).
 
 ---
 

@@ -17,49 +17,54 @@ import (
 	"github.com/Autumn-27/artex/notify"
 )
 
-// 本文件覆盖推送功能的端到端行为：漏洞落库 → 事件 → 分派 → 真发 HTTP。
+// This file covers the end-to-end behavior of the push feature: vulnerability persisted to the DB → event → dispatch → real HTTP send.
 //
-// 一个安全上的注意点：这些用例**不调用全局的 Notifier.step()**，只对自己创建的
-// 渠道调用 stepRealtime/stepDigest。原因是 step() 会遍历库里所有启用渠道——
-// 在一个已配好真实钉钉/企微机器人的开发库上跑测试，全局 step 会把测试期间
-// 产生的漏洞真推到那些群里。逐渠道调用把影响面严格限制在测试自造的假接收端上。
+// A safety note: these cases **do not call the global Notifier.step()**; they only call
+// stepRealtime/stepDigest on channels they created themselves. The reason is that step()
+// iterates over every enabled channel in the database — running the tests against a dev
+// database that already has real DingTalk/WeCom bots configured, a global step would push
+// the vulnerabilities produced during the tests into those real groups. Calling per channel
+// strictly limits the blast radius to the fake receivers the tests create themselves.
 //
-// 清理：用例结束时删掉本用例产生的事件（级联删投递）与渠道，不给真实渠道留积压。
+// Cleanup: at the end of a case, delete the events it produced (cascading to deliveries) and its channels, leaving no backlog for real channels.
 //
-// 断言口径：stepRealtime/stepDigest 不返回值、内部记日志，因此这里断言的是
-// **可观测的外部行为**（假接收端收到了什么、投递行落到什么状态），而不是函数的
-// 返回值——这比对返回值打桩更接近真实调用路径。
+// Assertion approach: stepRealtime/stepDigest return nothing and log internally, so what is
+// asserted here is the **observable external behavior** (what the fake receiver got, what
+// state the delivery rows ended up in) rather than the functions' return values — this is
+// closer to the real call path than stubbing return values.
 
-// notifyFixture 是本文件用例的公共装置。
+// notifyFixture is the shared fixture for the cases in this file.
 type notifyFixture struct {
 	s       *Server
 	pg      *db.DB
 	request func(method, path, body string) *httptest.ResponseRecorder
 	n       *Notifier
-	// 自建的 task/exploration：用例把漏洞记到这里，与其它用例的数据隔离。
+	// A self-created task/exploration: cases record vulnerabilities here, isolated from other cases' data.
 	taskID int64
 	expID  int64
-	// cleanupMark 之后产生的事件在清理时一并删除。
+	// Events produced after cleanupMark are deleted together during cleanup.
 	cleanupMark int64
 }
 
 func newNotifyFixture(t *testing.T) *notifyFixture {
 	t.Helper()
-	// 本文件的所有假接收端都跑在 127.0.0.1 上，而投递默认拒绝环回地址
-	// （防 SSRF 打到同机服务与云元数据）。测试显式打开这个开关；
-	// 守卫「默认拒绝」的行为由 notify 包的 ssrf_test.go 覆盖。
+	// All the fake receivers in this file run on 127.0.0.1, while delivery rejects loopback
+	// addresses by default (to prevent SSRF hitting same-host services and cloud metadata). The
+	// tests explicitly turn this switch on; the "reject by default" guard is covered by the
+	// notify package's ssrf_test.go.
 	t.Setenv(notify.AllowLocalTargetsEnv, "1")
-	// 백그라운드 투递 루프(3초 tick)를 끈다. 이 파일의 케이스들은 stepRealtime·
-	// stepDigest 를 직접 호출해 한 번의 분배 결과(앞 K건 송달·나머지 보류)를 검증하는데,
-	// 백그라운드 루프가 같은 채널을 동시에 처리하면 집계가 타이밍에 따라 흔들려(느린 CI
-	// 에서 간헐 실패) 결정성이 깨진다. 이 변수는 trafficEvidenceServer 가 서버를 세우기
-	// 전에 설정돼야 효과가 있다.
+	// Turn off the background delivery loop (3-second tick). The cases in this file call
+	// stepRealtime · stepDigest directly to verify the result of a single distribution (first K
+	// items delivered · the rest held back), and if the background loop processes the same
+	// channels concurrently, the counts fluctuate with timing (intermittent failures on slow
+	// CI) and determinism breaks. This variable only takes effect if it is set before
+	// trafficEvidenceServer brings up the server.
 	t.Setenv(notifyBackgroundDisabledEnv, "1")
 	s, _, request := trafficEvidenceServer(t)
 	pg := s.m.pg
 
-	// 自建一个 task：共享装置 trafficEvidenceServer 造的 task 拿不到 exploration id，
-	// 而记录漏洞必须提供它。
+	// Create our own task: the task built by the shared fixture trafficEvidenceServer doesn't
+	// expose an exploration id, and recording a vulnerability requires one.
 	task, err := s.m.CreateTask("通知推送测试", "推送行为验证", nil, 0, 0)
 	if err != nil {
 		t.Fatal(err)
@@ -74,13 +79,15 @@ func newNotifyFixture(t *testing.T) *notifyFixture {
 	if err := pg.QueryRow(`SELECT COALESCE(max(id),0) FROM notification_events`).Scan(&mark); err != nil {
 		t.Fatal(err)
 	}
-	// 让装置自成闭环：把建 fixture 之前就存在的事件一次性标记为已分派。
+	// Make the fixture self-contained: mark all events that existed before the fixture was built as dispatched in one go.
 	//
-	// 为什么必须做：FanOutPendingEvents 是**全局**的，会把库里所有未分派事件
-	// 展开到所有匹配渠道上。而共享装置 trafficEvidenceServer 自己就会记一条漏洞
-	// （正是它返回的那个初始 finding），其它用例也可能有残留。不隔离的话，
-	// 这些杂散事件会被分派到本用例的渠道上，让「应有 N 条投递」这类断言
-	// 时对时错——而且错法取决于用例执行顺序，比直接失败更难查。
+	// Why this is necessary: FanOutPendingEvents is **global** and expands every undispatched
+	// event in the database onto every matching channel. The shared fixture
+	// trafficEvidenceServer itself records a vulnerability (exactly the initial finding it
+	// returns), and other cases may leave leftovers too. Without isolation, these stray events
+	// would be dispatched to this case's channels, making assertions like "there should be N
+	// deliveries" flaky — and how they fail depends on the order the cases run in, which is
+	// harder to track down than a plain failure.
 	if _, err := pg.Exec(`UPDATE notification_events SET fanned_out = true WHERE id <= $1 AND NOT fanned_out`, mark); err != nil {
 		t.Fatal(err)
 	}
@@ -91,15 +98,16 @@ func newNotifyFixture(t *testing.T) *notifyFixture {
 			t.Logf("清理通知事件失败: %v", err)
 		}
 	})
-	// 总开关必须是开的（其它用例可能关过它）。
+	// The master switch must be on (other cases may have turned it off).
 	if err := pg.SetBool(settingNotifyEnabled, true); err != nil {
 		t.Fatal(err)
 	}
 	return f
 }
 
-// record 走真实的证据写入路径落一条漏洞，返回 finding id。
-// 这条路会在**同一事务**里登记推送事件——正是本功能的挂点。
+// record persists a vulnerability through the real evidence-write path and returns the
+// finding id. This path registers the push event in the **same transaction** — which is
+// exactly where this feature hooks in.
 func (f *notifyFixture) record(t *testing.T, vulnclass, severity string) int64 {
 	t.Helper()
 	out, err := f.s.evidenceStore().Record(context.Background(), db.RecordFindingInput{
@@ -118,7 +126,7 @@ func (f *notifyFixture) record(t *testing.T, vulnclass, severity string) int64 {
 	return out.FindingID
 }
 
-// channel 读回渠道配置（供逐渠道调用 stepX 使用）。
+// channel reads back the channel config (for calling stepX per channel).
 func (f *notifyFixture) channel(t *testing.T, id int64) *db.NotificationChannel {
 	t.Helper()
 	ch, err := f.pg.NotificationChannelByID(context.Background(), id)
@@ -128,7 +136,7 @@ func (f *notifyFixture) channel(t *testing.T, id int64) *db.NotificationChannel 
 	return ch
 }
 
-// deliver 分派事件并只对指定渠道跑一轮投递。
+// deliver dispatches events and runs one delivery round for the specified channel only.
 func (f *notifyFixture) deliver(t *testing.T, chID int64, baseURL string) {
 	t.Helper()
 	ctx := context.Background()
@@ -138,7 +146,7 @@ func (f *notifyFixture) deliver(t *testing.T, chID int64, baseURL string) {
 	f.n.stepRealtime(ctx, f.channel(t, chID), 50, baseURL)
 }
 
-// createChannel 通过 HTTP 接口建渠道，顺带覆盖接口自身的校验路径。
+// createChannel creates a channel through the HTTP API, covering the API's own validation paths along the way.
 func (f *notifyFixture) createChannel(t *testing.T, payload map[string]any) int64 {
 	t.Helper()
 	raw, _ := json.Marshal(payload)
@@ -156,7 +164,7 @@ func (f *notifyFixture) createChannel(t *testing.T, payload map[string]any) int6
 	return res.ID
 }
 
-// fakeWebhook 是记录收到的请求体的假接收端。
+// fakeWebhook is a fake receiver that records the request bodies it receives.
 type fakeWebhook struct {
 	*httptest.Server
 	mu     sync.Mutex
@@ -204,8 +212,9 @@ func (f *fakeWebhook) last(t *testing.T) map[string]any {
 	return f.body(t, f.count()-1)
 }
 
-// markdownText 从请求体里取出正文，兼容各家的字段名差异：
-// 钉钉 markdown 用 `text`、ActionCard 用 `text`、企业微信 markdown 用 `content`。
+// markdownText extracts the body text from the request body, tolerating each vendor's
+// different field names: DingTalk markdown uses `text`, ActionCard uses `text`, and WeCom
+// markdown uses `content`.
 func markdownText(t *testing.T, body map[string]any) string {
 	t.Helper()
 	for _, key := range []string{"markdown", "actionCard"} {
@@ -223,7 +232,7 @@ func markdownText(t *testing.T, body map[string]any) string {
 	return ""
 }
 
-// agePendingBatch 把该渠道的待发投递催老，用于测试汇总批次到期。
+// agePendingBatch ages the channel's pending deliveries, used to test digest batches coming due.
 func (f *notifyFixture) agePendingBatch(t *testing.T, chID int64) {
 	t.Helper()
 	if _, err := f.pg.Exec(`UPDATE notification_deliveries SET created_at = now() - interval '2 hours'
@@ -247,15 +256,16 @@ func TestNotifyEndToEndRealtimeDelivery(t *testing.T) {
 		t.Fatalf("应发出 1 条消息，实际 %d", hook.count())
 	}
 	text := markdownText(t, hook.last(t))
-	// "SQL注入" 은 입력으로 넣은 취약점 제목이라 카드에 그대로 에코된다(사용자 데이터,
-	// 번역 대상 아님). "높음"·"개요" 는 렌더 라벨이다 — 심각도는 notify.SeverityLabel("high")
-	// 가 내는 "🟠 높음", 요약 머리글은 writeItem 이 붙이는 "**개요**:" 에 각각 들어 있다.
+	// "SQL注入" (SQL injection) is the vulnerability title given as input, so it is echoed onto
+	// the card verbatim (user data, not a translation target). "높음" (high) · "개요" (overview)
+	// are render labels — the severity is in "🟠 높음" produced by notify.SeverityLabel("high"),
+	// and the summary heading is in "**개요**:" added by writeItem.
 	for _, want := range []string{"SQL注入", "높음", "개요"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("消息正文缺少 %q:\n%s", want, text)
 		}
 	}
-	// 投递应流转为 sent。
+	// The delivery should transition to sent.
 	var pending int
 	if err := f.pg.QueryRow(`SELECT count(*) FROM notification_deliveries WHERE channel_id=$1 AND state <> $2`,
 		chID, db.NotifyStateSent).Scan(&pending); err != nil {
@@ -311,7 +321,7 @@ func TestNotifyChannelAPIMasksSecretsAndPreservesOnUpdate(t *testing.T) {
 		t.Fatal("接口应告知前端哪些字段是凭据")
 	}
 
-	// PATCH 只改名 + 回传掩码凭据：真凭据必须原样保留。
+	// PATCH only renames + sends back the masked credentials: the real credentials must be kept as-is.
 	body, _ := json.Marshal(map[string]any{
 		"name":   "改名后",
 		"config": map[string]any{"webhook": fmt.Sprint(mine.Config["webhook"]), "secret": fmt.Sprint(mine.Config["secret"])},
@@ -330,7 +340,7 @@ func TestNotifyChannelAPIMasksSecretsAndPreservesOnUpdate(t *testing.T) {
 		t.Fatal("名字未更新")
 	}
 
-	// 显式清空 secret 应生效（区别于「回传掩码=保持不变」）。
+	// Explicitly clearing a secret should take effect (as opposed to "sending back the mask = keep unchanged").
 	body, _ = json.Marshal(map[string]any{"config": map[string]any{"secret": ""}})
 	if r := f.request("PATCH", fmt.Sprintf("/api/notify/channels/%d", chID), string(body)); r.Code != 200 {
 		t.Fatalf("清空 secret 失败 %d: %s", r.Code, r.Body)
@@ -356,12 +366,13 @@ func TestNotifyChannelAPICreateValidation(t *testing.T) {
 		payload map[string]any
 		wantSub string
 	}{
-		// wantSub 는 server/notify_api.go 가 내보내는 한국어 검증 오류와 일치시킨다
-		// (notifyErrKindInvalidFmt·notifyErrNameMissing·notifyErrModeInvalid 의 안정 문구).
-		// webhook 두 건은 notify/dingtalk.go 의 Validate 가 내는 오류인데, 그 webhook 주소
-		// 검증 문구는 이미 한국어로 현지화됐으므로(notify/dingtalk_feishu_wecom_localized_test.go
-		// 가 "Webhook 주소가 없습니다"·"Webhook 주소가 올바르지 않습니다" 로 검증한다) 기대
-		// 문자열도 한국어 안정 문구로 맞춘다.
+		// wantSub matches the Korean validation errors emitted by server/notify_api.go (the stable
+		// messages of notifyErrKindInvalidFmt · notifyErrNameMissing · notifyErrModeInvalid). The
+		// two webhook cases are errors produced by Validate in notify/dingtalk.go, and that webhook
+		// address validation text has already been localized to Korean
+		// (notify/dingtalk_feishu_wecom_localized_test.go checks it as "Webhook 주소가 없습니다"
+		// (Webhook address missing) · "Webhook 주소가 올바르지 않습니다" (Webhook address invalid)), so
+		// the expected strings are aligned with the stable Korean messages too.
 		{"类型非法", map[string]any{"name": "x", "kind": "nope", "config": map[string]any{}}, "채널 유형이 올바르지 않습니다"},
 		{"缺名称", map[string]any{"kind": notify.KindDingTalk, "config": map[string]any{"webhook": "https://e.com/h"}}, "채널 이름을 입력하세요"},
 		{"缺 webhook", map[string]any{"name": "x", "kind": notify.KindDingTalk, "config": map[string]any{}}, "Webhook 주소가 없습니다"},
@@ -429,21 +440,22 @@ func TestNotifyDigestBatchesMultipleFindingsIntoOneMessage(t *testing.T) {
 	}
 	ch := f.channel(t, chID)
 
-	// 未到期：不发。
+	// Not yet due: nothing is sent.
 	f.n.stepDigest(ctx, ch, 50, "")
 	if hook.count() != 0 {
 		t.Fatal("汇总批次未到期就发了")
 	}
 
-	// 催老批次后：三条合成一条消息。
+	// After aging the batch: the three are combined into one message.
 	f.agePendingBatch(t, chID)
 	f.n.stepDigest(ctx, ch, 50, "")
 	if got := hook.count(); got != 1 {
 		t.Fatalf("三条应汇总成一条消息，实际发了 %d 条", got)
 	}
 	text := markdownText(t, hook.last(t))
-	// 시간창이 있는 다이제스트 머리말은 markdown.go 가 "**최근 N분간 신규 취약점 N건**"
-	// 으로 렌더한다(digestInterval 기본 30분이라 WindowMinutes>0).
+	// A digest header with a time window is rendered by markdown.go as "**최근 N분간 신규 취약점
+	// N건**" ("N new vulnerabilities in the last N minutes") (digestInterval defaults to 30
+	// minutes, so WindowMinutes>0).
 	if !strings.Contains(text, "최근") || !strings.Contains(text, "신규 취약점 3건") {
 		t.Fatalf("汇总消息缺少条数/时间窗文案:\n%s", text)
 	}
@@ -452,7 +464,7 @@ func TestNotifyDigestBatchesMultipleFindingsIntoOneMessage(t *testing.T) {
 			t.Fatalf("汇总消息缺少第 %d 条:\n%s", i, text)
 		}
 	}
-	// 同一批次应共享 batch_id。
+	// The same batch should share a batch_id.
 	var distinct, total int
 	if err := f.pg.QueryRow(`SELECT count(DISTINCT batch_id), count(*) FROM notification_deliveries WHERE channel_id=$1`, chID).Scan(&distinct, &total); err != nil {
 		t.Fatal(err)
@@ -500,13 +512,14 @@ func TestNotifyStatusChangeDelivery(t *testing.T) {
 	}
 	f.deliver(t, chID, "")
 
-	// 应有两条：fixed 那一条是状态变更；finding_created 那条也可能在同一轮发出。
-	// 状态变更的实际上更晚创建，但不依赖顺序，全量找。
+	// There should be two: the fixed one is the status change; the finding_created one may also
+	// be sent in the same round. The status change is actually created later, but don't rely on
+	// the order; search all of them.
 	found := false
 	for i := 0; i < hook.count(); i++ {
 		text := markdownText(t, hook.body(t, i))
-		// 상태 변경 카드는 markdown.go 가 "**상태 변경**: %s → %s" 로, 상태값은
-		// notify.StatusLabel 이 렌더한다(fixed → "수정됨").
+		// The status change card is rendered by markdown.go as "**상태 변경**: %s → %s" ("status
+		// change"), and the status value by notify.StatusLabel (fixed → "수정됨", "fixed").
 		if strings.Contains(text, "상태 변경") && strings.Contains(text, "수정됨") {
 			found = true
 		}
@@ -556,12 +569,13 @@ func TestNotifyTestMessageEndpoint(t *testing.T) {
 	if hook.count() != 1 {
 		t.Fatalf("假接收端应收到 1 条测试消息，得到 %d", hook.count())
 	}
-	// 测试消息必须一眼能看出是测试，不能被误当成真实漏洞。
-	// 테스트 메시지 제목은 notify_api.go 의 notifyTestName("테스트 메시지 · 채널 설정 정상").
+	// The test message must be recognizable as a test at a glance and must not be mistaken for a
+	// real vulnerability. The test message title is notify_api.go's notifyTestName ("테스트 메시지
+	// · 채널 설정 정상", "test message · channel configured correctly").
 	if text := markdownText(t, hook.last(t)); !strings.Contains(text, "테스트") {
 		t.Fatalf("测试消息应标明是测试: %s", text)
 	}
-	// 配置坏掉时应把渠道的原始错误如实回给用户。
+	// When the config is broken, the channel's raw error should be returned to the user as-is.
 	badID := f.createChannel(t, map[string]any{
 		"name":   "坏地址",
 		"kind":   notify.KindDingTalk,
@@ -574,7 +588,7 @@ func TestNotifyTestMessageEndpoint(t *testing.T) {
 
 func TestNotifyDeliveriesHistoryAndRetry(t *testing.T) {
 	f := newNotifyFixture(t)
-	// 指向必然失败的地址，制造 failed 投递。
+	// Point at an address that is guaranteed to fail, to produce failed deliveries.
 	chID := f.createChannel(t, map[string]any{
 		"name":   "失败重试",
 		"kind":   notify.KindDingTalk,
@@ -586,7 +600,7 @@ func TestNotifyDeliveriesHistoryAndRetry(t *testing.T) {
 		t.Fatal(err)
 	}
 	ch := f.channel(t, chID)
-	// 连投到耗尽重试预算。
+	// Deliver repeatedly until the retry budget is exhausted.
 	for i := 0; i < db.MaxNotifyAttempts; i++ {
 		f.n.stepRealtime(ctx, ch, 50, "")
 		if _, err := f.pg.Exec(`UPDATE notification_deliveries SET next_attempt_at = now() - interval '1 minute' WHERE channel_id=$1`, chID); err != nil {
@@ -631,7 +645,7 @@ func TestNotifyDeliveriesHistoryAndRetry(t *testing.T) {
 		t.Fatalf("历史应带出漏洞标题，得到 %q", hist.Deliveries[0].Title)
 	}
 
-	// 手动重发：应回到 pending 且清零计数。
+	// Manual resend: should go back to pending with the counter reset to zero.
 	if r := f.request("POST", fmt.Sprintf("/api/notify/deliveries/%d/retry", hist.Deliveries[0].ID), ""); r.Code != 200 {
 		t.Fatalf("重发失败 %d: %s", r.Code, r.Body)
 	}
@@ -668,7 +682,7 @@ func TestNotifyMetaAndSettingsRoundTrip(t *testing.T) {
 		}
 	}
 
-	// 三项全局设置往返。尾部斜杠应被规范化掉，否则回链会拼出 "//function/..."。
+	// Round-trip the three global settings. The trailing slash should be normalized away, otherwise the back-link would come out as "//function/...".
 	if r := f.request("PUT", "/api/settings", `{"notify_public_base_url":"https://artex.example.com/","notify_digest_interval_min":15,"notify_enabled":true}`); r.Code != 200 {
 		t.Fatalf("写设置失败 %d: %s", r.Code, r.Body)
 	}
@@ -683,7 +697,7 @@ func TestNotifyMetaAndSettingsRoundTrip(t *testing.T) {
 		t.Fatalf("汇总周期未生效: %v", payload["notify_digest_interval_min"])
 	}
 
-	// 非法值应被拒。
+	// Invalid values should be rejected.
 	for _, body := range []string{
 		`{"notify_public_base_url":"ftp://x"}`,
 		`{"notify_digest_interval_min":0}`,
@@ -695,8 +709,9 @@ func TestNotifyMetaAndSettingsRoundTrip(t *testing.T) {
 	}
 }
 
-// TestNotifyDeepLinkUsesPublicBaseURL 覆盖回链拼接：配了 public_base_url 时
-// 单条消息必须用带按钮的 ActionCard，且链接指向漏洞详情页。
+// TestNotifyDeepLinkUsesPublicBaseURL covers back-link construction: when public_base_url is
+// configured, a single message must use an ActionCard with a button, and the link must point
+// to the vulnerability details page.
 func TestNotifyDeepLinkUsesPublicBaseURL(t *testing.T) {
 	f := newNotifyFixture(t)
 	hook := newFakeWebhook(t)
@@ -719,8 +734,9 @@ func TestNotifyDeepLinkUsesPublicBaseURL(t *testing.T) {
 	}
 }
 
-// TestNotifyNoDeepLinkWithoutBaseURL 反向覆盖：没配外部地址时不该产生坏链接
-// （比如指向 localhost 或相对路径），应退回纯 markdown。
+// TestNotifyNoDeepLinkWithoutBaseURL covers the reverse: when no external address is
+// configured, no broken link should be produced (e.g. pointing at localhost or a relative
+// path); it should fall back to plain markdown.
 func TestNotifyNoDeepLinkWithoutBaseURL(t *testing.T) {
 	f := newNotifyFixture(t)
 	hook := newFakeWebhook(t)
@@ -736,27 +752,31 @@ func TestNotifyNoDeepLinkWithoutBaseURL(t *testing.T) {
 	if body["msgtype"] != "markdown" {
 		t.Fatalf("未配外部地址时应发 markdown，得到 %v", body["msgtype"])
 	}
-	// 상세 링크 머리글은 markdown.go 가 "[상세 보기](URL)" 로 렌더한다 — 외부 주소가
-	// 없으면 이 링크가 아예 나오지 않아야 한다(옛 중국어 "查看详情" 를 검사하면 라벨이
-	// 한국어로 바뀐 지금은 항상 통과해 회귀를 못 잡는다).
+	// The details link heading is rendered by markdown.go as "[상세 보기](URL)" ("view details") —
+	// without an external address this link must not appear at all (checking for the old Chinese
+	// "查看详情" would always pass now that the label has changed to Korean, and would not catch
+	// a regression).
 	if text := markdownText(t, body); strings.Contains(text, "상세 보기") {
 		t.Fatalf("未配外部地址时不该出现详情链接:\n%s", text)
 	}
 }
 
-// TestNotifyDigestSegmentsAndDefersRemainder 是「静默丢失」修复的端到端证据。
+// TestNotifyDigestSegmentsAndDefersRemainder is the end-to-end evidence for the "silent loss" fix.
 //
-// 汇总消息受渠道长度上限约束（企微 4096 字节），一批装不下时必须**按整条**切分：
-// 装进本条的那些标记已送达，其余回到队列等下一条。曾经的实现是把整批标记
-// 成功——被截掉的那些既不在消息里、也不在失败列表里，投递历史还显示成功，
-// 漏洞就这么没了。
+// Digest messages are bound by the channel's length limit (WeCom: 4096 bytes), and when a
+// batch doesn't fit, it must be split **by whole items**: the ones that fit into this message
+// are marked delivered, and the rest go back to the queue for the next message. The old
+// implementation marked the whole batch successful — the truncated items were in neither the
+// message nor the failure list, the delivery history still showed success, and the
+// vulnerabilities simply vanished.
 //
-// 断言四件事：① 只标记了实际装下的条数 ② 其余仍是待发 ③ 被推迟的条目
-// **没有消耗重试次数** ④ 再跑一轮能把剩下的发出去（不会卡死）。
+// Asserts four things: ① only the number actually fitted was marked ② the rest are still
+// pending ③ the deferred items **did not consume retry attempts** ④ another round sends the
+// rest (it doesn't get stuck).
 func TestNotifyDigestSegmentsAndDefersRemainder(t *testing.T) {
 	f := newNotifyFixture(t)
 	hook := newFakeWebhook(t)
-	// 用企业微信：markdown 上限 4096 字节，是六个渠道里最紧的。
+	// Use WeCom: its markdown limit of 4096 bytes is the tightest of the six channels.
 	chID := f.createChannel(t, map[string]any{
 		"name":   "分段汇总",
 		"kind":   notify.KindWeCom,
@@ -764,7 +784,7 @@ func TestNotifyDigestSegmentsAndDefersRemainder(t *testing.T) {
 		"config": map[string]any{"webhook": hook.URL},
 	})
 	const total = 60
-	// 标题取长一点，保证 60 条远超 4096 字节，必然分段。
+	// Use a longish title so 60 items far exceed 4096 bytes and are guaranteed to be split.
 	longName := strings.Repeat("超长漏洞名称", 6)
 	for i := 0; i < total; i++ {
 		f.record(t, longName+strconv.Itoa(i+1), "high")
@@ -798,13 +818,15 @@ func TestNotifyDigestSegmentsAndDefersRemainder(t *testing.T) {
 	if sent+pending != total {
 		t.Fatalf("条目数对不上：sent=%d pending=%d total=%d（既没送达也没待发=丢失）", sent, pending, total)
 	}
-	// 消息正文必须如实告知还有多少条没包含在本条里。
-	// 분절 안내는 markdown.go 가 "(이 메시지에는 앞 N건만 … 나머지 N건은 다음 메시지에서 …)" 로 렌더한다.
+	// The message body must honestly state how many items were not included in this message.
+	// The segmentation notice is rendered by markdown.go as "(이 메시지에는 앞 N건만 … 나머지 N건은
+	// 다음 메시지에서 …)" ("this message contains only the first N … the remaining N in the next
+	// message …").
 	if text := markdownText(t, hook.last(t)); !strings.Contains(text, "나머지") {
 		t.Fatalf("消息应说明还有条目未包含在本条:\n%.400s", text)
 	}
 
-	// 被推迟的条目不得消耗重试预算：领取时 attempts 已乐观 +1，推迟时要减回去。
+	// Deferred items must not consume retry budget: attempts was optimistically +1'd at claim time, and must be decremented back on deferral.
 	var maxAttempts int
 	if err := f.pg.QueryRow(`SELECT COALESCE(max(attempts),0) FROM notification_deliveries
 WHERE channel_id=$1 AND state=$2`, chID, db.NotifyStatePending).Scan(&maxAttempts); err != nil {
@@ -814,8 +836,9 @@ WHERE channel_id=$1 AND state=$2`, chID, db.NotifyStatePending).Scan(&maxAttempt
 		t.Fatalf("被推迟的条目不该消耗重试次数（否则几条之后就会被判失败），得到 attempts=%d", maxAttempts)
 	}
 
-	// 反复跑直到收敛。断言的是**最终全部送达**且中途确实分了多轮——
-	// 这比「第二轮发完」更强：它证明分段不会卡死、也不会把剩余条目丢掉。
+	// Run repeatedly until it converges. What is asserted is that **everything is eventually
+	// delivered** and that it really took multiple rounds — this is stronger than "done by the
+	// second round": it proves segmentation neither gets stuck nor drops remaining items.
 	rounds := 0
 	for {
 		var undelivered int
@@ -840,7 +863,7 @@ WHERE channel_id=$1 AND state <> $2 AND state <> $3`, chID, db.NotifyStateSent, 
 	if rounds < 2 {
 		t.Fatalf("一条 4096 字节的消息装不下 %d 条长标题漏洞，应分多轮发出，实际只用了 %d 轮", total, rounds)
 	}
-	// 首轮之后的每一轮都应是**纯续发**，不存在被渠道拒绝的条目。
+	// Every round after the first should be **pure continuation**, with no items rejected by the channel.
 	var failed int
 	if err := f.pg.QueryRow(`SELECT count(*) FROM notification_deliveries WHERE channel_id=$1 AND state=$2`,
 		chID, db.NotifyStateFailed).Scan(&failed); err != nil {
@@ -851,19 +874,21 @@ WHERE channel_id=$1 AND state <> $2 AND state <> $3`, chID, db.NotifyStateSent, 
 	}
 }
 
-// TestNotifyBackoffTableMatchesAttemptBudget 是防漂移断言。
+// TestNotifyBackoffTableMatchesAttemptBudget is an anti-drift assertion.
 //
-// 重试预算（db.MaxNotifyAttempts）与退避序列表（notifyBackoff）分居两个包：
-// 前者是状态机的策略、后者是引擎的执行节拍。若只改其中一个——比如把预算提到 5
-// 次而忘了加退避档位——代码不会报错，只会让第 4、5 次重试沿用最后一档间隔，
-// 表现为「重试节奏莫名变慢」，排查时很难联想到是这里。
-// 断言两者长度一致，让这种漂移在 CI 里就暴露。
+// The retry budget (db.MaxNotifyAttempts) and the backoff table (notifyBackoff) live in two
+// different packages: the former is the state machine's policy, the latter the engine's
+// execution cadence. If only one of them is changed — e.g. raising the budget to 5 but
+// forgetting to add backoff tiers — the code won't complain; the 4th and 5th retries will just
+// reuse the last tier's interval, showing up as "retries mysteriously slowing down", which is
+// hard to trace back to here during debugging.
+// Asserting that their lengths match exposes such drift in CI.
 func TestNotifyBackoffTableMatchesAttemptBudget(t *testing.T) {
 	if len(notifyBackoff) != db.MaxNotifyAttempts {
 		t.Fatalf("退避档位数(%d)与最大尝试次数(%d)不一致——改一个必须同时改另一个",
 			len(notifyBackoff), db.MaxNotifyAttempts)
 	}
-	// 退避间隔必须单调不减，否则重试会越试越急，反而加剧限流。
+	// Backoff intervals must be monotonically non-decreasing, otherwise retries would get more and more aggressive and worsen rate limiting.
 	for i := 1; i < len(notifyBackoff); i++ {
 		if notifyBackoff[i] < notifyBackoff[i-1] {
 			t.Fatalf("退避间隔必须单调不减：第 %d 档 %v < 第 %d 档 %v",
@@ -872,14 +897,15 @@ func TestNotifyBackoffTableMatchesAttemptBudget(t *testing.T) {
 	}
 }
 
-// TestNotifyRateLimitDoesNotConsumeRetryBudget 锁住「先取令牌再领取」的顺序。
-// 若反了（先领后弃），被限流挡下的投递已经计过一次 attempts，
-// 预算会被纯粹的等待耗光，最后落进 failed。
+// TestNotifyRateLimitDoesNotConsumeRetryBudget locks in the "take tokens first, then claim"
+// order. If it were reversed (claim first, then drop), deliveries blocked by rate limiting
+// would already have counted one attempt, the budget would be used up purely by waiting, and
+// they'd end up in failed.
 func TestNotifyRateLimitDoesNotConsumeRetryBudget(t *testing.T) {
-	// 只测令牌桶本身，不需要 Server（也不该为它造一个）。
+	// Tests only the token bucket itself; no Server is needed (and none should be built for it).
 	n := &Notifier{buckets: map[int64]*notifyBucket{}}
 	now := time.Now()
-	// 每分钟 1 条：满桶时最多 1 条。
+	// 1 per minute: at most 1 when the bucket is full.
 	if got := n.takeTokens(1, 1, notifyMaxSendsPerChannelPerTick, now); got != 1 {
 		t.Fatalf("满桶时每分钟 1 条应取 1 个令牌，得到 %d", got)
 	}
@@ -892,37 +918,39 @@ func TestNotifyRateLimitDoesNotConsumeRetryBudget(t *testing.T) {
 	if got := n.takeTokens(1, 1, notifyMaxSendsPerChannelPerTick, now.Add(time.Minute)); got != 1 {
 		t.Fatalf("满一个周期应补回 1 个令牌，得到 %d", got)
 	}
-	// 不限流渠道走有限上限，避免单轮被无限积压拖住。
+	// A channel with no rate limit gets a finite cap, so a single round isn't held up by an unbounded backlog.
 	if got := n.takeTokens(2, 0, notifyUnlimitedBurstPerTick+10, now); got != notifyUnlimitedBurstPerTick {
 		t.Fatalf("不限流应返回每轮上限 %d，得到 %d", notifyUnlimitedBurstPerTick, got)
 	}
-	// 渠道之间的令牌桶互相独立。
+	// Token buckets of different channels are independent of each other.
 	if got := n.takeTokens(1, 1, notifyMaxSendsPerChannelPerTick, now.Add(time.Millisecond)); got != 0 {
 		t.Fatalf("渠道 1 的桶应仍然为空，得到 %d", got)
 	}
 }
 
-// TestNotifyTakeTokensKeepsUnusedTokens 锁住「只取 want 个」的语义。
+// TestNotifyTakeTokensKeepsUnusedTokens locks in the "take only want" semantics.
 //
-// 曾经的实现把桶整个抽空后才由调用方截断，于是 rate=100/min 的渠道攒满桶、
-// 一轮只用 5 条，剩下 95 个令牌直接丢弃；渠道这一轮没有待发投递时同样照扣。
-// 结果是注释声称的「积压时可以一次性冲 rate_per_min 条」在任何情况下都做不到。
+// The old implementation drained the whole bucket and only then let the caller truncate, so
+// a rate=100/min channel would fill its bucket, use only 5 in a round, and throw away the
+// remaining 95 tokens; it was charged the same even when the channel had no pending
+// deliveries in that round. As a result, what the comment claimed — "when backlogged, it can
+// burst rate_per_min items at once" — could never happen under any circumstances.
 func TestNotifyTakeTokensKeepsUnusedTokens(t *testing.T) {
 	n := &Notifier{buckets: map[int64]*notifyBucket{}}
 	now := time.Now()
-	// 桶初始为满（100），本轮只要 5 个。
+	// The bucket starts full (100); this round wants only 5.
 	if got := n.takeTokens(1, 100, 5, now); got != 5 {
 		t.Fatalf("want=5 时应恰好取 5 个令牌，得到 %d", got)
 	}
-	// 关键断言：余下的 95 个必须还在桶里，而不是被抽空丢弃。
-	// 不推进时间，确保取到的只可能来自存量而非补充。
+	// Key assertion: the remaining 95 must still be in the bucket, not drained and discarded.
+	// Time is not advanced, ensuring whatever is taken can only come from the stock, not a refill.
 	if got := n.takeTokens(1, 100, 95, now); got != 95 {
 		t.Fatalf("剩余令牌应仍可取用（期望 95），得到 %d——桶被整轮抽空了", got)
 	}
 	if got := n.takeTokens(1, 100, 1, now); got != 0 {
 		t.Fatalf("桶已取尽，应返回 0，得到 %d", got)
 	}
-	// want<=0 不应扣减任何令牌（空轮不收费）。
+	// want<=0 should not deduct any tokens (empty rounds are free).
 	n2 := &Notifier{buckets: map[int64]*notifyBucket{}}
 	if got := n2.takeTokens(1, 20, 0, now); got != 0 {
 		t.Fatalf("want=0 应返回 0，得到 %d", got)
@@ -932,16 +960,18 @@ func TestNotifyTakeTokensKeepsUnusedTokens(t *testing.T) {
 	}
 }
 
-// TestDigestTickPlanDecouplesBatchSizeFromSendBudget 钉住汇总模式的两个量纲。
+// TestDigestTickPlanDecouplesBatchSizeFromSendBudget pins the two dimensions of digest mode.
 //
-// 汇总批次的大小一旦跟每轮请求预算挂上，rate_per_min=20 的渠道就只能在每个
-// 3 秒 tick 里补到 1 个令牌，于是每条汇总消息只装 1 个漏洞——功能上等于没有
-// 汇总，而消息头部还写着「近 30 分钟新增 1 个漏洞」。这个退化不会报错，
-// 现有的端到端用例也看不出来（它们手动给 stepDigest 传一个够大的 limit，
-// 绕过了 step 里的额度计算），所以在这里直接断言决策本身。
+// Once the digest batch size is tied to the per-round request budget, a channel with
+// rate_per_min=20 refills only 1 token per 3-second tick, so each digest message holds only
+// 1 vulnerability — functionally equivalent to having no digest at all, while the message
+// header still says "1 new vulnerability in the last 30 minutes". This degradation raises no
+// error, and the existing end-to-end cases can't see it either (they manually pass a large
+// enough limit to stepDigest, bypassing the allowance calculation in step), so the decision
+// itself is asserted directly here.
 func TestDigestTickPlanDecouplesBatchSizeFromSendBudget(t *testing.T) {
 	tokens, claimLimit := digestTickPlan()
-	// 一批 = 一条消息 = 一次请求 = 一个令牌。令牌的单位是消息，不是漏洞。
+	// One batch = one message = one request = one token. The token's unit is messages, not vulnerabilities.
 	if tokens != 1 {
 		t.Fatalf("汇总一批只发一条消息，应恰好消耗 1 个令牌，得到 %d", tokens)
 	}
@@ -949,8 +979,9 @@ func TestDigestTickPlanDecouplesBatchSizeFromSendBudget(t *testing.T) {
 		t.Fatalf("汇总批次大小应为内存上界 db.MaxDigestBatchSize=%d，得到 %d",
 			db.MaxDigestBatchSize, claimLimit)
 	}
-	// 关键关系：批次大小必须远大于每轮请求预算。两者一旦同量级，
-	// 说明又把「发几条消息」和「一批装几条漏洞」混成了一个数。
+	// Key relationship: the batch size must be much larger than the per-round request budget.
+	// If the two are ever of the same magnitude, "how many messages to send" and "how many
+	// vulnerabilities a batch holds" have been conflated into one number again.
 	if claimLimit <= notifyMaxSendsPerChannelPerTick {
 		t.Fatalf("汇总批次大小 %d 不应受每轮请求预算 %d 约束——"+
 			"请求预算是由租约倒推的「发几次请求」，与「一批装几条漏洞」是两个量纲",
@@ -958,12 +989,14 @@ func TestDigestTickPlanDecouplesBatchSizeFromSendBudget(t *testing.T) {
 	}
 }
 
-// TestNotifyTickBudgetFitsWithinLease 是又一条防漂移断言。
+// TestNotifyTickBudgetFitsWithinLease is another anti-drift assertion.
 //
-// 单渠道每轮的投递条数上限（notifyMaxSendsPerChannelPerTick）是从租约时长倒推的：
-// 一轮里串行投递的最坏耗时必须 < 租约，否则后几条还没发完租约就过期，
-// 多实例部署时对端会把它们重新领走、重复发送。这三个常量分处不同位置，
-// 改任意一个都可能打破关系而不会有任何报错——所以在这里钉死。
+// The per-channel per-round delivery cap (notifyMaxSendsPerChannelPerTick) is derived
+// backwards from the lease duration: the worst-case duration of serial deliveries in one
+// round must be < the lease, otherwise the leases of the last few expire before they are
+// sent, and in multi-instance deployments the other side re-claims them and sends them
+// again. These three constants live in different places, and changing any one of them can
+// break the relationship without any error — so it is pinned here.
 func TestNotifyTickBudgetFitsWithinLease(t *testing.T) {
 	worst := time.Duration(notifyMaxSendsPerChannelPerTick) * notifySendTimeout
 	if worst >= notifyLease {

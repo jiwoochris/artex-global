@@ -10,9 +10,9 @@ import (
 	"github.com/Autumn-27/artex/selfupdate"
 )
 
-// releaseCache 是保护 GitHub 配额的那一层：未认证的 API 只有 60 次/小时/IP，
-// 而顶栏的"有新版本"提示每次整页加载都会查一次。缓存一旦失效，用户多开几个
-// 标签页就会把配额耗光，之后真想更新反而查不动。
+// releaseCache is the layer that protects the GitHub quota: the unauthenticated API allows only 60 requests/hour/IP,
+// while the top bar's "new version available" hint checks once on every full page load. Once the cache stops
+// working, a user opening a few extra tabs would exhaust the quota, and then a real update check could no longer get through.
 
 func newTestCache(fetch func(context.Context, *http.Client) (*selfupdate.Release, error)) *releaseCache {
 	return &releaseCache{fetch: fetch}
@@ -49,7 +49,7 @@ func TestReleaseCacheForceBypasses(t *testing.T) {
 	if _, err := c.get(t.Context(), nil, false); err != nil {
 		t.Fatal(err)
 	}
-	// 用户点「检查更新」必须拿到实时结果，否则刚发布的版本要等缓存过期才看得见。
+	// When the user clicks "Check for updates" they must get a live result; otherwise a just-published release would only show up after the cache expires.
 	if _, err := c.get(t.Context(), nil, true); err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestReleaseCacheExpiresAfterTTL(t *testing.T) {
 	if _, err := c.get(t.Context(), nil, false); err != nil {
 		t.Fatal(err)
 	}
-	// 把落库时间往前拨到刚过期，模拟 TTL 到点。
+	// Move the persisted timestamp back to just past expiry, simulating the TTL being reached.
 	c.at = time.Now().Add(-releaseTTL - time.Second)
 	if _, err := c.get(t.Context(), nil, false); err != nil {
 		t.Fatal(err)
@@ -88,7 +88,7 @@ func TestReleaseCacheUsesShorterTTLForErrors(t *testing.T) {
 	if _, err := c.get(t.Context(), nil, false); err == nil {
 		t.Fatal("期望返回错误")
 	}
-	// 失败结果也要缓存一会儿，否则 GitHub 不可达时每次页面加载都白等一次超时。
+	// Failed results must be cached for a while too; otherwise, when GitHub is unreachable, every page load waits out a timeout for nothing.
 	if _, err := c.get(t.Context(), nil, false); err == nil {
 		t.Fatal("期望返回错误")
 	}
@@ -96,7 +96,7 @@ func TestReleaseCacheUsesShorterTTLForErrors(t *testing.T) {
 		t.Errorf("错误应短时缓存，期望回源 1 次，实际 %d 次", calls)
 	}
 
-	// 但错误的 TTL 必须明显短于成功的，网络恢复后要能很快自愈。
+	// But the error TTL must be clearly shorter than the success TTL, so it can self-heal quickly once the network recovers.
 	if releaseErrTTL >= releaseTTL {
 		t.Fatalf("错误 TTL(%v) 必须短于成功 TTL(%v)", releaseErrTTL, releaseTTL)
 	}
@@ -118,12 +118,12 @@ func TestReleaseCacheDoesNotPoisonOnCallerCancel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 访客关掉标签页会取消请求。那不代表 GitHub 有问题，绝不能把"已取消"
-	// 写进缓存——否则接下来 30 分钟内每个访客都会收到一条莫名其妙的错误。
+	// A visitor closing the tab cancels the request. That does not mean GitHub has a problem, and "canceled" must never
+	// be written into the cache — otherwise every visitor in the next 30 minutes would get an inexplicable error.
 	c.fetch = func(ctx context.Context, _ *http.Client) (*selfupdate.Release, error) {
 		return nil, ctx.Err()
 	}
-	c.at = time.Now().Add(-releaseTTL - time.Second) // 让缓存过期，逼它回源
+	c.at = time.Now().Add(-releaseTTL - time.Second) // expire the cache to force a refetch from the source
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -131,8 +131,8 @@ func TestReleaseCacheDoesNotPoisonOnCallerCancel(t *testing.T) {
 		t.Fatal("调用方已取消时应把错误透传给它")
 	}
 
-	// 关键不变量：被取消的那一次不留下任何痕迹——缓存里既没有"已取消"这个错误，
-	// 也还保着上一次的好结果。
+	// Key invariant: the canceled attempt leaves no trace — the cache holds no "canceled" error,
+	// and it still keeps the previous good result.
 	if c.err != nil {
 		t.Fatalf("取消错误不应写进缓存，得到 %v", c.err)
 	}
@@ -140,8 +140,8 @@ func TestReleaseCacheDoesNotPoisonOnCallerCancel(t *testing.T) {
 		t.Fatalf("缓存应保留上一次的好结果，得到 %+v", c.rel)
 	}
 
-	// 那次取消没换来任何新数据，所以下一个访客理应重新回源——而且能正常拿到结果，
-	// 不会被上一次的取消连累。
+	// That cancellation produced no new data, so the next visitor should go back to the source — and get a result
+	// normally, without being affected by the previous cancellation.
 	c.fetch = func(context.Context, *http.Client) (*selfupdate.Release, error) {
 		return good, nil
 	}

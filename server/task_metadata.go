@@ -15,13 +15,13 @@ const (
 	maxTaskMetadataRequestSize = 16 << 10
 )
 
-// 작업 메타데이터 수정 API 가 사용자에게 돌려주는 오류 응답 문구. JSON 필드명
-// (name·pinned)은 원문 그대로 두고, 사람이 읽는 메시지만 한국어로 둔다.
+// Error response messages the task metadata update API returns to users. JSON field names
+// (name, pinned) stay verbatim; only the human-readable messages are in Korean.
 const (
 	errTaskMetaRequestTooLarge = "요청 본문이 너무 큽니다"
 	errTaskMetaNoFields        = "name 또는 pinned 중 하나는 반드시 제공해야 합니다"
 	errTaskMetaNameEmpty       = "작업 이름은 비워 둘 수 없습니다"
-	// errTaskMetaNameTooLongFmt 는 fmt.Sprintf 로 상한을 채우는 형식 문자열이다.
+	// errTaskMetaNameTooLongFmt is a format string whose upper limit is filled in via fmt.Sprintf.
 	errTaskMetaNameTooLongFmt = "작업 이름은 최대 %d자까지 입력할 수 있습니다"
 )
 

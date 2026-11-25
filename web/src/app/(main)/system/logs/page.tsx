@@ -11,7 +11,7 @@ import { MOCK } from "@/lib/mock/enabled";
 import type { LogLine } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-// Mock 데모: 백엔드 SSE 가 없으므로 예시 로그 몇 줄을 채워 둔다.
+// Mock demo: there is no backend SSE, so fill in a few sample log lines.
 const MOCK_LOGS: LogLine[] = [
   {
     seq: 1,

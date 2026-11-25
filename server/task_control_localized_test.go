@@ -12,15 +12,15 @@ import (
 	"github.com/Autumn-27/artex/db"
 )
 
-// task_control.go 의 작업·의도 제어 API 에러 응답을 한국어로 유지하는 회귀 방어 테스트다.
-// 한국어 판정은 F3a 의 assertKoreanError(한글 포함·중국어 한자 0)를, 응답 본문 추출은
-// task_categories 테스트의 decodeErrorField 를 재사용한다(같은 package server).
+// Regression guard that keeps the task/intent control API error responses in task_control.go in Korean.
+// The Korean check reuses F3a's assertKoreanError (Hangul present, zero Chinese Han characters), and
+// response body extraction reuses decodeErrorField from the task_categories tests (same package server).
 
-// TestTaskControlErrorConstantsLocalized 는 제어 응답 상수 10종이 전부 한국어임을
-// 단언한다. 의도 제어 경로(applyIntentControl)는 첫 줄에서 t.Store.GetNode(DB)를 거쳐야
-// 도달하므로 DB 없는 이 호스트에서 끝까지 못 몰아, 그 6종은 상수 자체를 단언한다
-// (intent_intervention·goals_api 선례). 작업 제어·배치 경로는 아래 두 테스트가 실제
-// 함수 실행과 HTTP 응답 본문까지 확인한다.
+// TestTaskControlErrorConstantsLocalized asserts that all ten control response constants are Korean.
+// The intent control path (applyIntentControl) has to go through t.Store.GetNode (DB) on its first line,
+// so it cannot be driven end to end on this DB-less host; for those six, the constants themselves are
+// asserted (following the intent_intervention and goals_api precedent). The task control and batch paths
+// are verified by the two tests below, through actual function execution and the HTTP response body.
 func TestTaskControlErrorConstantsLocalized(t *testing.T) {
 	cases := map[string]string{
 		"task_deleting":          errTaskCtrlDeleting,
@@ -39,24 +39,24 @@ func TestTaskControlErrorConstantsLocalized(t *testing.T) {
 	}
 }
 
-// TestTaskControlApplyResponsesLocalized 는 DB·엔진 상태를 거치지 않고 끝나는 pause 제어
-// 경로를 applyTaskControl 로 실제 실행해, 상수가 반환 오류에 실제로 실리는 연결을
-// 확인한다. 세 분기 모두 s.m.Task(맵 조회) → 삭제 장벽 → t.lifecycleSnapshot()(인메모리
-// 필드 Status/Paused 직접 읽기) 순이라, tasks 맵에 작업 하나와 빈 Engine 만 있으면
-// Store·DB 없이 돌아간다. 성공 경로(실제 일시정지)는 ApplyTaskPause(DB)를 거치므로
-// 여기서 몰지 않는다 — 오류 분기는 모두 그 전에 반환한다.
+// TestTaskControlApplyResponsesLocalized actually runs, via applyTaskControl, the pause control paths that
+// finish without touching DB or engine state, verifying that the constants actually make it into the
+// returned error. All three branches go s.m.Task (map lookup) → deletion barrier → t.lifecycleSnapshot()
+// (reading the in-memory Status/Paused fields directly), so they run without a Store or DB as long as the
+// tasks map holds one task and an empty Engine. The success path (actually pausing) goes through
+// ApplyTaskPause (DB), so it is not driven here — the error branches all return before that.
 func TestTaskControlApplyResponsesLocalized(t *testing.T) {
-	// 종료 상태 작업: isTerminalStatus(done) 분기.
+	// Task in a terminal state: the isTerminalStatus(done) branch.
 	terminalServer := func() (*Server, *Task) {
 		tk := &Task{ID: "1", Status: "done"}
 		return &Server{m: &Manager{tasks: map[string]*Task{"1": tk}}, engine: &Engine{}}, tk
 	}
-	// 이미 일시정지된 실행 작업: lifecycle.Paused 분기.
+	// Running task that is already paused: the lifecycle.Paused branch.
 	pausedServer := func() (*Server, *Task) {
 		tk := &Task{ID: "1", Status: "running", Paused: true}
 		return &Server{m: &Manager{tasks: map[string]*Task{"1": tk}}, engine: &Engine{}}, tk
 	}
-	// 삭제 장벽이 세워진 작업: IsDeleting 분기.
+	// Task with a deletion barrier raised: the IsDeleting branch.
 	deletingServer := func() (*Server, *Task) {
 		tk := &Task{ID: "1", Status: "running"}
 		s := &Server{m: &Manager{tasks: map[string]*Task{"1": tk}}, engine: &Engine{}}
@@ -88,11 +88,11 @@ func TestTaskControlApplyResponsesLocalized(t *testing.T) {
 	}
 }
 
-// TestControlTasksBatchResponsesLocalized 는 배치 제어 엔드포인트의 응답 본문을 실제
-// HTTP 로 검사한다. ① 빈 task_ids 는 s.m 접근 전에 writeErr 로 400 + 크기 오류를 내므로
-// &Server{} 로도 도달한다. ② 종료 상태 작업 하나를 배치 pause 하면 200 items[].error 로
-// 작업 제어 오류가 그대로 실려, applyTaskControl 오류가 배치 JSON 까지 전파되는 연결을
-// 확인한다.
+// TestControlTasksBatchResponsesLocalized checks the batch control endpoint's response body over real
+// HTTP. (1) Empty task_ids produce a 400 + size error via writeErr before s.m is accessed, so even
+// &Server{} reaches it. (2) Batch-pausing a single task in a terminal state carries the task control error
+// verbatim in the 200 response's items[].error, verifying that the applyTaskControl error propagates all
+// the way into the batch JSON.
 func TestControlTasksBatchResponsesLocalized(t *testing.T) {
 	t.Run("size-error", func(t *testing.T) {
 		s := &Server{}
@@ -144,9 +144,9 @@ func TestControlTasksBatchResponsesLocalized(t *testing.T) {
 	})
 }
 
-// TestIntentStateConflictWrapsSentinel 은 의도 상태 충돌 문구가 한국어이면서도 %w 로
-// db.ErrIntentStateConflict 를 그대로 감싸, errors.Is 식별이 깨지지 않음을 확인한다.
-// enum 값 paused 는 원문대로 보존되어야 한다.
+// TestIntentStateConflictWrapsSentinel verifies that the intent state conflict message is Korean while still
+// wrapping db.ErrIntentStateConflict verbatim with %w, so errors.Is identification does not break.
+// The enum value paused must be preserved verbatim.
 func TestIntentStateConflictWrapsSentinel(t *testing.T) {
 	err := fmt.Errorf(errIntentCtrlStateConflictFmt, db.ErrIntentStateConflict)
 	if !errors.Is(err, db.ErrIntentStateConflict) {

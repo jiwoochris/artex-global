@@ -5,7 +5,7 @@
 > evidence. The original (Chinese) is preserved in
 > [`finding-traffic-evidence-zh.md`](finding-traffic-evidence-zh.md).
 >
-> 한국어판: **[취약점 다중 트래픽 증거 (finding-traffic-evidence-ko.md)](finding-traffic-evidence-ko.md)**.
+> Korean version (한국어): **[finding-traffic-evidence-ko.md](finding-traffic-evidence-ko.md)**.
 
 The **Linked traffic** panel on the vulnerability detail screen supports multi-select across pages, entering a role and a description, ordering, and unbinding. The traffic page likewise lets you select several records at once and link them to a single existing vulnerability. Vulnerability evidence that a task inherits is read-only; to change it you must enter the source task.
 

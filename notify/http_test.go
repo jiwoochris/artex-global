@@ -9,12 +9,14 @@ import (
 	"testing"
 )
 
-// 本文件覆盖 doJSON 的 HTTP 层错误分级。
+// This file covers doJSON's HTTP-layer error classification.
 //
-// 为什么要单独测：各渠道适配器只管平台自己的业务错误码（钉钉 errcode、
-// 飞书 code、Telegram ok 字段），而**HTTP 层**的分级是 doJSON 统一做的，
-// 两者是两道独立的防线。少了这道，一个返回 503 的中转网关会被当成永久失败、
-// 直接放弃重试；而一个 403 会被当成可重试、白白退避三轮。
+// Why it is tested separately: each channel adapter handles only the platform's own
+// business error codes (DingTalk errcode, Feishu code, Telegram's ok field), while
+// the **HTTP-layer** classification is done uniformly by doJSON; the two are
+// independent lines of defense. Without this one, a relay gateway returning 503 would
+// be treated as a permanent failure and retries abandoned outright, while a 403 would
+// be treated as retryable and pointlessly back off for three rounds.
 
 func replyServer(t *testing.T, status int, body string) *httptest.Server {
 	t.Helper()
@@ -61,9 +63,11 @@ func TestDoJSONClassifiesHTTPStatus(t *testing.T) {
 				t.Fatalf("HTTP %d 的 permanent 判定错误：期望 %v 得到 %v (%v)",
 					tc.status, tc.permanent, got, err)
 			}
-			// 状态码必须出现在错误里，否则用户无从判断是自己配错了还是对端挂了。
-			// 断言数字而不是 Go 的英文 StatusText：本包的文案是中文的
-			// （与项目其它部分一致），数字才是语言无关、可稳定断言的部分。
+			// The status code must appear in the error, otherwise users cannot tell whether they
+			// misconfigured something or the peer is down.
+			// Assert on the number rather than Go's English StatusText: this package's messages
+			// are localized (Korean, not English), and the number is the
+			// language-independent part that can be asserted stably.
 			if !strings.Contains(err.Error(), strconv.Itoa(tc.status)) {
 				t.Errorf("错误信息应带上 HTTP 状态码 %d，得到 %v", tc.status, err)
 			}
@@ -71,8 +75,9 @@ func TestDoJSONClassifiesHTTPStatus(t *testing.T) {
 	}
 }
 
-// TestDoJSONIncludesResponseSnippet 覆盖 snippet：对端返回的错误说明要带回来，
-// 否则用户只知道「失败了」，不知道对端为什么拒绝。
+// TestDoJSONIncludesResponseSnippet covers snippet: the error description returned by
+// the peer must be brought back, otherwise users only know "it failed" and not why
+// the peer rejected it.
 func TestDoJSONIncludesResponseSnippet(t *testing.T) {
 	srv := replyServer(t, 400, `{"error":"invalid webhook token"}`)
 	_, err := doJSON(context.Background(), "GET", srv.URL, nil, nil)
@@ -84,10 +89,11 @@ func TestDoJSONIncludesResponseSnippet(t *testing.T) {
 	}
 }
 
-// TestDoJSONSnippetIsSingleLineAndBounded 约束 snippet 的形态：
-// 它对端响应会原样进 last_error 列与前端表格，多行/超长会破坏排版与载荷。
+// TestDoJSONSnippetIsSingleLineAndBounded constrains the shape of snippet:
+// the peer's response goes verbatim into the last_error column and the frontend table,
+// and multi-line/over-long content would break the layout and the payload.
 func TestDoJSONSnippetIsSingleLineAndBounded(t *testing.T) {
-	// 带换行、制表符与 5000 字符超长内容的响应。
+	// A response containing newlines, tabs, and over-long content of 5000 characters.
 	long := strings.Repeat("x", 5000)
 	srv := replyServer(t, 500, "line1\nline2\r\n\tline3 "+long)
 	_, err := doJSON(context.Background(), "GET", srv.URL, nil, nil)
@@ -98,14 +104,16 @@ func TestDoJSONSnippetIsSingleLineAndBounded(t *testing.T) {
 	if strings.ContainsAny(msg, "\r\n\t") {
 		t.Errorf("错误信息应压成单行，得到 %q", msg)
 	}
-	// snippet 上限 200 字符 + 固定前缀，总量必须远小于原始响应。
+	// snippet is capped at 200 characters + a fixed prefix; the total must be far smaller
+	// than the original response.
 	if len(msg) > 400 {
 		t.Errorf("错误信息过长（%d 字节），应被 snippet 截断: %q", len(msg), msg)
 	}
 }
 
-// TestDoJSONRejectsOversizedResponse 确认读取有上限：对端异常返回超大内容时
-// 不能把整个响应读进内存（投递历史里每一条都会存一份 last_error）。
+// TestDoJSONRejectsOversizedResponse confirms that reading is capped: when the peer
+// misbehaves and returns huge content, the whole response must not be read into
+// memory (every entry in the delivery history stores a copy of last_error).
 func TestDoJSONRejectsOversizedResponse(t *testing.T) {
 	huge := strings.Repeat("A", 1<<20) // 1 MiB
 	srv := replyServer(t, 400, huge)

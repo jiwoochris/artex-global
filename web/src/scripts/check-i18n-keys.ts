@@ -1,9 +1,9 @@
 /**
  * Script: check-i18n-keys.ts
  *
- * 로케일 메시지 파일(web/messages/{ko,en,zh,es,ja}.json)의 키 정합성 가드.
- * ko.json 을 기준으로 나머지 로케일의 키 집합이 완전히 일치하는지(누락·추가 모두) 검사하고,
- * 불일치가 있으면 비-0 으로 종료한다. 실행: npm run check:i18n
+ * Key-consistency guard for the locale message files (web/messages/{ko,en,zh,es,ja}.json).
+ * Using ko.json as the baseline, it checks that every other locale's key set matches exactly (both missing and extra keys),
+ * and exits non-zero on any mismatch. Run: npm run check:i18n
  */
 
 import { diffKeys, flattenKeys, isInSync } from "./i18n-keys";

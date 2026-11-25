@@ -5,9 +5,9 @@ import (
 	"unicode"
 )
 
-// assertRetestReasonKorean 은 재검증 사유 상수가 한글을 포함하고 중국어 한자가 없음을
-// 단언한다(F9). FinishFindingRetest·RecoverFindingRetests 의 SQL 리터럴 자리에 상수로
-// 이어 붙이므로, 상수를 핀 고정하면 패널에 노출되는 사용자 문구도 함께 보호된다.
+// assertRetestReasonKorean asserts that a retest reason constant contains Hangul and no Chinese Hanzi
+// (F9). Since the constants are concatenated into SQL literal positions in FinishFindingRetest and RecoverFindingRetests,
+// pinning the constants also protects the user-facing text shown in the panel.
 func assertRetestReasonKorean(t *testing.T, name, s string) {
 	t.Helper()
 	if s == "" {
@@ -27,10 +27,10 @@ func assertRetestReasonKorean(t *testing.T, name, s string) {
 	}
 }
 
-// TestFindingRetestReasonsLocalized 는 finding_retests.error 컬럼에 저장돼 재검증 패널
-// (finding-retest-panel) 의 item.error 로 노출되는 종결 사유 두 상수가 한국어임을 단언한다.
-// server/conversations.go 의 형제 사유(convRetest*)와 같은 컬럼·패널이라, 둘 중 하나만
-// 한국어면 같은 패널에서 언어가 섞인다.
+// TestFindingRetestReasonsLocalized asserts that the two termination reason constants, stored in the finding_retests.error column
+// and shown in the retest panel (finding-retest-panel) as item.error, are in Korean.
+// They share the same column and panel as the sibling reasons in server/conversations.go (convRetest*), so if only one of them
+// were Korean, the same panel would mix languages.
 func TestFindingRetestReasonsLocalized(t *testing.T) {
 	assertRetestReasonKorean(t, "retestNoConclusionReason", retestNoConclusionReason)
 	assertRetestReasonKorean(t, "retestServiceRestartReason", retestServiceRestartReason)

@@ -6,10 +6,10 @@ import (
 	"time"
 )
 
-// InsertSettingIfAbsent 는 auth.password_hash 의 안전망이다: 호출자의 GetSetting 검사는
-// 데이터베이스 오류로 무력해질 수 있고, 동시 요청에 새치기당할 수도 있다(bcrypt 가 수십
-// 밀리초를 쓴다). 그래서 "최초 1회만 설정" 의 보장은 if 판단이 아니라 기본키 제약에 있어야
-// 한다.
+// InsertSettingIfAbsent is the safety net for auth.password_hash: the caller's GetSetting check
+// can be defeated by a database error, or raced by a concurrent request (bcrypt takes tens of
+// milliseconds). So the "set only once, the first time" guarantee must rest on the primary-key constraint, not on an if
+// check.
 func TestInsertSettingIfAbsentDoesNotOverwrite(t *testing.T) {
 	d, err := Open(testDSN(t))
 	if err != nil {
@@ -17,7 +17,7 @@ func TestInsertSettingIfAbsentDoesNotOverwrite(t *testing.T) {
 	}
 	defer d.Close()
 
-	// 테스트 전용 키를 써서 개발 데이터베이스의 실제 auth.password_hash 는 건드리지 않는다.
+	// Use a test-only key so the dev database's real auth.password_hash is not touched.
 	key := fmt.Sprintf("test.insert_if_absent.%d", time.Now().UnixNano())
 	defer func() { _, _ = d.Exec(`DELETE FROM settings WHERE key=$1`, key) }()
 
