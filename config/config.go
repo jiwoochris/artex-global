@@ -48,13 +48,15 @@ type Config struct {
 //
 //	env ARTEX_OOB_SERVER_URL / ARTEX_OOB_TOKEN / ARTEX_OOB_ENABLED
 //	  > config file ("oob" block)
-//	  > built-in default (enabled, https://oast.me)
+//	  > built-in default (disabled, https://oast.me)
 //
-// The default is the public Interactsh service; a self-hosted instance is
-// configured by pointing server_url at it (HTTPS or bare hostname) and,
-// optionally, setting its token.
+// OOB is disabled by default: it sends traffic to a third-party service and
+// must be an explicit operator decision. When enabled without a server_url it
+// uses the public Interactsh service; a self-hosted instance is configured by
+// pointing server_url at it (HTTPS or bare hostname) and, optionally, setting
+// its token.
 func OOBSettings() (enabled bool, serverURL, token string) {
-	enabled, serverURL = true, "https://oast.me"
+	enabled, serverURL = false, "https://oast.me"
 	if o := Load().OOB; o != nil {
 		if o.Enabled != nil {
 			enabled = *o.Enabled

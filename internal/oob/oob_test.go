@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -21,14 +22,36 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
-	if !cfg.Enabled {
-		t.Fatal("默认应启用 OOB")
+	if cfg.Enabled {
+		t.Fatal("OOB 必须默认关闭：这是外部服务流量")
 	}
 	if cfg.ServerURL != DefaultServerURL {
 		t.Fatalf("默认服务应为 %s, got %q", DefaultServerURL, cfg.ServerURL)
 	}
 	if cfg.Token != "" {
 		t.Fatal("默认公共服务无需 token")
+	}
+}
+
+func TestPollRejectsUndecodablePayload(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/register":
+			_ = json.NewEncoder(w).Encode(map[string]string{"message": "registration successful"})
+		case "/poll":
+			_ = json.NewEncoder(w).Encode(pollResponse{Data: []string{"garbage"}, AESKey: "not-a-key"})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	s, err := newTestSession(t, srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = s.poll(func(Interaction) {})
+	if !errors.Is(err, errPayloadUndecodable) {
+		t.Fatalf("undecodable payload must be reported, got %v", err)
 	}
 }
 
@@ -164,7 +187,7 @@ func newTestSession(t *testing.T, serverURL string) (*Session, error) {
 		secretKey:     newUUID(),
 		health:        &healthState{},
 		quit:          make(chan struct{}),
-		http:          newHTTPClient(),
+		http:          newHTTPClient(Config{}),
 	}
 	if err := s.register(); err != nil {
 		return nil, err
@@ -227,7 +250,7 @@ func TestSessionUnreachableServer(t *testing.T) {
 }
 
 func TestHTTPClientHasBoundedIdleTimeout(t *testing.T) {
-	s := &Session{http: newHTTPClient()}
+	s := &Session{http: newHTTPClient(Config{})}
 	tr, ok := s.http.Transport.(*http.Transport)
 	if !ok {
 		t.Fatal("expected a dedicated HTTP transport")

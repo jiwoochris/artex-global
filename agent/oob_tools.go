@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Autumn-27/artex/config"
 	"github.com/Autumn-27/artex/db"
 	actool "github.com/Autumn-27/norma/tool"
 )
@@ -42,6 +43,9 @@ const (
 // oobSeededTools builds the catalog shells (nil session) used only to seed
 // Name/Description/Schema into the tools table; they are never called.
 func (t *ToolSet) oobSeededTools() []actool.CoreTool {
+	if enabled, _, _ := config.OOBSettings(); !enabled {
+		return nil
+	}
 	return []actool.CoreTool{t.oobGenerate(nil), t.oobPoll(nil)}
 }
 
@@ -250,6 +254,8 @@ func (t *ToolSet) recordOOBOutcome(outcome, summary, detail, evidence string) (i
 	if t == nil || t.ts == nil || t.ownerNode <= 0 {
 		return 0, nil
 	}
+	detail = capOOBText(detail)
+	evidence = capOOBText(evidence)
 	payload := map[string]any{
 		"summary":    summary,
 		"detail":     detail,
@@ -273,7 +279,7 @@ func (t *ToolSet) recordOOBOutcome(outcome, summary, detail, evidence string) (i
 			}
 		}
 	}
-	id, err := t.ts.AddNode(db.KindFact, payload, 5, "confirmed", t.worker, nil)
+	id, err := t.ts.AddNode(db.KindFact, payload, 5, "observed", t.worker, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -282,6 +288,15 @@ func (t *ToolSet) recordOOBOutcome(outcome, summary, detail, evidence string) (i
 	}
 	t.writes.Facts++
 	return id, nil
+}
+
+// capOOBText bounds target-controlled and error text persisted in a fact.
+func capOOBText(s string) string {
+	const max = 2000
+	if len(s) > max {
+		return s[:max] + "…"
+	}
+	return s
 }
 
 func (t *ToolSet) recordOOBUnavailable(err error) error {

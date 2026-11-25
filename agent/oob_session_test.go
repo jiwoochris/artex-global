@@ -40,6 +40,8 @@ func (f *fakePollClient) StartPolling(interval time.Duration, cb func(oob.Intera
 	return nil
 }
 
+func (f *fakePollClient) PollOnce(cb func(oob.Interaction)) error { return nil }
+
 func (f *fakePollClient) Health() (int64, error, time.Time, time.Time) {
 	return 0, nil, time.Time{}, time.Now()
 }
@@ -124,6 +126,18 @@ func TestLiveSessionDeduplicatesRedelivery(t *testing.T) {
 	}
 	if len(its) != 1 {
 		t.Fatalf("同一事件重复投递只应保留一次，got %d", len(its))
+	}
+}
+
+func TestLiveSessionTruncatesRawCallback(t *testing.T) {
+	ls := &liveSession{seen: make(map[string]struct{})}
+	long := strings.Repeat("a", maxRawCallback+100)
+	ls.handle(oob.Interaction{Protocol: "http", FullID: "probe.oast.me", Raw: long})
+	if len(ls.buf) != 1 {
+		t.Fatalf("expected one buffered callback, got %d", len(ls.buf))
+	}
+	if want := maxRawCallback + len("…"); len(ls.buf[0].Raw) != want {
+		t.Fatalf("raw callback must be bounded: got %d want %d", len(ls.buf[0].Raw), want)
 	}
 }
 

@@ -262,6 +262,7 @@ func TestOOBPollDistinguishesNoInteractionFromServiceUnavailable(t *testing.T) {
 // OOB 工具必须入 seed 目录并默认绑 worker——已有数据库重启后才能补绑，
 // 无需手工迁移。
 func TestOOBToolsSeededForWorker(t *testing.T) {
+	t.Setenv("ARTEX_OOB_ENABLED", "1")
 	byKey := map[string]ToolSeed{}
 	for _, s := range BuiltinToolSeeds() {
 		byKey[s.Key] = s

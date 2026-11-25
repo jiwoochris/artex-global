@@ -84,6 +84,7 @@ type liveSession struct {
 	seen   map[string]struct{}
 	closed bool
 	health func() (int64, error, time.Time, time.Time)
+	src    pollSource
 	// serverHost is the callback hostname without port; it lets the probe label
 	// be found even when the target prefixed it (data.<probe>.<server>).
 	serverHost string
@@ -94,6 +95,7 @@ type liveSession struct {
 type pollSource interface {
 	urlClient
 	StartPolling(interval time.Duration, cb func(oob.Interaction)) error
+	PollOnce(cb func(oob.Interaction)) error
 	Health() (int64, error, time.Time, time.Time)
 }
 
@@ -123,29 +125,39 @@ func newLiveSessionFrom(mint urlClient, src pollSource, pollInterval time.Durati
 	if hs, ok := src.(hostSource); ok {
 		ls.serverHost = hs.Host()
 	}
-	err := src.StartPolling(pollInterval, func(in oob.Interaction) {
-		key := interactionKey(in)
-		ls.mu.Lock()
-		if _, dup := ls.seen[key]; dup {
-			ls.mu.Unlock()
-			return
-		}
-		ls.seen[key] = struct{}{}
-		ls.buf = append(ls.buf, OOBInteraction{
-			Protocol:     in.Protocol,
-			UniqueID:     probeIDForInteraction(in.FullID, in.Raw, ls.serverHost),
-			FullID:       in.FullID,
-			Remote:       in.Remote,
-			Raw:          in.Raw,
-			TimestampISO: in.Timestamp.UTC().Format(time.RFC3339),
-		})
-		ls.mu.Unlock()
-	})
+	ls.src = src
+	err := src.StartPolling(pollInterval, ls.handle)
 	if err != nil {
 		return nil, err
 	}
 	ls.health = src.Health
 	return ls, nil
+}
+
+// maxRawCallback bounds target-controlled callback text returned to the model.
+const maxRawCallback = 2048
+
+// handle buffers one callback, deduplicated and with bounded raw text.
+func (ls *liveSession) handle(in oob.Interaction) {
+	key := interactionKey(in)
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	if _, dup := ls.seen[key]; dup {
+		return
+	}
+	ls.seen[key] = struct{}{}
+	raw := in.Raw
+	if len(raw) > maxRawCallback {
+		raw = raw[:maxRawCallback] + "…"
+	}
+	ls.buf = append(ls.buf, OOBInteraction{
+		Protocol:     in.Protocol,
+		UniqueID:     probeIDForInteraction(in.FullID, in.Raw, ls.serverHost),
+		FullID:       in.FullID,
+		Remote:       in.Remote,
+		Raw:          raw,
+		TimestampISO: in.Timestamp.UTC().Format(time.RFC3339),
+	})
 }
 
 // interactionKey identifies one callback event across redeliveries. Timestamp
@@ -214,6 +226,14 @@ func rawInteractionHost(raw string) string {
 func (ls *liveSession) Poll(wait time.Duration) ([]OOBInteraction, error) {
 	deadline := time.Now().Add(wait)
 	start := time.Now()
+	// Complete one real poll inside the requested window even when wait is
+	// shorter than the pump interval; otherwise a 1s wait can never observe
+	// anything and reports observation_incomplete.
+	if ls.src != nil {
+		if err := ls.src.PollOnce(ls.handle); err != nil {
+			return nil, err
+		}
+	}
 	for {
 		ls.mu.Lock()
 		if len(ls.buf) > 0 {
@@ -406,9 +426,15 @@ func OOBSessionFactory(cfg oob.Config) func() (oobSession, func(), error) {
 // OOBFactoryFromOptions builds a worker session factory from the resolved
 // config options. Returns nil when OOB is disabled — the worker then simply
 // has no OOB tools.
-func OOBFactoryFromOptions(enabled bool, serverURL, token string) func() (oobSession, func(), error) {
+func OOBFactoryFromOptions(enabled bool, serverURL, token, proxyURL, caCertFile string) func() (oobSession, func(), error) {
 	if !enabled {
 		return nil
 	}
-	return OOBSessionFactory(oob.Config{Enabled: true, ServerURL: serverURL, Token: token})
+	return OOBSessionFactory(oob.Config{
+		Enabled:    true,
+		ServerURL:  serverURL,
+		Token:      token,
+		ProxyURL:   proxyURL,
+		CACertFile: caCertFile,
+	})
 }

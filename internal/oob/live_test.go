@@ -3,6 +3,7 @@ package oob
 import (
 	"net"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -29,6 +30,10 @@ func TestLiveOastMe(t *testing.T) {
 		}
 		if len(got) > 0 {
 			t.Logf("CALLBACK protocol=%s full=%q remote=%s", got[0].Protocol, got[0].FullID, got[0].Remote)
+			probe := strings.TrimSuffix(host, ".oast.me")
+			if got[0].FullID != probe {
+				t.Fatalf("callback must map to the issued probe: got %q want %q", got[0].FullID, probe)
+			}
 			return
 		}
 		time.Sleep(2 * time.Second)

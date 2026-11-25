@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -39,6 +40,11 @@ const (
 	requestTimeout      = 10 * time.Second
 )
 
+// errPayloadUndecodable means the server returned an HTTP 200 poll whose
+// payload could not be decrypted or decoded. That is a protocol/service fault,
+// not a healthy empty observation window.
+var errPayloadUndecodable = errors.New("oob: callback payload could not be decrypted or decoded")
+
 // zbase32Alphabet is the lowercase alphabet the official client uses for the
 // per-probe nonce. It is DNS-label safe.
 const zbase32Alphabet = "ybndrfg8ejkmcpqxot1uwisza345h769"
@@ -50,12 +56,17 @@ type Config struct {
 	Enabled   bool   `json:"enabled"`
 	ServerURL string `json:"server_url"`
 	Token     string `json:"token"`
+	// ProxyURL routes registration and polling through the worker egress proxy.
+	// Empty means direct (ProxyFromEnvironment).
+	ProxyURL string `json:"proxy_url"`
+	// CACertFile trusts the egress proxy's CA when it terminates TLS.
+	CACertFile string `json:"ca_cert_file"`
 }
 
 // DefaultConfig returns the shipped defaults: enabled against the public
 // Interactsh service at oast.me.
 func DefaultConfig() Config {
-	return Config{Enabled: true, ServerURL: DefaultServerURL}
+	return Config{Enabled: false, ServerURL: DefaultServerURL}
 }
 
 // Validate checks a Config for internal consistency. An enabled config with no
@@ -183,7 +194,7 @@ func NewClient(c Config) (*Session, error) {
 		secretKey:     newUUID(),
 		health:        &healthState{},
 		quit:          make(chan struct{}),
-		http:          newHTTPClient(),
+		http:          newHTTPClient(c),
 	}
 	if err := s.register(); err != nil {
 		return nil, err
@@ -209,12 +220,34 @@ func parseServerURL(raw string) (*url.URL, error) {
 	return u, nil
 }
 
-func newHTTPClient() *http.Client {
+// newHTTPClient builds the session transport. It honours the worker egress
+// proxy and its CA, and never follows redirects: a 3xx must not silently turn
+// an HTTPS callback endpoint into a cleartext one.
+func newHTTPClient(c Config) *http.Client {
+	tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12}
+	if c.CACertFile != "" {
+		if pem, err := os.ReadFile(c.CACertFile); err == nil {
+			if pool := x509.NewCertPool(); pool.AppendCertsFromPEM(pem) {
+				tlsCfg.RootCAs = pool
+			}
+		}
+	}
+	tr := &http.Transport{
+		TLSClientConfig: tlsCfg,
+		IdleConnTimeout: 30 * time.Second,
+	}
+	if c.ProxyURL != "" {
+		if u, err := url.Parse(c.ProxyURL); err == nil {
+			tr.Proxy = http.ProxyURL(u)
+		}
+	} else {
+		tr.Proxy = http.ProxyFromEnvironment
+	}
 	return &http.Client{
-		Timeout: requestTimeout,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS12},
-			IdleConnTimeout: 30 * time.Second,
+		Timeout:   requestTimeout,
+		Transport: tr,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
 		},
 	}
 }
@@ -290,18 +323,35 @@ func (s *Session) StartPolling(interval time.Duration, cb func(Interaction)) err
 	return nil
 }
 
+// PollOnce performs one synchronous poll. It lets a short observation window
+// complete a real request even when it is shorter than the pump interval.
+func (s *Session) PollOnce(cb func(Interaction)) error {
+	if s == nil || s.isClosed() {
+		return errors.New("oob: 会话未初始化")
+	}
+	if err := s.poll(cb); err != nil {
+		s.health.record(err)
+		return err
+	}
+	s.health.recordOK()
+	return nil
+}
+
 func (s *Session) poll(cb func(Interaction)) error {
 	var resp pollResponse
 	if err := s.getJSON("/poll?id="+url.QueryEscape(s.correlationID)+"&secret="+url.QueryEscape(s.secretKey), &resp); err != nil {
 		return err
 	}
+	bad := 0
 	for _, data := range resp.Data {
 		plaintext, err := s.decryptMessage(resp.AESKey, data)
 		if err != nil {
+			bad++
 			continue
 		}
 		var in Interaction
 		if err := json.Unmarshal(bytes.TrimRight(plaintext, " \t\r\n"), &in); err != nil {
+			bad++
 			continue
 		}
 		cb(in)
@@ -312,6 +362,9 @@ func (s *Session) poll(cb func(Interaction)) error {
 			continue
 		}
 		cb(in)
+	}
+	if bad > 0 {
+		return fmt.Errorf("%w: %d of %d", errPayloadUndecodable, bad, len(resp.Data))
 	}
 	return nil
 }

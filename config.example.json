@@ -21,9 +21,9 @@
   "_comment_skill_dir": "스킬 루트 디렉터리입니다(하위 디렉터리 하나가 스킬 하나이며, SKILL.md 를 포함합니다). 우선순위: 환경 변수 ARTEX_SKILL_DIR > 이 필드 > 기본값(실행 파일과 같은 위치의 skills/). 비워 두거나 이 필드를 지우면 기본값을 씁니다. 상대 경로는 현재 작업 디렉터리를 기준으로 해석됩니다.",
   "skill_dir": "/opt/artex/skills",
 
-  "_comment_oob": "OOB(대역 외) 검증(Interactsh) 설정입니다. 이 블록이 없으면 기본값(활성화, 공개 oast.me)을 씁니다. 자체 서버는 server_url 에 HTTPS 주소(또는 호스트명)를, 필요하면 token 을 쓰십시오. 우선순위: 환경 변수 ARTEX_OOB_SERVER_URL / ARTEX_OOB_TOKEN / ARTEX_OOB_ENABLED > 이 블록 > 기본값. 명시적으로 끄려면 enabled 를 false 로 두십시오.",
+  "_comment_oob": "OOB(대역 외) 검증(Interactsh) 설정입니다. 기본값은 비활성화입니다(외부 서비스로의 트래픽이므로 명시적으로 켜야 합니다). 활성화하면 기본 서버는 공개 oast.me 이고, 자체 서버는 server_url 에 HTTPS 주소(또는 호스트명)를, 필요하면 token 을 쓰십시오. 우선순위: 환경 변수 ARTEX_OOB_SERVER_URL / ARTEX_OOB_TOKEN / ARTEX_OOB_ENABLED > 이 블록 > 기본값.",
   "oob": {
-    "enabled": true,
+    "enabled": false,
     "server_url": "https://oast.me"
   },
 
