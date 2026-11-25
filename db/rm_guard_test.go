@@ -17,6 +17,9 @@ func TestRMGuardPatterns(t *testing.T) {
 		"rm -rf /*",
 		"rm -rf /app/data",
 		"rm -rf /app/data/*",
+		"rm -rf /app/data&&true",
+		"rm -rf /etc; true",
+		`rm -rf "/tmp/first" /etc`,
 		"rm -rf data",
 		"rm -rf ./data",
 		"rm --recursive /etc",
@@ -30,6 +33,8 @@ func TestRMGuardPatterns(t *testing.T) {
 		`rm -rf "/etc"`,
 		"rm -rf /*",
 		"rm -rf /app/data/*",
+		`rm -rf "/tmp/first" /etc`,
+		"rm -rf /etc; true",
 		"rm -rf data",
 	}
 	for _, cmd := range criticalBlocked {

@@ -395,13 +395,21 @@ func dataRootAlternatives() string {
 	return strings.Join(alts, "|")
 }
 
+// rmBoundary is the set of characters that end a shell operand: quoting,
+// whitespace, globs, and shell control operators. A guard must accept all of
+// them, otherwise rm -rf /etc; true or rm -rf /app/data&&true slips through.
+const rmBoundary = `["'\s*?;&|()<>$\x60]`
+
 // rmGuardPatterns returns the narrowed recursive-delete and critical-path
 // patterns. They protect system roots, the data roots and root globs while
-// allowing cleanup below /app/data/tasks/<id>.
+// allowing cleanup below /app/data/tasks/<id>. The gap between rm and the
+// protected path may contain earlier operands (including quoted ones) but not
+// a shell operator, so rm -rf "/tmp/first" /etc is caught while
+// rm -rf /tmp; echo /etc is not.
 func rmGuardPatterns() (recursive, critical string) {
 	dataAlts := dataRootAlternatives()
-	recursive = `(?i)\brm\b.{0,80}(?:-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*|--recursive|--no-preserve-root)\s+["']?(?:/(?:etc|bin|usr|boot|var|lib|sys|proc|dev|sbin|root)(?:/|["'\s*?]|$)|(?:` + dataAlts + `)/?(?:["'\s*?]|$)|/(?:["'\s*?]|$))`
-	critical = `\brm\b[^"'\n]{0,60}["'\s](/(?:etc|bin|usr|boot|var|lib|sys|proc|dev|sbin|root)(?:/|["'\s*?]|$)|(?:` + dataAlts + `)/?(?:["'\s*?]|$)|/(?:["'\s*?]|$))`
+	recursive = `(?i)\brm\b.{0,80}(?:-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*|--recursive|--no-preserve-root)[^;\n&|]{0,200}?["'\s]["']?(?:/(?:etc|bin|usr|boot|var|lib|sys|proc|dev|sbin|root)(?:/|` + rmBoundary + `|$)|(?:` + dataAlts + `)/?(?:` + rmBoundary + `|$)|/(?:` + rmBoundary + `|$))`
+	critical = `\brm\b[^;\n&|]{0,200}?["'\s]["']?(?:/(?:etc|bin|usr|boot|var|lib|sys|proc|dev|sbin|root)(?:/|` + rmBoundary + `|$)|(?:` + dataAlts + `)/?(?:` + rmBoundary + `|$)|/(?:` + rmBoundary + `|$))`
 	return recursive, critical
 }
 
