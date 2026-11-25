@@ -116,7 +116,7 @@ func (t *ToolSet) oobPoll(s oobSession) actool.CoreTool {
 			observationFailed := func(err error) (actool.Result, error) {
 				outcome := "service_unavailable"
 				summary := "OOB 服务不可用，本轮未证明目标无漏洞"
-				if errors.Is(err, errNoCompletedPoll) || errors.Is(err, errSessionClosed) {
+				if errors.Is(err, errNoCompletedPoll) || errors.Is(err, errSessionClosed) || errors.Is(err, errStaleProbe) {
 					outcome = "observation_incomplete"
 					summary = "OOB 观察窗口未完成，不能判断是否有回调"
 				}
@@ -128,6 +128,8 @@ func (t *ToolSet) oobPoll(s oobSession) actool.CoreTool {
 				switch {
 				case errors.Is(err, errSessionClosed):
 					out["hint"] = "本次 OOB 会话已关闭（run 结束或重启失效），观察窗口未完成；继续验证请用 oob_generate 重新分配回调地址。"
+				case errors.Is(err, errStaleProbe):
+					out["hint"] = "probe_id не выдан в текущей сессии (например, пришёл из восстановленной истории воркера). Выполните oob_generate заново и используйте новый адрес."
 				case outcome == "service_unavailable":
 					out["hint"] = "OOB 服务当前不可用，不影响其他验证；如需稳定带外验证可在 config.json 的 oob 块配置自建 Interactsh 服务（server_url + token），或稍后重试。"
 				case outcome == "observation_incomplete":
@@ -137,6 +139,14 @@ func (t *ToolSet) oobPoll(s oobSession) actool.CoreTool {
 					out["fact_id"] = id
 				}
 				return jsonResult(out)
+			}
+
+			// A probe ID from a resumed transcript belongs to an earlier
+			// session; this run cannot observe it.
+			if a.ProbeID != "" {
+				if ts, ok := s.(*trackedSession); ok && !ts.knows(a.ProbeID) {
+					return observationFailed(errStaleProbe)
+				}
 			}
 
 			// Retained callbacks answer first: another probe's callback must not
@@ -158,11 +168,18 @@ func (t *ToolSet) oobPoll(s oobSession) actool.CoreTool {
 				// holding another probe's callback says nothing about this probe
 				// and must not be recorded as a healthy empty window.
 				deadline := time.Now().Add(wait)
+				healthy := false
 				for {
 					polled, err := s.Poll(time.Until(deadline))
 					if err != nil {
+						// A successful poll already completed during this
+						// observation; a later quiet tick must not erase it.
+						if errors.Is(err, errNoCompletedPoll) && healthy && !time.Now().Before(deadline) {
+							break
+						}
 						return observationFailed(err)
 					}
+					healthy = true
 					pending = append(pending, polled...)
 					remaining := make([]OOBInteraction, 0, len(pending))
 					for _, interaction := range pending {
@@ -222,7 +239,8 @@ func oobToolsForRun(t *ToolSet, s oobSession) []actool.CoreTool {
 	if s == nil || t == nil {
 		return nil
 	}
-	return []actool.CoreTool{t.oobGenerate(s), t.oobPoll(s)}
+	tracked := &trackedSession{inner: s, issued: make(map[string]struct{})}
+	return []actool.CoreTool{t.oobGenerate(tracked), t.oobPoll(tracked)}
 }
 
 // recordOOBOutcome persists one handler-owned route fact while retaining the

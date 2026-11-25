@@ -239,7 +239,40 @@ func (ls *liveSession) Poll(wait time.Duration) ([]OOBInteraction, error) {
 var (
 	errNoCompletedPoll = errors.New("oob: 观察窗口内没有完成一次轮询，无法判断是否有交互")
 	errSessionClosed   = errors.New("oob: 会话已关闭，观察窗口未完成")
+	errStaleProbe      = errors.New("oob: probe_id не выдан в текущей сессии")
 )
+
+// trackedSession records the probe IDs issued in the current run. A resumed
+// worker transcript may carry a probe ID from an earlier session; polling it
+// against a new correlation ID would record a false healthy absence.
+type trackedSession struct {
+	inner  oobSession
+	mu     sync.Mutex
+	issued map[string]struct{}
+}
+
+func (t *trackedSession) Generate() (string, string, error) {
+	id, host, err := t.inner.Generate()
+	if err == nil {
+		t.mu.Lock()
+		t.issued[id] = struct{}{}
+		t.mu.Unlock()
+	}
+	return id, host, err
+}
+
+func (t *trackedSession) Poll(wait time.Duration) ([]OOBInteraction, error) {
+	return t.inner.Poll(wait)
+}
+
+func (t *trackedSession) Close() error { return t.inner.Close() }
+
+func (t *trackedSession) knows(id string) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	_, ok := t.issued[id]
+	return ok
+}
 
 func (ls *liveSession) pollWindowHealth(since time.Time) error {
 	if ls.health == nil {

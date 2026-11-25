@@ -214,6 +214,7 @@ func newHTTPClient() *http.Client {
 		Timeout: requestTimeout,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS12},
+			IdleConnTimeout: 30 * time.Second,
 		},
 	}
 }
@@ -390,6 +391,7 @@ func (s *Session) Close() error {
 	var out registerResponse
 	// deregistration is best-effort: the server expires the session anyway
 	_ = s.postJSON("/deregister", body, &out)
+	s.http.CloseIdleConnections()
 	return nil
 }
 

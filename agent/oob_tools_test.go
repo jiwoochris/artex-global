@@ -175,6 +175,32 @@ func TestOOBPollIncompleteObservationIsNotNoInteraction(t *testing.T) {
 	}
 }
 
+// A probe ID from a resumed transcript belongs to an earlier session. Polling
+// it against the current session must not record a healthy absence.
+func TestOOBPollRejectsStaleProbeID(t *testing.T) {
+	fs := &fakeSession{url: "xxxx.oast.me"}
+	tracked := &trackedSession{inner: fs, issued: make(map[string]struct{})}
+	gen := (&ToolSet{}).oobGenerate(tracked)
+	res, err := gen.Call(context.Background(), json.RawMessage(`{}`), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	probes := decode(t, res.Flatten())["probes"].([]any)
+	issued := probes[0].(map[string]any)["probe_id"].(string)
+	if !tracked.knows(issued) {
+		t.Fatal("generate must record the issued probe")
+	}
+	poll := (&ToolSet{}).oobPoll(tracked)
+	res, err = poll.Call(context.Background(), json.RawMessage(`{"probe_id":"stale-from-transcript"}`), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := decode(t, res.Flatten())
+	if out["status"] != "observation_incomplete" {
+		t.Fatalf("stale probe must be observation_incomplete, got %v", out["status"])
+	}
+}
+
 func TestOOBPollDistinguishesNoInteractionFromServiceUnavailable(t *testing.T) {
 	d := testDB(t)
 	t.Cleanup(func() { d.Close() })

@@ -225,3 +225,14 @@ func TestSessionUnreachableServer(t *testing.T) {
 		t.Fatal("连接不可达服务应明确失败")
 	}
 }
+
+func TestHTTPClientHasBoundedIdleTimeout(t *testing.T) {
+	s := &Session{http: newHTTPClient()}
+	tr, ok := s.http.Transport.(*http.Transport)
+	if !ok {
+		t.Fatal("expected a dedicated HTTP transport")
+	}
+	if tr.IdleConnTimeout <= 0 {
+		t.Fatalf("idle connections must have a bounded lifetime, got %v", tr.IdleConnTimeout)
+	}
+}
