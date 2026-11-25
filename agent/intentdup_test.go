@@ -66,6 +66,41 @@ func TestDuplicateOpenIntentAllowsDisjointTargets(t *testing.T) {
 	}
 }
 
+// Two different checks on one host must stay distinct: the shared URL and the
+// generic verb are context, not direction.
+func TestDuplicateOpenIntentIgnoresSharedTargetContext(t *testing.T) {
+	queued := intentNode(1, "open",
+		"Test SQL injection on https://app.example.com", 7)
+	other := "Test reflected XSS on https://app.example.com"
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, other, []int64{7}); dup {
+		t.Fatal("different attack vectors on one host must not collapse")
+	}
+}
+
+// Expanding the same check to a new target is new work: the queued intent does
+// not cover the extra host, so the whole request must not be rejected.
+func TestDuplicateOpenIntentRequiresCompleteTargetCoverage(t *testing.T) {
+	queued := intentNode(1, "open",
+		"Verify authentication bypass on https://alpha.example.com", 101)
+	expanded := "Verify authentication bypass on https://alpha.example.com and https://bravo.example.com"
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, expanded, []int64{101, 202}); dup {
+		t.Fatal("an expanded target set must not be treated as a duplicate")
+	}
+}
+
+// Legacy intents stored target_ids/target_id; the guard must read them too.
+func TestDuplicateOpenIntentReadsLegacyTargetKeys(t *testing.T) {
+	payload, _ := json.Marshal(map[string]any{
+		"summary":    "Verify authentication bypass on https://alpha.example.com",
+		"target_ids": []int64{101},
+	})
+	queued := &db.Node{ID: 1, Kind: db.KindIntent, State: "open", Payload: payload}
+	other := "Verify authentication bypass on https://bravo.example.com"
+	if _, _, dup := duplicateOpenIntent([]*db.Node{queued}, other, []int64{202}); dup {
+		t.Fatal("legacy target_ids must participate in the coverage check")
+	}
+}
+
 // Short attack-vector tokens are the direction; dropping them would collapse
 // "Test DOM XSS" and "Test RPC RCE" into the same token set.
 func TestDuplicateOpenIntentKeepsShortVectorTokens(t *testing.T) {

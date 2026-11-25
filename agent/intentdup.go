@@ -30,6 +30,10 @@ const (
 
 var intentNonWord = regexp.MustCompile(`[^\p{L}\p{N}]+`)
 
+// intentURL matches a target address. It is context, not direction: the same
+// host appears in every check against it and would inflate similarity.
+var intentURL = regexp.MustCompile(`https?://\S+`)
+
 // intentStopwords are short function words that carry no direction. Short
 // domain tokens (xss, rce, sqli, ssrf, lfi, xxe) are kept on purpose: dropping
 // every token of three runes or fewer collapses "Test DOM XSS" and "Test RPC
@@ -39,6 +43,11 @@ var intentStopwords = map[string]struct{}{
 	"at": {}, "for": {}, "and": {}, "or": {}, "vs": {}, "by": {}, "with": {},
 	"from": {}, "as": {}, "is": {}, "are": {}, "be": {}, "do": {}, "no": {},
 	"not": {}, "into": {}, "via": {},
+	// Generic verbs carry no direction: two different checks on one host
+	// otherwise share them and look like the same direction.
+	"test": {}, "check": {}, "verify": {}, "probe": {}, "scan": {},
+	"проверить": {}, "проверка": {}, "проверки": {}, "проверять": {},
+	"исследование": {}, "исследовать": {}, "выполнить": {},
 	// Russian function words: short enough to survive the length cutoff but
 	// carrying no direction.
 	"а": {}, "без": {}, "более": {}, "бы": {}, "в": {}, "во": {}, "вот": {},
@@ -55,6 +64,7 @@ var intentStopwords = map[string]struct{}{
 
 func intentTokens(s string) map[string]struct{} {
 	toks := map[string]struct{}{}
+	s = intentURL.ReplaceAllString(s, " ")
 	for _, w := range intentNonWord.Split(strings.ToLower(s), -1) {
 		if len([]rune(w)) < 2 {
 			continue
@@ -88,16 +98,24 @@ func intentSummaryAndAnchors(n *db.Node) (string, []int64) {
 		return "", nil
 	}
 	var p struct {
-		Summary  string  `json:"summary"`
-		AssetIDs []int64 `json:"asset_ids"`
+		Summary   string  `json:"summary"`
+		AssetIDs  []int64 `json:"asset_ids"`
+		TargetIDs []int64 `json:"target_ids"`
+		TargetID  *int64  `json:"target_id"`
 	}
 	if err := json.Unmarshal(n.Payload, &p); err != nil {
 		return "", nil
 	}
-	if len(p.AssetIDs) == 0 {
+	anchors := make([]int64, 0, len(p.AssetIDs)+len(p.TargetIDs)+1)
+	anchors = append(anchors, p.AssetIDs...)
+	anchors = append(anchors, p.TargetIDs...)
+	if p.TargetID != nil {
+		anchors = append(anchors, *p.TargetID)
+	}
+	if len(anchors) == 0 {
 		return p.Summary, n.Anchors
 	}
-	return p.Summary, p.AssetIDs
+	return p.Summary, anchors
 }
 
 // duplicateOpenIntent returns the queued intent the new summary duplicates.
@@ -121,31 +139,35 @@ func duplicateOpenIntent(nodes []*db.Node, summary string, anchors []int64) (int
 		if existing == "" {
 			continue
 		}
-		// Both intents target known assets: disjoint target sets are never the
-		// same queued direction, however similar the wording. Overlapping target
-		// sets keep the lower anchored threshold below.
-		if len(newAnchors) > 0 && len(exAnchors) > 0 && !anchorsOverlap(newAnchors, exAnchors) {
+		// Both intents target known assets: the new direction is a duplicate
+		// only when the queued intent already covers every target. Disjoint or
+		// expanded target sets are new work, however similar the wording.
+		bothAnchored := len(newAnchors) > 0 && len(exAnchors) > 0
+		if bothAnchored && !anchorsCovered(exAnchors, newAnchors) {
 			continue
 		}
 		sim := jaccard(ns, intentTokens(existing))
 		if sim >= dupSimilarityFloor {
 			return n.ID, existing, true
 		}
-		if len(newAnchors) == 0 {
-			continue
-		}
-		if anchorsOverlap(newAnchors, exAnchors) && sim >= dupAnchoredSimilarityFloor {
+		if bothAnchored && sim >= dupAnchoredSimilarityFloor {
 			return n.ID, existing, true
 		}
 	}
 	return 0, "", false
 }
 
-func anchorsOverlap(set map[int64]struct{}, b []int64) bool {
-	for _, v := range b {
-		if _, ok := set[v]; ok {
-			return true
+// anchorsCovered reports whether every target of the new intent is already
+// covered by the queued intent.
+func anchorsCovered(existing []int64, newSet map[int64]struct{}) bool {
+	covered := make(map[int64]struct{}, len(existing))
+	for _, v := range existing {
+		covered[v] = struct{}{}
+	}
+	for v := range newSet {
+		if _, ok := covered[v]; !ok {
+			return false
 		}
 	}
-	return false
+	return true
 }
