@@ -17,6 +17,7 @@ type InterceptRule struct {
 	MatchTarget    string    `json:"match_target"`
 	MatchType      string    `json:"match_type"`
 	Pattern        string    `json:"pattern"`
+	ToolNames      []string  `json:"tool_names"`
 	Action         string    `json:"action"`
 	Message        string    `json:"message"`
 	TimeoutEnabled bool      `json:"timeout_enabled"`
@@ -42,15 +43,33 @@ type InterceptPending struct {
 	CreatedAt      time.Time       `json:"created_at"`
 }
 
-const interceptRuleCols = `id, name, enabled, priority, match_target, match_type, pattern, action, message, timeout_enabled, timeout_seconds, timeout_action, created_at, updated_at`
+const interceptRuleCols = `id, name, enabled, priority, match_target, match_type, pattern, COALESCE(tool_names,'[]'::jsonb), action, message, timeout_enabled, timeout_seconds, timeout_action, created_at, updated_at`
 
 func scanInterceptRule(row interface{ Scan(...any) error }) (InterceptRule, error) {
 	var r InterceptRule
+	var toolNamesJSON []byte
 	err := row.Scan(&r.ID, &r.Name, &r.Enabled, &r.Priority,
-		&r.MatchTarget, &r.MatchType, &r.Pattern, &r.Action, &r.Message,
+		&r.MatchTarget, &r.MatchType, &r.Pattern, &toolNamesJSON, &r.Action, &r.Message,
 		&r.TimeoutEnabled, &r.TimeoutSeconds, &r.TimeoutAction,
 		&r.CreatedAt, &r.UpdatedAt)
+	if err == nil && len(toolNamesJSON) > 0 {
+		if unmarshalErr := json.Unmarshal(toolNamesJSON, &r.ToolNames); unmarshalErr != nil {
+			return r, fmt.Errorf("intercept rule %d: invalid tool_names: %w", r.ID, unmarshalErr)
+		}
+	}
 	return r, err
+}
+
+// GetInterceptRule returns one rule (nil if absent).
+func (d *DB) GetInterceptRule(id int64) (*InterceptRule, error) {
+	r, err := scanInterceptRule(d.QueryRow(`SELECT `+interceptRuleCols+` FROM intercept_rules WHERE id=$1`, id))
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
 }
 
 // ListInterceptRules returns all rules ordered by priority DESC then id.
@@ -72,25 +91,46 @@ func (d *DB) ListInterceptRules() ([]InterceptRule, error) {
 }
 
 // CreateInterceptRule inserts a new rule.
-func (d *DB) CreateInterceptRule(name, matchTarget, matchType, pattern, action, message string, priority int, enabled bool, timeoutEnabled bool, timeoutSeconds int, timeoutAction string) (InterceptRule, error) {
+// normalizeToolNames trims, deduplicates and drops empty entries. A nil list
+// becomes an empty JSON array so "all tools" is stored deterministically.
+func normalizeToolNames(names []string) []string {
+	out := make([]string, 0, len(names))
+	seen := make(map[string]struct{}, len(names))
+	for _, n := range names {
+		n = strings.TrimSpace(n)
+		if n == "" {
+			continue
+		}
+		if _, dup := seen[n]; dup {
+			continue
+		}
+		seen[n] = struct{}{}
+		out = append(out, n)
+	}
+	return out
+}
+
+func (d *DB) CreateInterceptRule(name, matchTarget, matchType, pattern, action, message string, priority int, enabled bool, timeoutEnabled bool, timeoutSeconds int, timeoutAction string, toolNames []string) (InterceptRule, error) {
+	toolNamesJSON, _ := json.Marshal(normalizeToolNames(toolNames))
 	row := d.QueryRow(`
-INSERT INTO intercept_rules(name, enabled, priority, match_target, match_type, pattern, action, message, timeout_enabled, timeout_seconds, timeout_action)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+INSERT INTO intercept_rules(name, enabled, priority, match_target, match_type, pattern, tool_names, action, message, timeout_enabled, timeout_seconds, timeout_action)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING `+interceptRuleCols,
-		name, enabled, priority, matchTarget, matchType, pattern, action, message, timeoutEnabled, timeoutSeconds, timeoutAction)
+		name, enabled, priority, matchTarget, matchType, pattern, toolNamesJSON, action, message, timeoutEnabled, timeoutSeconds, timeoutAction)
 	return scanInterceptRule(row)
 }
 
 // UpdateInterceptRule replaces all editable fields of an existing rule.
-func (d *DB) UpdateInterceptRule(id int64, name, matchTarget, matchType, pattern, action, message string, priority int, enabled bool, timeoutEnabled bool, timeoutSeconds int, timeoutAction string) (InterceptRule, error) {
+func (d *DB) UpdateInterceptRule(id int64, name, matchTarget, matchType, pattern, action, message string, priority int, enabled bool, timeoutEnabled bool, timeoutSeconds int, timeoutAction string, toolNames []string) (InterceptRule, error) {
+	toolNamesJSON, _ := json.Marshal(normalizeToolNames(toolNames))
 	row := d.QueryRow(`
 UPDATE intercept_rules
    SET name=$2, enabled=$3, priority=$4, match_target=$5,
-       match_type=$6, pattern=$7, action=$8, message=$9,
-       timeout_enabled=$10, timeout_seconds=$11, timeout_action=$12
+       match_type=$6, pattern=$7, tool_names=$8, action=$9, message=$10,
+       timeout_enabled=$11, timeout_seconds=$12, timeout_action=$13
 WHERE id=$1
 RETURNING `+interceptRuleCols,
-		id, name, enabled, priority, matchTarget, matchType, pattern, action, message, timeoutEnabled, timeoutSeconds, timeoutAction)
+		id, name, enabled, priority, matchTarget, matchType, pattern, toolNamesJSON, action, message, timeoutEnabled, timeoutSeconds, timeoutAction)
 	return scanInterceptRule(row)
 }
 

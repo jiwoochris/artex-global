@@ -62,3 +62,62 @@ func TestMatchNoMatchWhenNoRulesConfigured(t *testing.T) {
 		t.Fatalf("an empty, successfully-loaded rule set must not match anything, got %+v", dec)
 	}
 }
+
+func TestRuleMatchesToolScope(t *testing.T) {
+	r := compiledRule{InterceptRule: db.InterceptRule{
+		MatchTarget: "tool_input",
+		MatchType:   "string",
+		Pattern:     "reboot",
+		ToolNames:   []string{"Bash"},
+	}}
+	if ruleMatches(r, "Write", []byte(`{"content":"reboot"}`)) {
+		t.Fatal("file content must not be matched by a Bash-scoped rule")
+	}
+	if !ruleMatches(r, "Bash", []byte(`{"command":"reboot"}`)) {
+		t.Fatal("Bash command must still match")
+	}
+	r.ToolNames = nil
+	if !ruleMatches(r, "Write", []byte(`{"content":"reboot"}`)) {
+		t.Fatal("empty tool scope must preserve legacy all-tools behavior")
+	}
+}
+
+// A rule saved with an alias spelling (["bash"]) must still match because the
+// incoming tool name is canonicalized.
+func TestRuleMatchesCanonicalizesRuleToolNames(t *testing.T) {
+	old := ToolNameCanonicalizer
+	ToolNameCanonicalizer = func(n string) string {
+		switch strings.ToLower(n) {
+		case "bash":
+			return "Bash"
+		case "webfetch", "web_fetch":
+			return "WebFetch"
+		}
+		return n
+	}
+	defer func() { ToolNameCanonicalizer = old }()
+
+	r := compiledRule{InterceptRule: db.InterceptRule{
+		MatchTarget: "tool_input",
+		MatchType:   "string",
+		Pattern:     "reboot",
+		ToolNames:   []string{"bash"},
+	}}
+	if !ruleMatches(r, "Bash", []byte(`{"command":"reboot"}`)) {
+		t.Fatal("a saved bash alias must match the canonical Bash tool")
+	}
+}
+
+func TestNormalizeCommandExpandsIFS(t *testing.T) {
+	for in, want := range map[string]string{
+		"rm -rf$IFS/etc":             "rm -rf /etc",
+		"rm${IFS}-rf${IFS}/app/data": "rm -rf /app/data",
+		"rm -rf${IFS%?}/etc":         "rm -rf /etc",
+		"rm -rf '/etc'":              "rm -rf /etc",
+		"r''m -rf /etc":              "rm -rf /etc",
+	} {
+		if got := normalizeCommand(in); got != want {
+			t.Errorf("normalizeCommand(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

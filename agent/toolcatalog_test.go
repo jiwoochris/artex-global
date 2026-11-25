@@ -82,3 +82,20 @@ func TestDecorateToolInjectsDefaults(t *testing.T) {
 		t.Errorf("limit = %v, want 9 (no override)", seen["limit"])
 	}
 }
+
+func TestCanonicalToolName(t *testing.T) {
+	cases := map[string]string{
+		"bash":               "Bash",
+		"BASH":               "Bash",
+		"webfetch":           "WebFetch",
+		"web_fetch":          "WebFetch",
+		"executeextratool":   "ExecuteExtraTool",
+		"execute_extra_tool": "ExecuteExtraTool",
+		"mcp__zap__request":  "mcp__zap__request",
+	}
+	for in, want := range cases {
+		if got := canonicalToolName(in); got != want {
+			t.Errorf("canonicalToolName(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

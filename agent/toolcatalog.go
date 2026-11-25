@@ -4,9 +4,54 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
+	"sync"
 
+	"github.com/Autumn-27/artex/intercept"
 	actool "github.com/Autumn-27/norma/tool"
 )
+
+// The intercept layer must see the canonical tool name even when the model
+// calls an alias (bash, BASH, web_fetch, …). The map is built from the built-in
+// catalog and installed into the intercept package once.
+var (
+	canonicalOnce sync.Once
+	canonicalMap  map[string]string
+)
+
+func normalizeToolName(s string) string {
+	return strings.ToLower(strings.ReplaceAll(s, "_", ""))
+}
+
+func canonicalToolName(name string) string {
+	canonicalOnce.Do(func() {
+		canonicalMap = map[string]string{}
+		// SDK default tools and the execution meta-tools are not part of
+		// BuiltinToolSeeds, but aliases for them must resolve too.
+		for _, name := range []string{
+			"Bash", "WebFetch", "web_search", "shell_open", "shell_send",
+			"Write", "Edit", "MultiEdit", "Read", "LS", "Glob", "Grep",
+			"ExecuteExtraTool", "SearchExtraTools", "Skill", "TodoWrite",
+			"oob_generate", "oob_poll",
+		} {
+			canonicalMap[normalizeToolName(name)] = name
+			for _, alias := range toolAliasNames(name) {
+				canonicalMap[normalizeToolName(alias)] = name
+			}
+		}
+		for _, seed := range BuiltinToolSeeds() {
+			canonicalMap[normalizeToolName(seed.Key)] = seed.Key
+			for _, alias := range toolAliasNames(seed.Key) {
+				canonicalMap[normalizeToolName(alias)] = seed.Key
+			}
+		}
+	})
+	if v, ok := canonicalMap[normalizeToolName(name)]; ok {
+		return v
+	}
+	return name
+}
+
+func init() { intercept.ToolNameCanonicalizer = canonicalToolName }
 
 // 本文件把「内置工具」从纯代码变成可枚举、可被 DB 覆盖的目录：
 //   - BuiltinToolSeeds()：把三个执行 agent 的内置工具集展开成 seed 记录（key +

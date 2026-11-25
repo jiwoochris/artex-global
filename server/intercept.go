@@ -134,7 +134,11 @@ func (s *Server) interceptCreateRule(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err.Error())
 		return
 	}
-	rule, err := pg.CreateInterceptRule(req.Name, req.MatchTarget, req.MatchType, req.Pattern, req.Action, req.Message, req.Priority, req.Enabled, req.TimeoutEnabled, req.TimeoutSeconds, req.TimeoutAction)
+	toolNames := []string{}
+	if req.ToolNames != nil {
+		toolNames = *req.ToolNames
+	}
+	rule, err := pg.CreateInterceptRule(req.Name, req.MatchTarget, req.MatchType, req.Pattern, req.Action, req.Message, req.Priority, req.Enabled, req.TimeoutEnabled, req.TimeoutSeconds, req.TimeoutAction, toolNames)
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -162,7 +166,21 @@ func (s *Server) interceptUpdateRule(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, err.Error())
 		return
 	}
-	rule, err := pg.UpdateInterceptRule(id, req.Name, req.MatchTarget, req.MatchType, req.Pattern, req.Action, req.Message, req.Priority, req.Enabled, req.TimeoutEnabled, req.TimeoutSeconds, req.TimeoutAction)
+	toolNames := []string{}
+	if req.ToolNames != nil {
+		toolNames = *req.ToolNames
+	} else {
+		existing, getErr := pg.GetInterceptRule(id)
+		if getErr != nil {
+			writeErr(w, 500, getErr.Error())
+			return
+		}
+		// Preserve tool scoping when an older UI edits a rule without the field.
+		if existing != nil {
+			toolNames = existing.ToolNames
+		}
+	}
+	rule, err := pg.UpdateInterceptRule(id, req.Name, req.MatchTarget, req.MatchType, req.Pattern, req.Action, req.Message, req.Priority, req.Enabled, req.TimeoutEnabled, req.TimeoutSeconds, req.TimeoutAction, toolNames)
 	if err != nil {
 		writeErr(w, 500, err.Error())
 		return
@@ -474,17 +492,18 @@ func (s *Server) interceptJudgeUsage(w http.ResponseWriter, r *http.Request) {
 // --- helpers ---
 
 type interceptRuleReq struct {
-	Name           string `json:"name"`
-	Enabled        bool   `json:"enabled"`
-	Priority       int    `json:"priority"`
-	MatchTarget    string `json:"match_target"`
-	MatchType      string `json:"match_type"`
-	Pattern        string `json:"pattern"`
-	Action         string `json:"action"`
-	Message        string `json:"message"`
-	TimeoutEnabled bool   `json:"timeout_enabled"`
-	TimeoutSeconds int    `json:"timeout_seconds"`
-	TimeoutAction  string `json:"timeout_action"`
+	Name           string    `json:"name"`
+	Enabled        bool      `json:"enabled"`
+	Priority       int       `json:"priority"`
+	MatchTarget    string    `json:"match_target"`
+	MatchType      string    `json:"match_type"`
+	Pattern        string    `json:"pattern"`
+	ToolNames      *[]string `json:"tool_names"`
+	Action         string    `json:"action"`
+	Message        string    `json:"message"`
+	TimeoutEnabled bool      `json:"timeout_enabled"`
+	TimeoutSeconds int       `json:"timeout_seconds"`
+	TimeoutAction  string    `json:"timeout_action"`
 }
 
 func validateInterceptRuleReq(req interceptRuleReq) error {

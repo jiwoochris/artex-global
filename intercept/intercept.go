@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -160,6 +161,20 @@ var defaultEnabledTools = []string{
 	"Bash", "WebFetch", "web_search",
 	"shell_open", "shell_send",
 	"Write", "Edit", "MultiEdit",
+	"ExecuteExtraTool", "oob_generate", "oob_poll",
+}
+
+// ToolNameCanonicalizer maps alias spellings (bash, BASH, web_fetch, …) to the
+// canonical tool name. The agent package installs it at init; nil keeps names
+// unchanged.
+var ToolNameCanonicalizer func(string) string
+
+// CanonicalToolName resolves an alias to its canonical tool name.
+func CanonicalToolName(name string) string {
+	if ToolNameCanonicalizer != nil {
+		return ToolNameCanonicalizer(name)
+	}
+	return name
 }
 
 // New creates an Interceptor backed by d. The rule cache is lazy-loaded on
@@ -247,6 +262,10 @@ func (i *Interceptor) rules() ([]compiledRule, error) {
 // (i.e. it should enter the rule-matching path). Uses the same double-check lock
 // pattern as rules().
 func (i *Interceptor) IsToolEnabled(name string) bool {
+	name = CanonicalToolName(name)
+	if strings.HasPrefix(name, "mcp__") {
+		return true
+	}
 	i.mu.RLock()
 	if i.enabledTools != nil {
 		v := i.enabledTools[name]
@@ -529,6 +548,7 @@ func judgeActionLabel(action string) string {
 // nothing in the log to tell the two cases apart. So this fails toward a
 // human instead, the same way BuildReviewInput's context error does below.
 func (i *Interceptor) Match(toolName string, input []byte) (Decision, bool) {
+	toolName = CanonicalToolName(toolName)
 	rules, err := i.rules()
 	if err != nil {
 		return Decision{
@@ -561,6 +581,20 @@ func (i *Interceptor) Match(toolName string, input []byte) (Decision, bool) {
 }
 
 func ruleMatches(r compiledRule, toolName string, input []byte) bool {
+	toolName = CanonicalToolName(toolName)
+	if len(r.ToolNames) > 0 {
+		allowed := false
+		for _, name := range r.ToolNames {
+			canonical := CanonicalToolName(name)
+			if canonical == toolName || (strings.HasPrefix(toolName, "mcp__") && canonical == "ExecuteExtraTool") {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return false
+		}
+	}
 	var subject string
 	switch r.MatchTarget {
 	case "tool_name":
@@ -570,10 +604,82 @@ func ruleMatches(r compiledRule, toolName string, input []byte) bool {
 	default:
 		return false
 	}
-	if r.MatchType == "regex" {
-		return r.re != nil && r.re.MatchString(subject)
+	// Tool input arrives as JSON, so a command such as rm -rf "/etc" is stored
+	// with escaped quotes. Match the raw payload and every decoded string value.
+	subjects := []string{subject}
+	if r.MatchTarget == "tool_input" {
+		for _, s := range jsonStringValues(input) {
+			subjects = append(subjects, s, normalizeCommand(s))
+		}
 	}
-	return strings.Contains(subject, r.Pattern)
+	for _, s := range subjects {
+		if r.MatchType == "regex" {
+			if r.re != nil && r.re.MatchString(s) {
+				return true
+			}
+		} else if strings.Contains(s, r.Pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// jsonStringValues returns every string value in a JSON payload, unescaped.
+// A tool_input rule must see the command the model actually wrote, not its
+// JSON serialization.
+func jsonStringValues(input []byte) []string {
+	if len(input) > 1<<20 {
+		return nil
+	}
+	var v any
+	if err := json.Unmarshal(input, &v); err != nil {
+		return nil
+	}
+	var out []string
+	var walk func(any)
+	walk = func(x any) {
+		switch t := x.(type) {
+		case string:
+			out = append(out, t)
+		case []any:
+			for _, item := range t {
+				walk(item)
+			}
+		case map[string]any:
+			for _, item := range t {
+				walk(item)
+			}
+		}
+	}
+	walk(v)
+	return out
+}
+
+// cmdPathToken matches an absolute or ./ ../-relative path at an operand
+// boundary. It deliberately does not touch URL slashes ("://" is not a
+// boundary), so only command operands are normalised.
+var cmdPathToken = regexp.MustCompile(`(^|[\s"'=])((?:/|\.{1,2}/)[^\s"';|&]*)`)
+
+// shellIFS matches the shell's IFS variable, which expands to whitespace.
+// Without this, "rm -rf$IFS/etc" and "rm${IFS}-rf${IFS}/app/data" reach the
+// shell as the protected commands but fail a text rule that expects a space.
+var shellIFS = regexp.MustCompile(`\$(?:IFS\b|\{IFS[^}]*\})`)
+
+// normalizeCommand removes shell quoting/escaping and canonicalises path
+// operands, so r""m, r\m, /et""c, /app/data/. and /app/data/tasks/58/../..
+// cannot hide a protected operand from a text rule.
+func normalizeCommand(s string) string {
+	s = shellIFS.ReplaceAllString(s, " ")
+	s = strings.ReplaceAll(s, "\"", "")
+	s = strings.ReplaceAll(s, "'", "")
+	s = strings.ReplaceAll(s, "\\", "")
+	return cmdPathToken.ReplaceAllStringFunc(s, func(m string) string {
+		boundary, p := "", m
+		if len(m) > 0 && m[0] != '/' {
+			boundary, p = m[:1], m[1:]
+		}
+		return boundary + path.Clean(p)
+	})
 }
 
 func defaultMessage(action, name string) string {
