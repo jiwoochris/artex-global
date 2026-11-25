@@ -24,14 +24,61 @@ type Database struct {
 	SSLMode  string `json:"sslmode"`
 }
 
+// OOB is the out-of-band verification (Interactsh) block of config.json. An
+// absent block means the built-in default: disabled. When enabled without a
+// server URL it uses the public service at oast.me. Enabled is a pointer so an
+// omitted field keeps the default.
+type OOB struct {
+	Enabled   *bool  `json:"enabled"`
+	ServerURL string `json:"server_url"`
+	Token     string `json:"token"`
+}
+
 // Config is the on-disk config file shape.
 type Config struct {
 	Database Database `json:"database"`
 	SkillDir string   `json:"skill_dir"`
+	OOB      *OOB     `json:"oob"`
 	// Language is the bootstrap/default user-facing output language for the
 	// artex-global ("en"/"ko"/"zh"/"es"/"ja"). Empty → DefaultLanguage. At
 	// runtime a value stored in the settings table (edited in the UI) overrides it.
 	Language string `json:"language"`
+}
+
+// OOBSettings resolves the out-of-band verification settings with precedence:
+//
+//	env ARTEX_OOB_SERVER_URL / ARTEX_OOB_TOKEN / ARTEX_OOB_ENABLED
+//	  > config file ("oob" block)
+//	  > built-in default (disabled, https://oast.me)
+//
+// OOB is disabled by default: it sends traffic to a third-party service and
+// must be an explicit operator decision. When enabled without a server_url it
+// uses the public Interactsh service; a self-hosted instance is configured by
+// pointing server_url at it (HTTPS or bare hostname) and, optionally, setting
+// its token.
+func OOBSettings() (enabled bool, serverURL, token string) {
+	enabled, serverURL = false, "https://oast.me"
+	if o := Load().OOB; o != nil {
+		if o.Enabled != nil {
+			enabled = *o.Enabled
+		}
+		if v := strings.TrimSpace(o.ServerURL); v != "" {
+			serverURL = v
+		}
+		if v := strings.TrimSpace(o.Token); v != "" {
+			token = v
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv("ARTEX_OOB_SERVER_URL")); v != "" {
+		serverURL = v
+	}
+	if v := strings.TrimSpace(os.Getenv("ARTEX_OOB_TOKEN")); v != "" {
+		token = v
+	}
+	if v := strings.ToLower(strings.TrimSpace(os.Getenv("ARTEX_OOB_ENABLED"))); v != "" {
+		enabled = v == "1" || v == "true" || v == "yes" || v == "on"
+	}
+	return enabled, serverURL, token
 }
 
 // SupportedLanguages lists the user-facing output languages artex-global can
