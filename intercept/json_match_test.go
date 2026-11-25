@@ -45,3 +45,70 @@ func TestRuleMatchesStillChecksRawPayload(t *testing.T) {
 		t.Fatal("tool scope must still be enforced")
 	}
 }
+
+func TestNormalizeCommand(t *testing.T) {
+	cases := map[string]string{
+		"rm -rf /app/data/.":              "rm -rf /app/data",
+		"rm -rf /app//data":               "rm -rf /app/data",
+		"rm -rf .//data":                  "rm -rf data",
+		"rm -rf /app/data//":              "rm -rf /app/data",
+		"rm -rf /app/data/tasks/58/../..": "rm -rf /app/data",
+		`r""m -rf /etc`:                   "rm -rf /etc",
+		`r\m -rf /etc`:                    "rm -rf /etc",
+		`rm -rf /et""c`:                   "rm -rf /etc",
+		`rm -rf /app/da""ta`:              "rm -rf /app/data",
+		"curl https://example.com//x":     "curl https://example.com//x",
+	}
+	for in, want := range cases {
+		if got := normalizeCommand(in); got != want {
+			t.Errorf("normalizeCommand(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestRuleMatchesAliasAndMCP(t *testing.T) {
+	prev := ToolNameCanonicalizer
+	ToolNameCanonicalizer = func(n string) string {
+		if n == "bash" {
+			return "Bash"
+		}
+		return n
+	}
+	t.Cleanup(func() { ToolNameCanonicalizer = prev })
+	rule := compiledRule{
+		InterceptRule: db.InterceptRule{
+			MatchTarget: "tool_input",
+			MatchType:   "regex",
+			Pattern:     "reboot",
+			ToolNames:   []string{"Bash"},
+		},
+		re: regexp.MustCompile("reboot"),
+	}
+	if !ruleMatches(rule, "bash", []byte(`{"command":"reboot"}`)) {
+		t.Fatal("alias must resolve to the canonical tool scope")
+	}
+	mcpRule := compiledRule{
+		InterceptRule: db.InterceptRule{
+			MatchTarget: "tool_input",
+			MatchType:   "regex",
+			Pattern:     "/delete",
+			ToolNames:   []string{"ExecuteExtraTool"},
+		},
+		re: regexp.MustCompile("/delete"),
+	}
+	if !ruleMatches(mcpRule, "mcp__zap__request", []byte(`{"url":"/delete"}`)) {
+		t.Fatal("MCP calls must inherit the ExecuteExtraTool scope")
+	}
+}
+
+func TestIsToolEnabledCoversExecutionTools(t *testing.T) {
+	i := &Interceptor{enabledTools: map[string]bool{}}
+	for _, name := range defaultEnabledTools {
+		i.enabledTools[name] = true
+	}
+	for _, name := range []string{"ExecuteExtraTool", "oob_generate", "oob_poll", "mcp__zap__request"} {
+		if !i.IsToolEnabled(name) {
+			t.Errorf("execution tool %q must enter the rule path", name)
+		}
+	}
+}

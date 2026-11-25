@@ -169,9 +169,16 @@ func (s *Server) interceptUpdateRule(w http.ResponseWriter, r *http.Request) {
 	toolNames := []string{}
 	if req.ToolNames != nil {
 		toolNames = *req.ToolNames
-	} else if existing, getErr := pg.GetInterceptRule(id); getErr == nil && existing != nil {
+	} else {
+		existing, getErr := pg.GetInterceptRule(id)
+		if getErr != nil {
+			writeErr(w, 500, getErr.Error())
+			return
+		}
 		// Preserve tool scoping when an older UI edits a rule without the field.
-		toolNames = existing.ToolNames
+		if existing != nil {
+			toolNames = existing.ToolNames
+		}
 	}
 	rule, err := pg.UpdateInterceptRule(id, req.Name, req.MatchTarget, req.MatchType, req.Pattern, req.Action, req.Message, req.Priority, req.Enabled, req.TimeoutEnabled, req.TimeoutSeconds, req.TimeoutAction, toolNames)
 	if err != nil {

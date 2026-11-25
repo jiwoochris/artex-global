@@ -20,6 +20,10 @@ func TestRMGuardPatterns(t *testing.T) {
 		"rm -rf /app/data&&true",
 		"rm -rf /etc; true",
 		`rm -rf "/tmp/first" /etc`,
+		"rm -rf /app/data/tasks",
+		"rm -rf /app/data/sessions",
+		"rm -rf /app/data/db",
+		"rm -rf /app/data/tasks/1 /app/data/tasks",
 		"rm -rf data",
 		"rm -rf ./data",
 		"rm --recursive /etc",
@@ -90,9 +94,25 @@ func TestHTTPBuiltInClassification(t *testing.T) {
 			t.Errorf("%q must be scoped to HTTP tools", name)
 		}
 	}
+	for _, name := range []string{"[内置] SQL DROP DATABASE / TABLE / SCHEMA", "[内置] Redis FLUSHALL / FLUSHDB"} {
+		if !isHTTPBuiltIn(name) {
+			t.Errorf("payload rule %q must also cover HTTP tools", name)
+		}
+	}
 	for _, name := range []string{"[内置] 数据外泄管道", "[内置] 递归强制删除 rm -rf"} {
 		if isHTTPBuiltIn(name) {
 			t.Errorf("%q must stay a command rule", name)
 		}
+	}
+}
+
+func TestNormalizeToolNames(t *testing.T) {
+	got := normalizeToolNames([]string{" Bash ", "bash", "", "WebFetch", "Bash"})
+	want := []string{"Bash", "bash", "WebFetch"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("normalizeToolNames = %v, want %v", got, want)
+	}
+	if got := normalizeToolNames(nil); got == nil || len(got) != 0 {
+		t.Fatalf("nil must become an empty non-nil slice, got %#v", got)
 	}
 }

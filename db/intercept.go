@@ -89,8 +89,27 @@ func (d *DB) ListInterceptRules() ([]InterceptRule, error) {
 }
 
 // CreateInterceptRule inserts a new rule.
+// normalizeToolNames trims, deduplicates and drops empty entries. A nil list
+// becomes an empty JSON array so "all tools" is stored deterministically.
+func normalizeToolNames(names []string) []string {
+	out := make([]string, 0, len(names))
+	seen := make(map[string]struct{}, len(names))
+	for _, n := range names {
+		n = strings.TrimSpace(n)
+		if n == "" {
+			continue
+		}
+		if _, dup := seen[n]; dup {
+			continue
+		}
+		seen[n] = struct{}{}
+		out = append(out, n)
+	}
+	return out
+}
+
 func (d *DB) CreateInterceptRule(name, matchTarget, matchType, pattern, action, message string, priority int, enabled bool, timeoutEnabled bool, timeoutSeconds int, timeoutAction string, toolNames []string) (InterceptRule, error) {
-	toolNamesJSON, _ := json.Marshal(toolNames)
+	toolNamesJSON, _ := json.Marshal(normalizeToolNames(toolNames))
 	row := d.QueryRow(`
 INSERT INTO intercept_rules(name, enabled, priority, match_target, match_type, pattern, tool_names, action, message, timeout_enabled, timeout_seconds, timeout_action)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -101,7 +120,7 @@ RETURNING `+interceptRuleCols,
 
 // UpdateInterceptRule replaces all editable fields of an existing rule.
 func (d *DB) UpdateInterceptRule(id int64, name, matchTarget, matchType, pattern, action, message string, priority int, enabled bool, timeoutEnabled bool, timeoutSeconds int, timeoutAction string, toolNames []string) (InterceptRule, error) {
-	toolNamesJSON, _ := json.Marshal(toolNames)
+	toolNamesJSON, _ := json.Marshal(normalizeToolNames(toolNames))
 	row := d.QueryRow(`
 UPDATE intercept_rules
    SET name=$2, enabled=$3, priority=$4, match_target=$5,

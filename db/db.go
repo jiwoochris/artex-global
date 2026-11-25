@@ -358,6 +358,10 @@ var httpBuiltInRules = []string{
 	"[内置] 脚本中声明 HTTP DELETE 方法（JS/通用）",
 	"[内置] 批量清空 / 清除接口路径",
 	"[内置] 删除类接口路径",
+	"[内置] SQL DROP DATABASE / TABLE / SCHEMA",
+	"[内置] SQL TRUNCATE",
+	"[内置] MongoDB drop / dropDatabase",
+	"[内置] Redis FLUSHALL / FLUSHDB",
 }
 
 func isHTTPBuiltIn(name string) bool {
@@ -379,8 +383,9 @@ func commandToolNames() []string {
 func httpToolNames() []string {
 	return []string{
 		"Bash", "bash", "BASH", "shell_open", "shell_send",
-		"WebFetch", "web_fetch", "WEBFETCH",
-		"ExecuteExtraTool", "execute_extra_tool", "EXECUTEEXTRATOOL",
+		"WebFetch", "webfetch", "web_fetch", "WEBFETCH",
+		"ExecuteExtraTool", "executeextratool", "execute_extra_tool", "EXECUTEEXTRATOOL",
+		"oob_generate", "oob_poll",
 	}
 }
 
@@ -407,7 +412,7 @@ const rmBoundary = `["'\s*?;&|()<>$\x60]`
 // a shell operator, so rm -rf "/tmp/first" /etc is caught while
 // rm -rf /tmp; echo /etc is not.
 func rmGuardPatterns() (recursive, critical string) {
-	dataAlts := dataRootAlternatives()
+	dataAlts := `(?:` + dataRootAlternatives() + `)(?:/tasks|/sessions|/db)?`
 	recursive = `(?i)\brm\b.{0,80}(?:-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*|--recursive|--no-preserve-root)[^;\n&|]{0,200}?["'\s]["']?(?:/(?:etc|bin|usr|boot|var|lib|sys|proc|dev|sbin|root)(?:/|` + rmBoundary + `|$)|(?:` + dataAlts + `)/?(?:` + rmBoundary + `|$)|/(?:` + rmBoundary + `|$))`
 	critical = `\brm\b[^;\n&|]{0,200}?["'\s]["']?(?:/(?:etc|bin|usr|boot|var|lib|sys|proc|dev|sbin|root)(?:/|` + rmBoundary + `|$)|(?:` + dataAlts + `)/?(?:` + rmBoundary + `|$)|/(?:` + rmBoundary + `|$))`
 	return recursive, critical
@@ -714,7 +719,7 @@ func (d *DB) seedDefaultInterceptRulesV4() error {
 	if _, err := d.Exec(`
 UPDATE intercept_rules
    SET tool_names = CASE WHEN name IN ($3,$4,$5,$6,$7) THEN $2::jsonb ELSE $1::jsonb END
- WHERE name LIKE '[内置]%' AND tool_names = '[]'::jsonb`,
+ WHERE name LIKE '[内置]%' AND (tool_names = '[]'::jsonb OR tool_names = 'null'::jsonb)`,
 		string(commandTools), string(httpTools),
 		httpBuiltInRules[0], httpBuiltInRules[1], httpBuiltInRules[2], httpBuiltInRules[3], httpBuiltInRules[4]); err != nil {
 		return fmt.Errorf("scope intercept rules: %w", err)
