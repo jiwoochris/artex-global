@@ -10,6 +10,7 @@ The upstream ARTEX project's per-version release history (0.3.x and earlier) and
 
 ### Localization (i18n)
 
+- **The agent editor can show the prompts in English.** A switch shows the original, the English text, or both side by side for the system prompt, prompt versions and wrap-up prompts. Built-in prompts use reviewed reference translations in `agent/prompts_en/`, and a test fails if a built-in prompt changes without its translation. Edited or custom prompts can be machine-translated on request with the active LLM configuration, cached per paragraph. The model still receives the original prompts.
 - **Server console logs and the startup banner are now always English,** regardless of the display language, and a test fails if a non-ASCII message enters a log call. Runtime values such as model-written text and target names are printed as they are.
 - **Built-in block rules, asset rule notes, and tool descriptions now follow the display language.** A value is translated only while it still matches its DB seed text, so user edits stay as written, and the text sent to the model is unchanged.
 - **Added Spanish documentation.** Translated `README.es.md` from the English README into natural Spanish and added a Spanish link to the language navigation of all five READMEs (English, Korean, Chinese, Spanish, Japanese). Code, commands, payloads, URLs and identifiers are preserved; only descriptive text is translated.

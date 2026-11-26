@@ -1126,6 +1126,26 @@
         "toolsNone": "(none selected)",
         "message": "Message: {msg}"
       }
+    },
+    "english": {
+      "viewLabel": "Prompt language view",
+      "mode": {
+        "original": "Original",
+        "both": "Side by side",
+        "english": "English"
+      },
+      "title": "English translation",
+      "source": {
+        "reference": "Reviewed translation",
+        "machine": "Machine translation",
+        "machineModel": "Machine translation ({model})",
+        "original": "No translation needed"
+      },
+      "empty": "Nothing to translate.",
+      "noReference": "There is no reviewed translation for this text, because it differs from the built-in default. You can machine-translate it with the active LLM configuration, which uses tokens.",
+      "machineBtn": "Machine-translate",
+      "retranslateBtn": "Translate the edited text",
+      "machineNote": "Machine translations are for reading only and may be imprecise. Agents always receive the original text."
     }
   },
   "assetSearch": {

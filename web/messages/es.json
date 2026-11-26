@@ -1126,6 +1126,26 @@
         "toolsNone": "(ninguna seleccionada)",
         "message": "Mensaje: {msg}"
       }
+    },
+    "english": {
+      "viewLabel": "Vista de idioma del prompt",
+      "mode": {
+        "original": "Original",
+        "both": "En paralelo",
+        "english": "Inglés"
+      },
+      "title": "Traducción al inglés",
+      "source": {
+        "reference": "Traducción revisada",
+        "machine": "Traducción automática",
+        "machineModel": "Traducción automática ({model})",
+        "original": "No requiere traducción"
+      },
+      "empty": "No hay nada que traducir.",
+      "noReference": "No hay una traducción revisada para este texto porque difiere del valor predeterminado integrado. Puede traducirlo automáticamente con la configuración de LLM activa, lo que consume tokens.",
+      "machineBtn": "Traducir automáticamente",
+      "retranslateBtn": "Traducir el texto editado",
+      "machineNote": "Las traducciones automáticas son solo para lectura y pueden ser imprecisas. Los agentes siempre reciben el texto original."
     }
   },
   "assetSearch": {

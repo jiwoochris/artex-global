@@ -244,6 +244,15 @@ function interceptPageQuery(page: number, size: number, filter: InterceptApprova
   return query.toString();
 }
 
+// PromptTranslation is the English view of a prompt. source: "reference" = reviewed
+// translation of a built-in prompt, "machine" = LLM translation, "original" = the text has
+// nothing to translate, "none" = no reference and machine translation was not requested.
+export type PromptTranslation = {
+  text: string;
+  source: "reference" | "machine" | "original" | "none";
+  model?: string;
+};
+
 export const api = {
   // 后端应用版本号（release 时由 ldflags 注入，默认 "dev"）。
   health: () => get<{ ok: boolean; service: string; version: string }>("/health"),
@@ -1096,6 +1105,10 @@ export const api = {
     get<{ variables: PromptVar[] }>(`/agents/${key}/variables`).then((r) => arr(r.variables)),
   previewAgentPrompt: (key: string, template: string, sample?: Record<string, string>) =>
     post<{ rendered: string; error?: string }>(`/agents/${key}/prompt/preview`, { template, sample }),
+  // Read-only English view of prompt text (the model still receives the original).
+  // machine=false only returns the reviewed reference translation of a built-in prompt;
+  // machine=true falls back to an LLM translation, which spends tokens.
+  translatePrompt: (text: string, machine = false) => post<PromptTranslation>("/prompts/translate", { text, machine }),
   getAgentVisibility: (key: string) => get<{ mcp: number[]; skill: string[] }>(`/agents/${key}/visibility`),
   setAgentVisibility: (key: string, mcp: number[], skill: string[]) =>
     put<{ ok: boolean }>(`/agents/${key}/visibility`, { mcp, skill }),

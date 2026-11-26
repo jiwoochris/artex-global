@@ -2337,6 +2337,11 @@ function route(m: string, path: string, seg: string[], q: URLSearchParams, b: Re
   if (seg[0] === "agents" && seg[2] === "prompt" && seg[3] === "preview")
     return { rendered: String(b.template ?? "").replace(/\{\{\.(\w+)\}\}/g, "«$1»") };
   if (seg[0] === "agents" && seg[2] === "visibility" && m === "GET") return D.agentDetail(seg[1]).visibility;
+  // English prompt view: the demo has no reference translations and no LLM.
+  if (path === "/prompts/translate" && m === "POST") {
+    if (b.machine) throw new Error("Machine translation is not supported in demo mode");
+    return { text: "", source: "none" };
+  }
 
   // ── conversations ──
   if (path === "/conversations" && m === "GET") {

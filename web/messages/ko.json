@@ -1126,6 +1126,26 @@
         "toolsNone": "(선택 안 됨)",
         "message": "메시지: {msg}"
       }
+    },
+    "english": {
+      "viewLabel": "프롬프트 언어 보기",
+      "mode": {
+        "original": "원문",
+        "both": "나란히 보기",
+        "english": "영어"
+      },
+      "title": "영어 번역",
+      "source": {
+        "reference": "검토된 번역",
+        "machine": "기계 번역",
+        "machineModel": "기계 번역 ({model})",
+        "original": "번역할 내용 없음"
+      },
+      "empty": "번역할 내용이 없습니다.",
+      "noReference": "이 텍스트는 내장 기본값과 달라 검토된 번역이 없습니다. 활성화된 LLM 설정으로 기계 번역할 수 있으며, 이때 토큰이 사용됩니다.",
+      "machineBtn": "기계 번역",
+      "retranslateBtn": "수정한 텍스트 다시 번역",
+      "machineNote": "기계 번역은 읽기용이며 부정확할 수 있습니다. 에이전트에는 항상 원문이 전달됩니다."
     }
   },
   "assetSearch": {

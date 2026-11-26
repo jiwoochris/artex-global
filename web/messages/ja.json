@@ -1126,6 +1126,26 @@
         "toolsNone": "（未選択）",
         "message": "メッセージ: {msg}"
       }
+    },
+    "english": {
+      "viewLabel": "プロンプトの言語表示",
+      "mode": {
+        "original": "原文",
+        "both": "並べて表示",
+        "english": "英語"
+      },
+      "title": "英語訳",
+      "source": {
+        "reference": "レビュー済みの翻訳",
+        "machine": "機械翻訳",
+        "machineModel": "機械翻訳（{model}）",
+        "original": "翻訳不要"
+      },
+      "empty": "翻訳する内容がありません。",
+      "noReference": "このテキストは組み込みのデフォルトと異なるため、レビュー済みの翻訳はありません。有効な LLM 設定で機械翻訳できますが、トークンを消費します。",
+      "machineBtn": "機械翻訳",
+      "retranslateBtn": "編集したテキストを再翻訳",
+      "machineNote": "機械翻訳は閲覧用であり、不正確な場合があります。エージェントには常に原文が渡されます。"
     }
   },
   "assetSearch": {
