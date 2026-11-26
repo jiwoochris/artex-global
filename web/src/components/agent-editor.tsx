@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Markdown } from "@/components/markdown";
+import { EnglishViewSwitch, useEnglishViewMode, WithEnglish } from "@/components/prompt-english-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -72,6 +73,8 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
   const [diffVer, setDiffVer] = React.useState<PromptVersion | null>(null);
 
   const [prompt, setPrompt] = React.useState("");
+  // Original / side by side / English view of the prompts (display only).
+  const [enMode, setEnMode] = useEnglishViewMode();
   const [mcpVisible, setMcpVisible] = React.useState<number[]>([]);
   const [skillVisible, setSkillVisible] = React.useState<string[]>([]);
   const [preview, setPreview] = React.useState("");
@@ -455,13 +458,16 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
             </div>
           </div>
 
-          <Textarea
-            className="font-mono text-xs"
-            rows={16}
-            value={prompt}
-            placeholder={tr("prompt.placeholder")}
-            onChange={(e) => setPrompt(e.target.value)}
-          />
+          <EnglishViewSwitch mode={enMode} onChange={setEnMode} />
+          <WithEnglish mode={enMode} englishText={prompt}>
+            <Textarea
+              className="font-mono text-xs"
+              rows={16}
+              value={prompt}
+              placeholder={tr("prompt.placeholder")}
+              onChange={(e) => setPrompt(e.target.value)}
+            />
+          </WithEnglish>
 
           <div className="flex flex-wrap gap-2">
             <Dialog>
@@ -537,7 +543,7 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
               if (!o) setViewVer(null);
             }}
           >
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className={cn("sm:max-w-2xl", enMode === "both" && "lg:max-w-5xl")}>
               <DialogHeader>
                 <DialogTitle>
                   v{viewVer?.version}
@@ -556,9 +562,12 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
                   )}
                 </DialogDescription>
               </DialogHeader>
-              <pre className="bg-muted max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-md p-3 font-mono text-xs">
-                {viewVer?.template_text || tr("version.empty")}
-              </pre>
+              <EnglishViewSwitch mode={enMode} onChange={setEnMode} />
+              <WithEnglish mode={enMode} englishText={viewVer?.template_text ?? ""}>
+                <pre className="bg-muted max-h-[55vh] overflow-auto whitespace-pre-wrap rounded-md p-3 font-mono text-xs">
+                  {viewVer?.template_text || tr("version.empty")}
+                </pre>
+              </WithEnglish>
               <div className="flex gap-2 justify-end">
                 {viewVer && viewVer.version !== versions[0]?.version && (
                   <Button
@@ -637,13 +646,17 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
               </Badge>
             )}
           </div>
-          <Textarea
-            className="font-mono text-xs"
-            rows={10}
-            value={wrapup}
-            placeholder={wrapupDefault || tr("wrapup.placeholder")}
-            onChange={(e) => setWrapup(e.target.value)}
-          />
+          <EnglishViewSwitch mode={enMode} onChange={setEnMode} />
+          {/* An empty field runs the built-in default, so that is what the English view shows. */}
+          <WithEnglish mode={enMode} englishText={wrapup.trim() ? wrapup : wrapupDefault}>
+            <Textarea
+              className="font-mono text-xs"
+              rows={10}
+              value={wrapup}
+              placeholder={wrapupDefault || tr("wrapup.placeholder")}
+              onChange={(e) => setWrapup(e.target.value)}
+            />
+          </WithEnglish>
           <div className="grid gap-1.5">
             <Label htmlFor="wrapup-turns" className="text-xs">
               {tr("wrapup.turnsLabel", { default: wrapupTurnsDefault })}
@@ -695,13 +708,15 @@ export function AgentEditor({ agentKey, onSaved }: { agentKey: string; onSaved?:
                   </Badge>
                 )}
               </div>
-              <Textarea
-                className="font-mono text-xs"
-                rows={10}
-                value={ttWrapup}
-                placeholder={ttWrapupDefault || tr("taskTimeout.placeholder")}
-                onChange={(e) => setTtWrapup(e.target.value)}
-              />
+              <WithEnglish mode={enMode} englishText={ttWrapup.trim() ? ttWrapup : ttWrapupDefault}>
+                <Textarea
+                  className="font-mono text-xs"
+                  rows={10}
+                  value={ttWrapup}
+                  placeholder={ttWrapupDefault || tr("taskTimeout.placeholder")}
+                  onChange={(e) => setTtWrapup(e.target.value)}
+                />
+              </WithEnglish>
               <div className="grid gap-1.5">
                 <Label htmlFor="tt-turns" className="text-xs">
                   {tr("taskTimeout.turnsLabel", { default: ttTurnsDefault })}

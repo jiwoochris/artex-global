@@ -1384,3 +1384,15 @@ CREATE INDEX IF NOT EXISTS idx_notification_deliveries_batch
     ON notification_deliveries(batch_id) WHERE batch_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_notification_deliveries_channel
     ON notification_deliveries(channel_id, id DESC);
+
+-- Machine translations shown read-only in the UI, such as the English view of an edited
+-- agent prompt. Never sent to a model. Keyed by the SHA-256 of one source paragraph, so
+-- editing a prompt only re-translates the paragraphs that changed.
+CREATE TABLE IF NOT EXISTS text_translations (
+    src_hash   TEXT NOT NULL,
+    lang       TEXT NOT NULL,
+    text       TEXT NOT NULL,
+    model      TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (src_hash, lang)
+);

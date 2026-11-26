@@ -1126,6 +1126,26 @@
         "toolsNone": "（未选）",
         "message": "消息：{msg}"
       }
+    },
+    "english": {
+      "viewLabel": "提示词语言视图",
+      "mode": {
+        "original": "原文",
+        "both": "并排显示",
+        "english": "英文"
+      },
+      "title": "英文翻译",
+      "source": {
+        "reference": "已审校译文",
+        "machine": "机器翻译",
+        "machineModel": "机器翻译（{model}）",
+        "original": "无需翻译"
+      },
+      "empty": "没有需要翻译的内容。",
+      "noReference": "该文本与内置默认值不同，因此没有已审校的译文。可以使用当前启用的 LLM 配置进行机器翻译，这会消耗 token。",
+      "machineBtn": "机器翻译",
+      "retranslateBtn": "重新翻译修改后的文本",
+      "machineNote": "机器翻译仅供阅读，可能不够准确。Agent 始终接收原文。"
     }
   },
   "assetSearch": {

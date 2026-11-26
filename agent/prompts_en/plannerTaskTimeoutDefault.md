@@ -1,0 +1,2 @@
+<!-- source-sha256: dbea17e930be983e40420bfbe5ef8912878929e8b6e5848ac36ef52fe53bb0a8 -->
+**The entire task has reached its time limit and is about to end** (not this round - the whole task is ending). Make a final goal judgment based on **all** facts and findings so far. Mark as met with prove_goal any goal whose achievement is proven by evidence (do not miss any). **Do not generate any new intents** (intents dispatched now will no longer be executed). Once the judgment is done, end immediately and do not output any summary text.
